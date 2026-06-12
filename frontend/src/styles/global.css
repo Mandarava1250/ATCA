@@ -1,0 +1,521 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600;700;900&family=Noto+Sans+SC:wght@300;400;500;700&family=Ma+Shan+Zheng&display=swap');
+
+:root {
+  /* === 暗色古典主题 - 参考 gujian-atlas === */
+  --bg: #1A1714;
+  --bg-light: #24201C;
+  --bg-card: #2A2520;
+  --bg-hover: #332D27;
+  --border: #3A342C;
+  --border-light: #4A4338;
+
+  /* 金色强调系 */
+  --gold: #C9A96E;
+  --gold-light: #D4B87A;
+  --gold-dim: #8B7A52;
+  --gold-rgb: 201,169,110;
+
+  /* 文字 */
+  --text: #E8E0D4;
+  --text-muted: #9A9084;
+  --text-dim: #6A6358;
+
+  /* 功能 */
+  --c-red: #8B3A2A;
+  --c-jade: #5A7B6C;
+
+  /* 浮动文字颜色 (参考古建筑-atlas) */
+  --color-red:  #C27B7B;
+  --color-cyan: #7BC2B5;
+  --color-blue: #7B9EC2;
+  --color-gold: #C9A96E;
+
+  --r-sm: 2px; --r-md: 4px; --r-lg: 8px;
+  --t: 1000ms cubic-bezier(0.4,0,0.2,1);
+  --t-fast: 800ms cubic-bezier(0.4,0,0.2,1);
+  --t-slow: 1500ms cubic-bezier(0.4,0,0.2,1);
+  --font-serif: 'Noto Serif SC','STSong',serif;
+  --font-sans: 'Noto Sans SC','PingFang SC',sans-serif;
+  --font-calligraphy: 'Ma Shan Zheng','STKaiti',cursive;
+}
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:16px;-webkit-font-smoothing:antialiased}
+body{font-family:var(--font-sans);color:var(--text);background:var(--bg);line-height:1.8;min-height:100vh}
+#app{min-height:100vh;background:var(--bg)}
+h1,h2,h3,h4,h5,h6{font-family:var(--font-serif);font-weight:600;color:var(--text);letter-spacing:0.06em}
+a{color:var(--gold);text-decoration:none;transition:color var(--t)}
+a:hover{color:var(--gold-light)}
+button{font-family:inherit;cursor:pointer;border:none;background:none}
+img{max-width:100%;height:auto;display:block}
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-thumb{background:var(--border-light);border-radius:2px}
+
+.container{max-width:1200px;margin:0 auto;padding:0 24px}
+
+/* 页面内容区统一下移，避免被固定导航栏(68px)遮挡 */
+.page-content{padding-top:100px !important}
+
+/* === 书法体 === */
+.calligraphy{font-family:var(--font-calligraphy);font-weight:400;letter-spacing:0.15em}
+
+/* === 画框卡片 === */
+.card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r-md);transition:all var(--t-fast);overflow:hidden}
+.card:hover{border-color:var(--gold-dim);box-shadow:0 4px 24px rgba(0,0,0,0.3)}
+
+/* === 按钮 === */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:10px 24px;border-radius:var(--r-sm);font-family:var(--font-serif);font-size:0.875rem;letter-spacing:0.08em;transition:all var(--t-fast);cursor:pointer;border:1px solid transparent}
+.btn-gold{background:transparent;color:var(--gold);border-color:var(--gold-dim)}
+.btn-gold:hover{background:rgba(var(--gold-rgb),0.1);border-color:var(--gold)}
+.btn-solid-gold{background:var(--gold);color:#1A1714;border-color:var(--gold);font-weight:600}
+.btn-solid-gold:hover{background:var(--gold-light);border-color:var(--gold-light)}
+
+/* === atca 按钮系统（全局） === */
+.atca-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:10px 22px;border-radius:8px;font-size:0.875rem;font-weight:500;letter-spacing:0.04em;transition:all var(--t-fast);cursor:pointer;border:1.5px solid transparent;text-decoration:none;font-family:inherit}
+.atca-btn-primary{background:linear-gradient(135deg,var(--gold) 0%,var(--gold-light) 100%);color:#1A1714;border-color:var(--gold);font-weight:600;box-shadow:0 4px 14px rgba(201,169,110,0.3)}
+.atca-btn-primary:hover{background:linear-gradient(135deg,var(--gold-light) 0%,#E0C88A 100%);transform:translateY(-2px);box-shadow:0 6px 20px rgba(201,169,110,0.4)}
+.atca-btn-secondary{background:linear-gradient(135deg,var(--bg-light) 0%,var(--bg-hover) 100%);color:var(--text);border-color:var(--border);box-shadow:0 2px 8px rgba(0,0,0,0.2)}
+.atca-btn-secondary:hover{background:linear-gradient(135deg,var(--bg-hover) 0%,rgba(201,169,110,0.08) 100%);border-color:var(--gold-dim);color:var(--gold);transform:translateY(-2px);box-shadow:0 4px 14px rgba(0,0,0,0.25)}
+
+/* === 标签 === */
+.tag{display:inline-flex;padding:2px 10px;border-radius:var(--r-sm);font-size:0.75rem;font-family:var(--font-serif);background:rgba(var(--gold-rgb),0.08);color:var(--gold);border:1px solid rgba(var(--gold-rgb),0.2)}
+
+/* === 输入框 === */
+.inp{width:100%;padding:12px 16px;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--bg-light);color:var(--text);font-size:0.875rem;transition:all var(--t-fast)}
+.inp:focus{outline:none;border-color:var(--gold-dim);box-shadow:0 0 0 2px rgba(var(--gold-rgb),0.1)}
+
+/* === 装饰 === */
+.diamond{color:var(--gold);font-size:1rem;margin-right:8px}
+.gold-line{height:1px;background:linear-gradient(90deg,transparent,var(--gold-dim),transparent)}
+.seal{display:inline-flex;padding:3px 8px;border:2px solid var(--c-red);color:var(--c-red);font-family:var(--font-calligraphy);font-size:0.875rem;transform:rotate(-3deg);opacity:0.8}
+
+/* === 浮动粒子 === */
+@keyframes float{0%,100%{transform:translateY(0) rotate(0deg);opacity:0.15}50%{transform:translateY(-20px) rotate(2deg);opacity:0.35}}
+@keyframes fadeInUp{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
+
+/* === 竖排文字 === */
+.vertical{writing-mode:vertical-rl;text-orientation:upright;letter-spacing:0.3em}
+
+/* === 导航毛玻璃 === */
+.nav-glass{background:rgba(26,23,20,0.92);backdrop-filter:blur(16px)}
+
+/* === 加载 === */
+.spin{display:inline-block;width:18px;height:18px;border:2px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ============================================
+   管理后台统一UI优化
+   ============================================ */
+
+/* --- 工具栏 --- */
+.admin-page { display: flex; flex-direction: column; gap: 16px; }
+.page-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.page-toolbar .search-input {
+  max-width: 280px;
+  padding: 8px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--bg-card);
+  color: var(--text);
+  font-size: 0.8125rem;
+  outline: none;
+  transition: border-color var(--t);
+}
+.page-toolbar .search-input:focus {
+  border-color: var(--gold-dim);
+  box-shadow: 0 0 0 2px rgba(201,169,110,0.1);
+}
+.page-toolbar .search-input::placeholder {
+  color: var(--text-dim);
+}
+
+/* --- 数据表格 --- */
+.data-table-wrapper {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+}
+.data-table thead th {
+  background: var(--bg);
+  padding: 12px 16px;
+  text-align: left;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+.data-table tbody td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  vertical-align: middle;
+}
+.data-table tbody tr {
+  transition: background var(--t);
+}
+.data-table tbody tr:hover {
+  background: var(--bg-hover);
+}
+.data-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* 状态标签 */
+.data-table .tag {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: var(--r-full);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.data-table .tag.admin { background: rgba(139, 37, 0, 0.15); color: #C27B7B; }
+.data-table .tag.moderator { background: rgba(201, 169, 110, 0.12); color: var(--gold); }
+.data-table .tag.user { background: rgba(107, 114, 128, 0.1); color: var(--text-muted); }
+.data-table .tag.active { background: rgba(90, 123, 108, 0.15); color: #7BC2B5; }
+.data-table .tag.inactive { background: rgba(107, 114, 128, 0.08); color: var(--text-dim); }
+
+/* 操作按钮 */
+.data-table .btn-text {
+  background: none;
+  border: none;
+  color: var(--gold-dim);
+  font-size: 0.75rem;
+  cursor: pointer;
+  padding: 3px 8px;
+  border-radius: var(--r-sm);
+  transition: all var(--t);
+  margin-right: 4px;
+}
+.data-table .btn-text:hover {
+  color: var(--gold);
+  background: rgba(201, 169, 110, 0.08);
+}
+.data-table .btn-text.danger {
+  color: #8B5A5A;
+}
+.data-table .btn-text.danger:hover {
+  color: #C27B7B;
+  background: rgba(139, 58, 58, 0.08);
+}
+
+.empty-table {
+  padding: 48px;
+  text-align: center;
+  color: var(--text-dim);
+  font-size: 0.875rem;
+}
+
+/* --- 弹窗/模态框 --- */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 24px;
+  animation: modalFadeIn 0.2s ease;
+}
+.modal-card {
+  background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-light) 100%);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: 28px;
+  width: 100%;
+  max-width: 480px;
+  max-height: 85vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  animation: modalSlideUp 0.3s ease;
+}
+.modal-card.modal-xl {
+  max-width: 720px;
+}
+.modal-card h3 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin-bottom: 20px;
+  color: var(--gold);
+  letter-spacing: 0.06em;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+/* --- 表单 --- */
+.form-group {
+  margin-bottom: 16px;
+}
+.form-group label {
+  display: block;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  margin-bottom: 6px;
+  color: var(--text-muted);
+}
+.form-group input,
+.form-group select,
+.form-group textarea {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 0.875rem;
+  outline: none;
+  transition: all var(--t);
+  font-family: inherit;
+}
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  border-color: var(--gold-dim);
+  box-shadow: 0 0 0 3px rgba(201,169,110,0.08);
+}
+.form-group input::placeholder,
+.form-group textarea::placeholder {
+  color: var(--text-dim);
+}
+.form-group select option {
+  background: var(--bg-card);
+  color: var(--text);
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+@media (max-width: 640px) {
+  .form-grid { grid-template-columns: 1fr; }
+}
+
+/* 表单标签页 */
+.form-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0;
+}
+.form-tab {
+  padding: 8px 16px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+  cursor: pointer;
+  transition: all var(--t);
+  font-family: var(--font-serif);
+}
+.form-tab:hover {
+  color: var(--text);
+}
+.form-tab.active {
+  color: var(--gold);
+  border-bottom-color: var(--gold);
+  font-weight: 600;
+}
+
+/* 模态框底部按钮 */
+.modal-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+/* --- 批量操作栏 --- */
+.batch-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 12px;
+  background: rgba(201, 169, 110, 0.06);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+}
+
+/* --- 按钮规范 --- */
+.atca-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 18px;
+  border-radius: var(--r-md);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--t);
+  font-family: inherit;
+  letter-spacing: 0.02em;
+}
+.atca-btn-primary {
+  background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 100%);
+  color: var(--bg);
+  border: none;
+  box-shadow: 0 2px 8px rgba(201,169,110,0.25);
+}
+.atca-btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(201,169,110,0.4);
+}
+.atca-btn-secondary {
+  background: var(--bg-hover);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+.atca-btn-secondary:hover {
+  border-color: var(--gold-dim);
+  color: var(--gold);
+}
+.atca-btn-danger {
+  background: rgba(139, 58, 58, 0.15);
+  color: #C27B7B;
+  border: 1px solid rgba(139, 58, 58, 0.3);
+}
+.atca-btn-danger:hover {
+  background: rgba(139, 58, 58, 0.25);
+}
+.atca-btn-sm {
+  padding: 5px 12px;
+  font-size: 0.75rem;
+}
+
+/* === 动画 === */
+@keyframes modalFadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes modalSlideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ===== 华夏营造 - 古典画卷式过渡动画 ===== */
+
+/* 通用页面切换动画 - 水墨展开 */
+.page-enter-active,
+.page-leave-active {
+  transition: all 300ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.page-enter-from {
+  opacity: 0;
+  transform: translateY(16px) scale(0.98);
+  filter: blur(3px);
+}
+
+.page-leave-to {
+  opacity: 0;
+  transform: translateY(-12px) scale(1.01);
+  filter: blur(2px);
+}
+
+/* 古典淡入动画 */
+@keyframes scrollInk {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.99);
+    filter: blur(2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+/* 古典滑入动画 */
+@keyframes slideClassical {
+  from {
+    opacity: 0;
+    transform: translateX(-16px) translateY(8px);
+    filter: blur(2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) translateY(0);
+    filter: blur(0);
+  }
+}
+
+/* 古典缩放动画 */
+@keyframes scaleInk {
+  from {
+    opacity: 0;
+    transform: scale(1.02);
+    filter: blur(4px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+    filter: blur(0);
+  }
+}
+
+/* 古典上浮动画 */
+@keyframes riseUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+    filter: blur(3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
+/* 快速淡入 */
+@keyframes fadeInFast {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* ===== 动画工具类 ===== */
+.animate-scroll-ink { animation: scrollInk 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94); }
+.animate-slide-classical { animation: slideClassical 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94); }
+.animate-scale-ink { animation: scaleInk 0.15s cubic-bezier(0.25, 0.46, 0.45, 0.94); }
+.animate-rise-up { animation: riseUp 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94); }
+.animate-fade-in-fast { animation: fadeInFast 0.12s ease-out; }
+
+/* 延迟动画 - 用于列表项依次出现 */
+.animate-delay-1 { animation-delay: 50ms; }
+.animate-delay-2 { animation-delay: 100ms; }
+.animate-delay-3 { animation-delay: 150ms; }
+.animate-delay-4 { animation-delay: 200ms; }
+.animate-delay-5 { animation-delay: 250ms; }
+
+/* ===== 优化所有过渡动画速度 ===== */
+* {
+  transition-duration: var(--t-fast) !important;
+}
+
+/* 保持部分元素使用正常速度 */
+.main-chart,
+.splash-screen,
+.splash-ring,
+.particle {
+  transition-duration: var(--t) !important;
+}
