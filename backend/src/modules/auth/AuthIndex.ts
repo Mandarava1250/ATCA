@@ -316,7 +316,7 @@ router.post('/refresh', asyncHandler(async (req, res) => {
 // 登出
 router.post('/logout', authMiddleware, asyncHandler(async (req: AuthRequest, res) => {
   const authHeader = req.headers.authorization;
-  if (authHeader && authHeader.startsWith('Bearer ')) { addToBlacklist(authHeader.substring(7)); }
+  if (authHeader && authHeader.startsWith('Bearer ')) { await addToBlacklist(authHeader.substring(7)); }
   res.json({ success: true, message: '登出成功' });
 }));
 
@@ -407,7 +407,7 @@ router.put('/change-password', authMiddleware, validateBody(changePasswordSchema
     if (!validPassword) { res.status(401).json({ success: false, error: { code: 'AUTH_001', message: '原密码错误' } }); return; }
     user.password = await bcrypt.hash(newPassword, config.bcrypt.saltRounds);
     const authHeader = req.headers.authorization;
-    if (authHeader && authHeader.startsWith('Bearer ')) { addToBlacklist(authHeader.substring(7)); }
+    if (authHeader && authHeader.startsWith('Bearer ')) { await addToBlacklist(authHeader.substring(7)); }
     res.json({ success: true, message: '密码修改成功，请重新登录' });
     return;
   }
@@ -420,7 +420,7 @@ router.put('/change-password', authMiddleware, validateBody(changePasswordSchema
   const hashedPassword = await bcrypt.hash(newPassword, config.bcrypt.saltRounds);
   await execute('user', 'UPDATE dbo.atca_user SET [password] = @password WHERE [user_id] = @userId', { password: hashedPassword, userId });
   const authHeader = req.headers.authorization;
-  if (authHeader && authHeader.startsWith('Bearer ')) { addToBlacklist(authHeader.substring(7)); }
+  if (authHeader && authHeader.startsWith('Bearer ')) { await addToBlacklist(authHeader.substring(7)); }
   res.json({ success: true, message: '密码修改成功，请重新登录' });
 }));
 

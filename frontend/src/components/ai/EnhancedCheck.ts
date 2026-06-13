@@ -14,6 +14,28 @@ export interface CheckResult {
   matchedKnowledge: KnowledgeEntry[];
 }
 
+// 在模块加载时初始化知识图谱一次，避免每次查询重复初始化
+let knowledgeGraphInitialized = false;
+let initializationPromise: Promise<void> | null = null;
+
+async function ensureKnowledgeGraphInitialized(): Promise<void> {
+  // 使用Promise避免竞态条件：如果已有初始化正在进行，直接返回同一个Promise
+  if (initializationPromise) return initializationPromise;
+  
+  initializationPromise = (async () => {
+    if (!knowledgeGraphInitialized) {
+      try {
+        await knowledgeGraph.initialize();
+        knowledgeGraphInitialized = true;
+      } catch {
+        // 初始化失败，后续查询会返回空数组
+      }
+    }
+  })();
+  
+  return initializationPromise;
+}
+
 /** 增强检查器 */
 class EnhancedChecker {
   /**
@@ -58,7 +80,7 @@ class EnhancedChecker {
     
     return {
       passed: relevance >= 0.6,
-      relevance: relevance || 0.8,
+      relevance,
       suggestions,
       matchedKnowledge
     };
@@ -69,7 +91,8 @@ class EnhancedChecker {
    */
   private async queryKnowledge(question: string): Promise<KnowledgeEntry[]> {
     try {
-      await knowledgeGraph.initialize();
+      // 确保知识图谱已初始化（幂等性检查，只初始化一次）
+      await ensureKnowledgeGraphInitialized();
       return knowledgeGraph.query(question, 5);
     } catch {
       return [];

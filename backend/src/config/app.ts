@@ -26,14 +26,28 @@ if (!envLoaded) {
   console.warn('[Config] 未能加载 .env.db，使用默认配置');
 }
 
+// JWT 配置验证 - 所有环境都必须设置 JWT secrets
+const nodeEnv = process.env.NODE_ENV || 'development';
+const isProduction = nodeEnv === 'production';
+
+const jwtSecret = process.env.JWT_SECRET;
+const jwtRefreshSecret = process.env.JWT_REFRESH_SECRET;
+
+// 所有环境都必须设置 JWT secrets
+if (!jwtSecret || !jwtRefreshSecret) {
+  console.error('[Config] 错误：必须设置 JWT_SECRET 和 JWT_REFRESH_SECRET 环境变量');
+  console.error('[Config] 请在 .env 文件中配置这些变量');
+  process.exit(1);
+}
+
 export const config = {
-  nodeEnv: process.env.NODE_ENV || 'development',
+  nodeEnv,
   port: parseInt(process.env.PORT || '3000', 10),
   apiPrefix: process.env.API_PREFIX || '/api/v1',
 
   jwt: {
-    secret: process.env.JWT_SECRET || 'default-jwt-secret-change-me',
-    refreshSecret: process.env.JWT_REFRESH_SECRET || 'default-refresh-secret-change-me',
+    secret: jwtSecret,
+    refreshSecret: jwtRefreshSecret,
     accessExpiry: '24h',
     refreshExpiry: '7d',
   },

@@ -10,18 +10,62 @@ import { logger, ErrorType } from '../utils/logger';
 // ============================================
 
 const sqlInjectionPatterns: RegExp[] = [
-  // 基础SQL注入模式
-  /('(\\s+)?('|\\))/gi,
-  /(--|\/\*|\*\/)/gi,
-  /(UNION\s+SELECT|SELECT\s+FROM|INSERT\s+INTO|DELETE\s+FROM|UPDATE\s+.*SET)/gi,
-  /(EXEC|EXECUTE|sp_)/gi,
-  /(DROP\s+TABLE|DROP\s+DATABASE|TRUNCATE\s+TABLE)/gi,
-  /(OR\s+1=1|AND\s+1=1|OR\s+'a'='a')/gi,
-  // 盲注模式
-  /(WAITFOR\s+DELAY|BENCHMARK|SLEEP)/gi,
-  // 基于时间的注入
-  /(IF\s+\(.*\).*WAITFOR|CASE\s+WHEN)/gi,
+  // 基础SQL注入模式 - 检测引号逃逸和注释
+  /'(\s|\/|\*)*('|"|\\|--)/gi,
+  /(\/\*.*\*\/|--\s*$)/gim,
+  // 危险SQL命令 - 需要结合其他模式才能触发
+  /;\s*(DROP|DELETE|TRUNCATE|UPDATE|INSERT|EXEC|EXECUTE)\s+/gi,
+  // 基于数字的布尔注入
+  /\b(OR|AND)\s+(\d+)\s*=\s*(\d+)\b/gi,
+  // 基于字符串的布尔注入
+  /\b(OR|AND)\s+['"]([^'"]*)['"]\s*=\s*['"]\1['"]/gi,
+  // 时间盲注
+  /\b(WAITFOR\s+DELAY|BENCHMARK|SLEEP)\b/gi,
+  // 堆叠查询
+  /;\s*SELECT\b/gi,
 ];
+
+// 检测SQL注入的辅助函数 - 更加智能的检测
+function isSqlInjectionAttempt(data: string): boolean {
+  let score = 0;
+  
+  // 检查是否包含SQL关键字组合
+  const keywords = ['SELECT', 'UNION', 'INSERT', 'DELETE', 'UPDATE', 'DROP', 'EXEC'];
+  const keywordCount = keywords.filter(k => new RegExp(`\\b${k}\\b`, 'gi').test(data)).length;
+  
+  // 如果只有单个SQL关键字，不视为攻击（可能是正常内容）
+  if (keywordCount <= 1 && !/;\s*\w+/.test(data)) {
+    return false;
+  }
+  
+  // 检查引号逃逸模式
+  if (/'\s*['"]/.test(data) || /''/.test(data)) {
+    score += 2;
+  }
+  
+  // 检查SQL注释
+  if (/\-\-|\*\//.test(data)) {
+    score += 1;
+  }
+  
+  // 检查危险命令
+  if (/;\s*(DROP|DELETE|TRUNCATE)\b/i.test(data)) {
+    score += 3;
+  }
+  
+  // 检查布尔注入模式
+  if (/\b(OR|AND)\s+\d+\s*=\s*\d+\b/i.test(data)) {
+    score += 2;
+  }
+  
+  // 检查字符串相等注入
+  if (/\b(OR|AND)\s+['"].*['"]\s*=\s*['"].*['"]/i.test(data)) {
+    score += 2;
+  }
+  
+  // 综合评分判断
+  return score >= 3;
+}
 
 export function sqlInjectionDetection(req: Request, res: Response, next: NextFunction): void {
   const checkForInjection = (data: any): boolean => {
@@ -29,12 +73,8 @@ export function sqlInjectionDetection(req: Request, res: Response, next: NextFun
     
     const strData = typeof data === 'string' ? data : JSON.stringify(data);
     
-    for (const pattern of sqlInjectionPatterns) {
-      if (pattern.test(strData)) {
-        return true;
-      }
-    }
-    return false;
+    // 使用更智能的检测方法
+    return isSqlInjectionAttempt(strData);
   };
 
   // 检查请求体、查询参数和路径参数

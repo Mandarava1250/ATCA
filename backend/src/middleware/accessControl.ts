@@ -279,7 +279,9 @@ export function sessionTimeoutCheck(req: Request, res: Response, next: NextFunct
 // ============================================
 
 export function apiKeyValidation(req: Request, res: Response, next: NextFunction): void {
-  const apiKey = req.headers['x-api-key'];
+  // HTTP headers 可能是字符串或字符串数组，需要安全处理
+  const apiKeyHeader = req.headers['x-api-key'];
+  const apiKey = Array.isArray(apiKeyHeader) ? apiKeyHeader[0] : apiKeyHeader;
   
   // 如果配置了API密钥，进行验证
   if (process.env.API_KEY && apiKey !== process.env.API_KEY) {

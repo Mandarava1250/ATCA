@@ -1,33 +1,30 @@
 <template>
   <div id="app" :class="{ 'dark-theme': isDark }">
     <!-- 古风水墨过渡遮罩 -->
-    <transition 
-      name="ink-transition" 
-      @before-enter="handleBeforeEnter" 
-      @after-enter="handleAfterEnter" 
-      @before-leave="handleBeforeLeave" 
-      @after-leave="handleAfterLeave">
-      <div v-if="isTransitioning" class="ink-overlay" :class="[currentStyle, schemeClass]">
-        <!-- 方案1：轻盈飘逸 - 简洁淡雅的遮罩层 -->
-        <div v-if="animationSettings.scheme === 'light'" class="light-scheme">
-          <div class="light-gradient"></div>
+    <div 
+      v-show="isTransitioning || isFadingOut"
+      class="ink-overlay" 
+      :class="[currentStyle, schemeClass, { active: isTransitioning, 'fade-out': isFadingOut }]">
+      <!-- 方案1：轻盈飘逸 - 简洁淡雅的遮罩层 -->
+      <div v-if="animationSettings.scheme === 'light'" class="light-scheme">
+        <div class="light-gradient"></div>
+      </div>
+      
+      <!-- 方案2：水墨晕染 - 经典水墨效果 -->
+      <div v-if="animationSettings.scheme === 'ink-wash'" class="ink-wash-scheme">
+        <!-- 宣纸纹理背景 -->
+        <div class="rice-paper"></div>
+        
+        <!-- 水墨晕染效果 -->
+        <div class="ink-wash-container">
+          <div class="ink-wash wash-1"></div>
+          <div class="ink-wash wash-2"></div>
+          <div class="ink-wash wash-3"></div>
         </div>
         
-        <!-- 方案2：水墨晕染 - 经典水墨效果 -->
-        <div v-if="animationSettings.scheme === 'ink-wash'" class="ink-wash-scheme">
-          <!-- 宣纸纹理背景 -->
-          <div class="rice-paper"></div>
-          
-          <!-- 水墨晕染效果 -->
-          <div class="ink-wash-container">
-            <div class="ink-wash wash-1"></div>
-            <div class="ink-wash wash-2"></div>
-            <div class="ink-wash wash-3"></div>
-          </div>
-          
-          <!-- 古典祥云 -->
-          <div class="cloud-decoration">
-            <svg class="cloud-svg" viewBox="0 0 400 200" preserveAspectRatio="none">
+        <!-- 古典祥云 -->
+        <div class="cloud-decoration">
+          <svg class="cloud-svg" viewBox="0 0 400 200" preserveAspectRatio="none">
               <defs>
                 <linearGradient id="cloudGradient" x1="0%" y1="0%" x2="100%" y2="100%">
                   <stop offset="0%" style="stop-color:#C9A96E;stop-opacity:0.15" />
@@ -76,6 +73,52 @@
             <div class="frame-corner bottom-right">
               <div class="corner-ornament"></div>
             </div>
+          </div>
+          
+          <!-- 中央古典图案 -->
+          <div class="center-emblem">
+            <!-- 外圈 -->
+            <div class="emblem-ring outer">
+              <svg viewBox="0 0 200 200">
+                <circle cx="100" cy="100" r="95" fill="none" stroke="#C9A96E" stroke-width="1" opacity="0.4"/>
+                <circle cx="100" cy="100" r="90" fill="none" stroke="#C9A96E" stroke-width="0.5" stroke-dasharray="5 3" opacity="0.3"/>
+              </svg>
+            </div>
+            
+            <!-- 中圈 -->
+            <div class="emblem-ring middle">
+              <svg viewBox="0 0 160 160">
+                <circle cx="80" cy="80" r="75" fill="none" stroke="#D4B87A" stroke-width="1" opacity="0.5"/>
+                <circle cx="80" cy="80" r="70" fill="none" stroke="#C9A96E" stroke-width="0.5" opacity="0.3"/>
+              </svg>
+            </div>
+            
+            <!-- 内圈 -->
+            <div class="emblem-ring inner">
+              <svg viewBox="0 0 120 120">
+                <circle cx="60" cy="60" r="55" fill="none" stroke="#C9A96E" stroke-width="1.5" opacity="0.6"/>
+                <circle cx="60" cy="60" r="50" fill="none" stroke="#D4B87A" stroke-width="0.5" opacity="0.4"/>
+              </svg>
+            </div>
+            
+            <!-- 中央图案 -->
+            <div class="emblem-center">
+              <div class="center-icon">{{ currentIcon }}</div>
+              <div class="center-glow"></div>
+            </div>
+            
+            <!-- 四个方向的装饰 -->
+            <div class="cardinal-point north"></div>
+            <div class="cardinal-point south"></div>
+            <div class="cardinal-point east"></div>
+            <div class="cardinal-point west"></div>
+          </div>
+          
+          <!-- 古典装饰文字 -->
+          <div v-if="animationSettings.showPageName" class="classical-text">
+            <span class="text-decoration">『</span>
+            <span class="main-text">{{ pageName }}</span>
+            <span class="text-decoration">』</span>
           </div>
         </div>
         
@@ -170,62 +213,61 @@
               <div class="corner-ornament"></div>
             </div>
           </div>
-        </div>
-        
-        <!-- 中央古典图案（仅水墨晕染和笔走龙蛇方案显示） -->
-        <div v-if="animationSettings.scheme !== 'light'" class="center-emblem">
-          <!-- 外圈 -->
-          <div class="emblem-ring outer">
-            <svg viewBox="0 0 200 200">
-              <circle cx="100" cy="100" r="95" fill="none" stroke="#C9A96E" stroke-width="1" opacity="0.4"/>
-              <circle cx="100" cy="100" r="90" fill="none" stroke="#C9A96E" stroke-width="0.5" stroke-dasharray="5 3" opacity="0.3"/>
-            </svg>
+          
+          <!-- 中央古典图案 -->
+          <div class="center-emblem">
+            <!-- 外圈 -->
+            <div class="emblem-ring outer">
+              <svg viewBox="0 0 200 200">
+                <circle cx="100" cy="100" r="95" fill="none" stroke="#C9A96E" stroke-width="1" opacity="0.4"/>
+                <circle cx="100" cy="100" r="90" fill="none" stroke="#C9A96E" stroke-width="0.5" stroke-dasharray="5 3" opacity="0.3"/>
+              </svg>
+            </div>
+            
+            <!-- 中圈 -->
+            <div class="emblem-ring middle">
+              <svg viewBox="0 0 160 160">
+                <circle cx="80" cy="80" r="75" fill="none" stroke="#D4B87A" stroke-width="1" opacity="0.5"/>
+                <circle cx="80" cy="80" r="70" fill="none" stroke="#C9A96E" stroke-width="0.5" opacity="0.3"/>
+              </svg>
+            </div>
+            
+            <!-- 内圈 -->
+            <div class="emblem-ring inner">
+              <svg viewBox="0 0 120 120">
+                <circle cx="60" cy="60" r="55" fill="none" stroke="#C9A96E" stroke-width="1.5" opacity="0.6"/>
+                <circle cx="60" cy="60" r="50" fill="none" stroke="#D4B87A" stroke-width="0.5" opacity="0.4"/>
+              </svg>
+            </div>
+            
+            <!-- 中央图案 -->
+            <div class="emblem-center">
+              <div class="center-icon">{{ currentIcon }}</div>
+              <div class="center-glow"></div>
+            </div>
+            
+            <!-- 四个方向的装饰 -->
+            <div class="cardinal-point north"></div>
+            <div class="cardinal-point south"></div>
+            <div class="cardinal-point east"></div>
+            <div class="cardinal-point west"></div>
           </div>
           
-          <!-- 中圈 -->
-          <div class="emblem-ring middle">
-            <svg viewBox="0 0 160 160">
-              <circle cx="80" cy="80" r="75" fill="none" stroke="#D4B87A" stroke-width="1" opacity="0.5"/>
-              <circle cx="80" cy="80" r="70" fill="none" stroke="#C9A96E" stroke-width="0.5" opacity="0.3"/>
-            </svg>
+          <!-- 古典装饰文字 -->
+          <div v-if="animationSettings.showPageName" class="classical-text">
+            <span class="text-decoration">『</span>
+            <span class="main-text">{{ pageName }}</span>
+            <span class="text-decoration">』</span>
           </div>
           
-          <!-- 内圈 -->
-          <div class="emblem-ring inner">
-            <svg viewBox="0 0 120 120">
-              <circle cx="60" cy="60" r="55" fill="none" stroke="#C9A96E" stroke-width="1.5" opacity="0.6"/>
-              <circle cx="60" cy="60" r="50" fill="none" stroke="#D4B87A" stroke-width="0.5" opacity="0.4"/>
-            </svg>
+          <!-- 底部装饰线 -->
+          <div class="bottom-decoration">
+            <div class="deco-line"></div>
+            <div class="deco-pattern"></div>
+            <div class="deco-line"></div>
           </div>
-          
-          <!-- 中央图案 -->
-          <div class="emblem-center">
-            <div class="center-icon">{{ currentIcon }}</div>
-            <div class="center-glow"></div>
-          </div>
-          
-          <!-- 四个方向的装饰 -->
-          <div class="cardinal-point north"></div>
-          <div class="cardinal-point south"></div>
-          <div class="cardinal-point east"></div>
-          <div class="cardinal-point west"></div>
-        </div>
-        
-        <!-- 古典装饰文字（可选显示） -->
-        <div v-if="animationSettings.showPageName && animationSettings.scheme !== 'light'" class="classical-text">
-          <span class="text-decoration">『</span>
-          <span class="main-text">{{ pageName }}</span>
-          <span class="text-decoration">』</span>
-        </div>
-        
-        <!-- 底部装饰线 -->
-        <div v-if="animationSettings.scheme === 'dramatic'" class="bottom-decoration">
-          <div class="deco-line"></div>
-          <div class="deco-pattern"></div>
-          <div class="deco-line"></div>
         </div>
       </div>
-    </transition>
 
     <router-view v-slot="{ Component }">
       <transition :name="animationSettings.skipTransition ? '' : 'page-unfurl'" mode="out-in" @before-enter="(el) => !animationSettings.skipTransition && perfLogger.perf('页面进入前', { element: el.tagName, path: route.path })" @after-enter="(el) => !animationSettings.skipTransition && perfLogger.perf('页面进入完成', { element: el.tagName, path: route.path })" @before-leave="(el) => !animationSettings.skipTransition && perfLogger.perf('页面离开前', { element: el.tagName, path: route.path })" @after-leave="(el) => !animationSettings.skipTransition && perfLogger.perf('页面离开完成', { element: el.tagName, path: route.path })">
@@ -234,10 +276,10 @@
     </router-view>
 
     <!-- AI Assistant -->
-    <template v-if="!hideAI">
+    <div v-if="!hideAI" class="ai-container">
       <AIChatModal />
       <AIChatButton />
-    </template>
+    </div>
   </div>
 </template>
 
@@ -259,10 +301,12 @@ const animationSettings = useAnimationSettingsStore();
 const route = useRoute();
 const isDark = computed(() => userStore.settings?.theme === 'dark');
 const isTransitioning = ref(false);
+const isFadingOut = ref(false);
 const currentIcon = ref('殿');
 const pageName = ref('营造');
 const currentStyle = ref('style-home');
-let previousPath = route.path;
+// 关键修复：初始化为 splash 页面，确保首次进入能正确触发动画
+let previousPath = '/splash';
 let transitionStartTime = 0;
 let animationFrameCount = 0;
 let animationStartTimestamp = 0;
@@ -275,6 +319,11 @@ const schemeClass = computed(() => {
 // 获取动画时长（毫秒）
 const transitionDuration = computed(() => {
   return animationSettings.getSchemeDuration();
+});
+
+// 获取淡出时长（毫秒）- 为进入时长的60%，确保平滑过渡
+const fadeOutDuration = computed(() => {
+  return Math.round(transitionDuration.value * 0.6);
 });
 
 // 需要显示转场动画的页面列表
@@ -294,14 +343,12 @@ const pageConfig: Record<string, {
   name: string;
   style: string;
 }> = {
-  '/home': { icon: '首页', name: '归', style: 'style-home' },
-  '/architecture': { icon: '建', name: '观', style: 'style-architecture' },
-  '/architecture/detail': { icon: '筑', name: '览', style: 'style-detail' },
-  '/quiz': { icon: '试', name: '考', style: 'style-quiz' },
-  '/workshop': { icon: '匠', name: '工', style: 'style-workshop' },
-  '/community': { icon: '社', name: '雅', style: 'style-community' },
-  '/profile': { icon: '人', name: '物', style: 'style-profile' },
-  '/admin': { icon: '管', name: '理', style: 'style-admin' },
+  '/home': { icon: '首页', name: '营造', style: 'style-home' },
+  '/architecture': { icon: '馆', name: '浏览', style: 'style-architecture' },
+  '/quiz': { icon: '试', name: '测验', style: 'style-quiz' },
+  '/workshop': { icon: '筑', name: '工坊', style: 'style-workshop' },
+  '/community': { icon: '社', name: '讨论', style: 'style-community' },
+  '/profile': { icon: '人', name: '详情', style: 'style-profile' },
   'default': { icon: '殿', name: '营造', style: 'style-default' }
 };
 
@@ -386,10 +433,12 @@ watch(() => route.path, (newPath, oldPath) => {
   if (newPath === '/splash') return;
   
   const watchStartTime = Date.now();
-  previousPath = oldPath || '/';
+  // 使用实际的 oldPath，确保路由变化追踪正确
+  const fromPath = oldPath || previousPath || '/splash';
+  previousPath = fromPath;
   
   logger.info('路由变化开始', {
-    fromPath: previousPath,
+    fromPath: fromPath,
     toPath: newPath,
     skipTransition: animationSettings.skipTransition,
     timestamp: watchStartTime,
@@ -410,23 +459,30 @@ watch(() => route.path, (newPath, oldPath) => {
   
   // 检查是否需要显示转场动画：只有在指定页面之间跳转时才显示
   // 特殊情况：从序幕动画 (/splash) 跳转到其他页面时也需要显示转场
-  const isFromSplash = previousPath === '/splash' || previousPath === '/';
+  const isFromSplash = fromPath === '/splash' || fromPath === '/';
   const shouldShowTransition = (transitionPages.includes(newPath) && 
-                                transitionPages.includes(previousPath)) ||
+                                transitionPages.includes(fromPath)) ||
                                (isFromSplash && transitionPages.includes(newPath));
+  
+  logger.debug('转场动画判断', {
+    isFromSplash,
+    newPathInList: transitionPages.includes(newPath),
+    fromPathInList: transitionPages.includes(fromPath),
+    shouldShowTransition,
+  });
   
   // 如果用户设置跳过转场动画，或者当前页面不需要转场动画，则直接完成路由变化
   if (animationSettings.skipTransition || !shouldShowTransition) {
     const skipReason = animationSettings.skipTransition ? '用户设置跳过' : '非指定页面';
     logger.info('跳过转场动画', {
-      fromPath: previousPath,
+      fromPath: fromPath,
       toPath: newPath,
       reason: skipReason,
       timestamp: Date.now(),
     });
     
     logger.info('路由变化完成', {
-      fromPath: previousPath,
+      fromPath: fromPath,
       toPath: newPath,
       totalDuration: Date.now() - watchStartTime,
       timestamp: Date.now(),
@@ -434,39 +490,63 @@ watch(() => route.path, (newPath, oldPath) => {
     return;
   }
   
-  isTransitioning.value = true;
-  transitionStartTime = Date.now();
-  animationFrameCount = 0;
-  animationStartTimestamp = performance.now();
+  // 重置动画状态
+  isTransitioning.value = false;
+  isFadingOut.value = false;
   
-  perfLogger.perf('过渡遮罩显示', {
-    fromPath: previousPath,
-    toPath: newPath,
-    timestamp: transitionStartTime,
+  // 强制 Vue 重新渲染状态
+  requestAnimationFrame(() => {
+    isTransitioning.value = true;
+    isFadingOut.value = false;
+    transitionStartTime = Date.now();
+    animationFrameCount = 0;
+    animationStartTimestamp = performance.now();
+    
+    perfLogger.perf('过渡遮罩显示', {
+      fromPath: fromPath,
+      toPath: newPath,
+      timestamp: transitionStartTime,
+      scheme: animationSettings.scheme,
+      duration: transitionDuration.value,
+    });
+    
+    requestAnimationFrame(countAnimationFrame);
+    
+    // 进入动画完成后开始淡出
+    setTimeout(() => {
+      isTransitioning.value = false;
+      isFadingOut.value = true;
+      
+      perfLogger.perf('过渡遮罩开始淡出', {
+        fromPath: fromPath,
+        toPath: newPath,
+        timestamp: Date.now(),
+        fadeOutDuration: fadeOutDuration.value,
+      });
+      
+      // 淡出动画完成后隐藏遮罩
+      setTimeout(() => {
+        isFadingOut.value = false;
+        const hideTime = Date.now();
+        const transitionDurationMs = hideTime - transitionStartTime;
+        
+        perfLogger.perf('过渡遮罩隐藏完成', {
+          fromPath: fromPath,
+          toPath: newPath,
+          duration: transitionDurationMs,
+          expectedDuration: transitionDuration.value + fadeOutDuration.value,
+          timestamp: hideTime,
+        });
+        
+        logger.info('路由变化完成', {
+          fromPath: fromPath,
+          toPath: newPath,
+          totalDuration: hideTime - watchStartTime,
+          timestamp: hideTime,
+        });
+      }, fadeOutDuration.value);
+    }, transitionDuration.value);
   });
-  
-  requestAnimationFrame(countAnimationFrame);
-  
-  setTimeout(() => {
-    isTransitioning.value = false;
-    const hideTime = Date.now();
-    const transitionDurationMs = hideTime - transitionStartTime;
-    
-    perfLogger.perf('过渡遮罩隐藏', {
-      fromPath: previousPath,
-      toPath: newPath,
-      duration: transitionDurationMs,
-      expectedDuration: transitionDuration.value,
-      timestamp: hideTime,
-    });
-    
-    logger.info('路由变化完成', {
-      fromPath: previousPath,
-      toPath: newPath,
-      totalDuration: hideTime - watchStartTime,
-      timestamp: hideTime,
-    });
-  }, transitionDuration.value);
 });
 
 const hideAI = computed(() => {
@@ -491,20 +571,59 @@ const hideAI = computed(() => {
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  transition: opacity 0.3s ease, transform 0.3s ease;
+  opacity: 0;
+  visibility: hidden;
+  transform: scale(1.05);
+  pointer-events: none;
+  /* 确保过渡属性始终存在 */
+  transition: opacity 2.5s cubic-bezier(0.4, 0, 0.2, 1), 
+              visibility 2.5s cubic-bezier(0.4, 0, 0.2, 1),
+              transform 2.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* 方案Class */
+.ink-overlay.active {
+  opacity: 1;
+  visibility: visible;
+  transform: scale(1);
+  pointer-events: auto;
+}
+
+.ink-overlay.fade-out {
+  opacity: 0;
+  visibility: hidden;
+  transform: scale(0.95);
+}
+
+/* 方案Class - 使用CSS变量控制不同方案的动画时长 */
 .ink-overlay.scheme-light {
   background: linear-gradient(135deg, rgba(26, 23, 20, 0.95) 0%, rgba(42, 37, 32, 0.95) 50%, rgba(26, 23, 20, 0.95) 100%);
+  --transition-duration: 2s;
+  --fadeout-duration: 1.2s;
 }
 
 .ink-overlay.scheme-ink-wash {
   background: linear-gradient(135deg, #1A1714 0%, #2A2520 50%, #1A1714 100%);
+  --transition-duration: 2.5s;
+  --fadeout-duration: 1.5s;
 }
 
 .ink-overlay.scheme-dramatic {
   background: linear-gradient(135deg, #0F0D0B 0%, #1A1714 50%, #0F0D0B 100%);
+  --transition-duration: 3s;
+  --fadeout-duration: 1.8s;
+}
+
+/* 统一使用CSS变量 */
+.ink-overlay {
+  transition: opacity var(--transition-duration, 2.5s) cubic-bezier(0.4, 0, 0.2, 1), 
+              visibility var(--transition-duration, 2.5s) cubic-bezier(0.4, 0, 0.2, 1),
+              transform var(--transition-duration, 2.5s) cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.ink-overlay.fade-out {
+  transition: opacity var(--fadeout-duration, 1.5s) cubic-bezier(0.4, 0, 0.2, 1), 
+              visibility var(--fadeout-duration, 1.5s) cubic-bezier(0.4, 0, 0.2, 1),
+              transform var(--fadeout-duration, 1.5s) cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* ===== 轻盈飘逸方案样式 ===== */
@@ -522,11 +641,11 @@ const hideAI = computed(() => {
   height: 100%;
   background: radial-gradient(
     ellipse at center,
-    rgba(201, 169, 110, 0.15) 0%,
-    rgba(201, 169, 110, 0.05) 30%,
+    rgba(201, 169, 110, 0.2) 0%,
+    rgba(201, 169, 110, 0.08) 30%,
     transparent 70%
   );
-  animation: lightPulse 0.3s ease-out;
+  animation: lightPulse 2s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
 }
 
@@ -560,67 +679,85 @@ const hideAI = computed(() => {
 @keyframes lightPulse {
   0% {
     opacity: 0;
-    transform: scale(0.9);
+    transform: scale(0.85);
+    filter: blur(20px);
+  }
+  20% {
+    opacity: 0.6;
+    transform: scale(0.95);
+    filter: blur(10px);
   }
   50% {
     opacity: 1;
     transform: scale(1.02);
+    filter: blur(0);
+  }
+  80% {
+    opacity: 1;
+    transform: scale(1.01);
+    filter: blur(0);
   }
   100% {
     opacity: 1;
     transform: scale(1);
+    filter: blur(0);
   }
 }
 
 @keyframes cloudFloat {
-  0%, 100% { transform: translate(-10%, -10%) rotate(0deg); }
-  50% { transform: translate(10%, 10%) rotate(2deg); }
+  0%, 100% { transform: translate(-10%, -10%) rotate(0deg) scale(1); }
+  25% { transform: translate(-5%, -5%) rotate(1deg) scale(1.02); }
+  50% { transform: translate(10%, 10%) rotate(2deg) scale(1.05); }
+  75% { transform: translate(5%, 5%) rotate(1deg) scale(1.03); }
 }
 
 /* ===== 水墨晕染方案样式 ===== */
 
-/* 宣纸纹理 - 增强留白艺术 */
+/* 宣纸纹理 - 增强留白艺术和笔触质感 */
 .rice-paper {
   position: absolute;
   inset: 0;
   background-image: 
-    radial-gradient(circle at 20% 30%, rgba(201, 169, 110, 0.04) 0%, transparent 50%),
-    radial-gradient(circle at 80% 70%, rgba(201, 169, 110, 0.03) 0%, transparent 40%),
-    radial-gradient(circle at 50% 50%, rgba(212, 184, 122, 0.02) 0%, transparent 60%),
-    url("data:image/svg+xml,%3Csvg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    /* 水墨笔触纹理 - 模拟宣纸的纤维质感 */
+    radial-gradient(circle at 20% 30%, rgba(201, 169, 110, 0.05) 0%, transparent 50%),
+    radial-gradient(circle at 80% 70%, rgba(201, 169, 110, 0.04) 0%, transparent 40%),
+    radial-gradient(circle at 50% 50%, rgba(212, 184, 122, 0.03) 0%, transparent 60%),
+    /* 纹理噪点 - 模拟宣纸的自然纹理 */
+    url("data:image/svg+xml,%3Csvg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.06'/%3E%3C/svg%3E"),
+    /* 笔触纹理 - 模拟毛笔的笔锋效果 */
+    url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='brush'%3E%3CfeTurbulence type='turbulence' baseFrequency='0.05' numOctaves='2' result='turbulence'/%3E%3CfeDisplacementMap in='SourceGraphic' in2='turbulence' scale='3' xChannelSelector='R' yChannelSelector='G'/%3E%3C/filter%3E%3Cpath d='M0,100 Q50,80 100,100 T200,100' stroke='rgba(201,169,110,0.02)' stroke-width='2' fill='none' filter='url(%23brush)'/%3E%3C/svg%3E");
   animation: paperTexture 20s linear infinite;
-  opacity: 0.9;
+  opacity: 0.95;
 }
 
-/* 宣纸纹理水印效果 */
+/* 宣纸纹理水印效果 - 增强留白意境 */
 .rice-paper::before {
   content: '';
   position: absolute;
   inset: 0;
   background: 
+    /* 网格水印 - 模拟宣纸的水印纹理 */
     repeating-linear-gradient(
       0deg,
       transparent,
       transparent 50px,
-      rgba(201, 169, 110, 0.01) 50px,
-      rgba(201, 169, 110, 0.01) 51px
+      rgba(201, 169, 110, 0.015) 50px,
+      rgba(201, 169, 110, 0.015) 51px
     ),
     repeating-linear-gradient(
       90deg,
       transparent,
       transparent 50px,
-      rgba(201, 169, 110, 0.01) 50px,
-      rgba(201, 169, 110, 0.01) 51px
-    );
+      rgba(201, 169, 110, 0.015) 50px,
+      rgba(201, 169, 110, 0.015) 51px
+    ),
+    /* 留白渐变 - 模拟水墨的留白空间 */
+    radial-gradient(ellipse at 30% 20%, rgba(255, 250, 240, 0.03) 0%, transparent 40%),
+    radial-gradient(ellipse at 70% 80%, rgba(255, 250, 240, 0.02) 0%, transparent 35%);
   pointer-events: none;
 }
 
-@keyframes paperTexture {
-  0% { transform: translate(0, 0); }
-  100% { transform: translate(-100px, -100px); }
-}
-
-/* 水墨晕染 - 增强层次感和过渡效果 */
+/* 水墨晕染 - 增强层次感和笔触质感 */
 .ink-wash-container {
   position: absolute;
   inset: 0;
@@ -630,14 +767,15 @@ const hideAI = computed(() => {
 .ink-wash {
   position: absolute;
   border-radius: 50%;
-  filter: blur(60px);
-  opacity: 0.18;
-  animation: inkFlow 0.4s ease-out;
-  /* 添加笔触质感边缘 */
+  filter: blur(80px);
+  opacity: 0.22;
+  animation: inkFlow 2.5s cubic-bezier(0.4, 0, 0.2, 1);
+  /* 添加笔触质感边缘 - 增强水墨层次感 */
   box-shadow: 
-    inset 0 0 60px rgba(201, 169, 110, 0.3),
-    inset -20px -20px 40px rgba(139, 122, 82, 0.2),
-    inset 20px 20px 40px rgba(212, 184, 122, 0.2);
+    inset 0 0 100px rgba(201, 169, 110, 0.4),
+    inset -30px -30px 60px rgba(139, 122, 82, 0.3),
+    inset 30px 30px 60px rgba(212, 184, 122, 0.3),
+    0 0 80px rgba(201, 169, 110, 0.1);
 }
 
 .wash-1 {
@@ -653,7 +791,7 @@ const hideAI = computed(() => {
     transparent 80%
   );
   animation: washFlow1 8s ease-in-out infinite;
-  /* 添加水墨晕染边缘 */
+  /* 添加水墨晕染边缘 - 不规则笔触 */
   border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
 }
 
@@ -670,7 +808,7 @@ const hideAI = computed(() => {
     transparent 80%
   );
   animation: washFlow2 10s ease-in-out infinite;
-  /* 不规则边缘 */
+  /* 不规则边缘 - 模拟笔触 */
   border-radius: 40% 60% 70% 30% / 40% 70% 30% 60%;
 }
 
@@ -688,7 +826,7 @@ const hideAI = computed(() => {
     transparent 80%
   );
   animation: washFlow3 12s ease-in-out infinite;
-  /* 流动边缘 */
+  /* 流动边缘 - 模拟水墨晕染 */
   border-radius: 50% 50% 40% 60% / 60% 40% 60% 40%;
 }
 
@@ -696,14 +834,23 @@ const hideAI = computed(() => {
   0%, 100% { 
     transform: translate(0, 0) scale(1) rotate(0deg); 
   }
-  25% { 
-    transform: translate(30px, 20px) scale(1.05) rotate(2deg); 
+  15% { 
+    transform: translate(20px, 15px) scale(1.02) rotate(1deg); 
   }
-  50% { 
-    transform: translate(50px, 30px) scale(1.1) rotate(0deg); 
+  30% { 
+    transform: translate(40px, 25px) scale(1.05) rotate(2deg); 
+  }
+  45% { 
+    transform: translate(50px, 30px) scale(1.08) rotate(1deg); 
+  }
+  60% { 
+    transform: translate(45px, 28px) scale(1.06) rotate(0deg); 
   }
   75% { 
-    transform: translate(20px, 10px) scale(1.03) rotate(-1deg); 
+    transform: translate(30px, 20px) scale(1.03) rotate(-1deg); 
+  }
+  90% { 
+    transform: translate(15px, 10px) scale(1.01) rotate(-0.5deg); 
   }
 }
 
@@ -711,11 +858,17 @@ const hideAI = computed(() => {
   0%, 100% { 
     transform: translate(0, 0) scale(1) rotate(0deg); 
   }
-  33% { 
-    transform: translate(-25px, -15px) scale(1.08) rotate(-2deg); 
+  20% { 
+    transform: translate(-20px, -15px) scale(1.03) rotate(-1deg); 
   }
-  66% { 
-    transform: translate(-40px, -20px) scale(1.15) rotate(1deg); 
+  40% { 
+    transform: translate(-35px, -25px) scale(1.07) rotate(-2deg); 
+  }
+  60% { 
+    transform: translate(-45px, -30px) scale(1.1) rotate(-1deg); 
+  }
+  80% { 
+    transform: translate(-30px, -20px) scale(1.05) rotate(0deg); 
   }
 }
 
@@ -723,23 +876,52 @@ const hideAI = computed(() => {
   0%, 100% { 
     transform: translate(-50%, -50%) scale(1) rotate(0deg); 
   }
+  25% { 
+    transform: translate(-50%, -50%) scale(1.08) rotate(2deg); 
+  }
   50% { 
-    transform: translate(-50%, -50%) scale(1.2) rotate(5deg); 
+    transform: translate(-50%, -50%) scale(1.15) rotate(3deg); 
+  }
+  75% { 
+    transform: translate(-50%, -50%) scale(1.08) rotate(2deg); 
   }
 }
 
 @keyframes inkFlow {
   0% {
     opacity: 0;
-    transform: scale(0.8);
+    transform: scale(0.6);
+    filter: blur(100px);
+  }
+  15% {
+    opacity: 0.1;
+    transform: scale(0.75);
+    filter: blur(80px);
   }
   30% {
+    opacity: 0.15;
+    transform: scale(0.85);
+    filter: blur(60px);
+  }
+  50% {
     opacity: 0.2;
-    transform: scale(0.9);
+    transform: scale(0.95);
+    filter: blur(40px);
+  }
+  70% {
+    opacity: 0.22;
+    transform: scale(1.02);
+    filter: blur(20px);
+  }
+  85% {
+    opacity: 0.22;
+    transform: scale(1.01);
+    filter: blur(10px);
   }
   100% {
-    opacity: 0.18;
+    opacity: 0.22;
     transform: scale(1);
+    filter: blur(80px);
   }
 }
 
@@ -748,7 +930,7 @@ const hideAI = computed(() => {
 .dramatic-scheme {
   position: absolute;
   inset: 0;
-  /* 添加深沉意境背景 */
+  /* 添加深沉意境背景 - 模拟浓墨效果 */
   background: linear-gradient(135deg, #0A0908 0%, #1A1714 30%, #2A2520 50%, #1A1714 70%, #0A0908 100%);
 }
 
@@ -756,12 +938,14 @@ const hideAI = computed(() => {
   opacity: 1;
 }
 
-/* 笔触容器 - 增强书写感 */
+/* 笔触容器 - 增强书写感和笔锋质感 */
 .brush-stroke-container {
   position: absolute;
   inset: 0;
   overflow: hidden;
   opacity: 0.7;
+  /* 添加笔触纹理背景 */
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='brushTexture'%3E%3CfeTurbulence type='turbulence' baseFrequency='0.04' numOctaves='3' result='turbulence'/%3E%3CfeDisplacementMap in='SourceGraphic' in2='turbulence' scale='5' xChannelSelector='R' yChannelSelector='G'/%3E%3C/filter%3E%3Cpath d='M0,200 Q100,150 200,200 T400,200' stroke='rgba(201,169,110,0.03)' stroke-width='3' fill='none' filter='url(%23brushTexture)'/%3E%3C/svg%3E");
 }
 
 .brush-strokes {
@@ -769,131 +953,237 @@ const hideAI = computed(() => {
   height: 100%;
 }
 
-/* 笔触效果 - 增加笔触质感 */
+/* 笔触效果 - 增加笔触质感和笔锋效果 */
 .stroke {
   fill: none;
   stroke-linecap: round;
   stroke-linejoin: round;
-  animation: brushDraw 0.5s ease-out forwards;
+  animation: brushDraw 3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
   opacity: 0;
   filter: url(#brushTexture);
 }
 
-/* 笔触1 - 主笔触 */
+/* 笔触1 - 主笔触（浓墨） */
 .stroke-1 {
   stroke-dasharray: 250;
   stroke-dashoffset: 250;
-  stroke-width: 4;
+  stroke-width: 5;
+  /* 添加笔锋阴影效果 */
+  filter: drop-shadow(0 0 3px rgba(201, 169, 110, 0.5));
 }
 
-/* 笔触2 - 副笔触 */
+/* 笔触2 - 副笔触（中墨） */
 .stroke-2 {
   stroke-dasharray: 220;
   stroke-dashoffset: 220;
-  stroke-width: 3;
-  animation-delay: 0.08s;
+  stroke-width: 3.5;
+  animation-delay: 0.2s;
+  filter: drop-shadow(0 0 2px rgba(212, 184, 122, 0.4));
 }
 
-/* 笔触3 - 辅助笔触 */
+/* 笔触3 - 辅助笔触（淡墨） */
 .stroke-3 {
   stroke-dasharray: 190;
   stroke-dashoffset: 190;
-  stroke-width: 2;
-  animation-delay: 0.16s;
+  stroke-width: 2.5;
+  animation-delay: 0.4s;
+  filter: drop-shadow(0 0 1px rgba(139, 122, 82, 0.3));
 }
 
-/* 笔触4 - 装饰笔触 */
+/* 笔触4 - 装饰笔触（轻墨） */
 .stroke-4 {
   stroke-dasharray: 160;
   stroke-dashoffset: 160;
-  stroke-width: 1.5;
-  animation-delay: 0.24s;
+  stroke-width: 2;
+  animation-delay: 0.6s;
+  opacity: 0.6;
 }
 
 @keyframes brushDraw {
   0% {
     stroke-dashoffset: 100%;
     opacity: 0;
+    filter: blur(5px);
+  }
+  10% {
+    opacity: 0.3;
+    filter: blur(3px);
   }
   20% {
+    opacity: 0.7;
+    filter: blur(1px);
+  }
+  30% {
     opacity: 1;
+    filter: blur(0);
+  }
+  60% {
+    stroke-dashoffset: 20%;
+    opacity: 1;
+    filter: blur(0);
+  }
+  80% {
+    stroke-dashoffset: 5%;
+    opacity: 0.9;
+    filter: blur(0);
   }
   100% {
     stroke-dashoffset: 0;
     opacity: 1;
+    filter: blur(0);
   }
 }
 
 .dramatic-scheme .ink-wash {
-  opacity: 0.22;
-  filter: blur(80px);
-  /* 添加水墨质感边缘 */
+  opacity: 0.25;
+  filter: blur(100px);
+  /* 添加水墨质感边缘 - 增强层次感 */
   box-shadow: 
-    inset 0 0 80px rgba(201, 169, 110, 0.4),
-    inset -30px -30px 50px rgba(139, 122, 82, 0.3),
-    inset 30px 30px 50px rgba(212, 184, 122, 0.3);
+    inset 0 0 120px rgba(201, 169, 110, 0.5),
+    inset -40px -40px 80px rgba(139, 122, 82, 0.4),
+    inset 40px 40px 80px rgba(212, 184, 122, 0.4),
+    0 0 100px rgba(201, 169, 110, 0.15);
 }
 
 .dramatic-scheme .ink-wash.wash-1 {
-  animation: dramaticWash1 0.5s ease-out;
-  /* 增强主水墨效果 */
+  animation: dramaticWash1 3s cubic-bezier(0.4, 0, 0.2, 1);
+  /* 增强主水墨效果 - 不规则边缘 */
   border-radius: 55% 45% 35% 65% / 55% 40% 60% 45%;
 }
 
 .dramatic-scheme .ink-wash.wash-2 {
-  animation: dramaticWash2 0.5s ease-out 0.1s both;
-  /* 增强副水墨效果 */
+  animation: dramaticWash2 3s cubic-bezier(0.4, 0, 0.2, 1) 0.3s both;
+  /* 增强副水墨效果 - 不对称边缘 */
   border-radius: 45% 55% 65% 35% / 45% 60% 40% 55%;
 }
 
 .dramatic-scheme .ink-wash.wash-3 {
-  animation: dramaticWash3 0.5s ease-out 0.2s both;
-  /* 增强中心水墨效果 */
+  animation: dramaticWash3 3s cubic-bezier(0.4, 0, 0.2, 1) 0.6s both;
+  /* 增强中心水墨效果 - 流动边缘 */
   border-radius: 50% 50% 45% 55% / 55% 45% 55% 45%;
 }
 
 @keyframes dramaticWash1 {
   0% {
     opacity: 0;
-    transform: translate(-100px, -100px) scale(0.5) rotate(-10deg);
+    transform: translate(-100px, -100px) scale(0.4) rotate(-15deg);
+    filter: blur(150px);
   }
-  40% {
-    opacity: 0.3;
-    transform: translate(-50px, -50px) scale(0.75) rotate(-5deg);
+  15% {
+    opacity: 0.1;
+    transform: translate(-80px, -80px) scale(0.55) rotate(-10deg);
+    filter: blur(120px);
+  }
+  30% {
+    opacity: 0.15;
+    transform: translate(-60px, -60px) scale(0.7) rotate(-5deg);
+    filter: blur(90px);
+  }
+  45% {
+    opacity: 0.2;
+    transform: translate(-30px, -30px) scale(0.85) rotate(-2deg);
+    filter: blur(60px);
+  }
+  60% {
+    opacity: 0.23;
+    transform: translate(-10px, -10px) scale(0.95) rotate(-1deg);
+    filter: blur(40px);
+  }
+  75% {
+    opacity: 0.25;
+    transform: translate(-5px, -5px) scale(1.02) rotate(0deg);
+    filter: blur(20px);
+  }
+  90% {
+    opacity: 0.25;
+    transform: translate(0, 0) scale(1.01) rotate(0deg);
+    filter: blur(10px);
   }
   100% {
-    opacity: 0.22;
+    opacity: 0.25;
     transform: translate(0, 0) scale(1) rotate(0deg);
+    filter: blur(100px);
   }
 }
 
 @keyframes dramaticWash2 {
   0% {
     opacity: 0;
-    transform: translate(100px, 100px) scale(0.5) rotate(10deg);
+    transform: translate(100px, 100px) scale(0.4) rotate(15deg);
+    filter: blur(150px);
   }
-  40% {
-    opacity: 0.3;
-    transform: translate(50px, 50px) scale(0.75) rotate(5deg);
+  15% {
+    opacity: 0.1;
+    transform: translate(80px, 80px) scale(0.55) rotate(10deg);
+    filter: blur(120px);
+  }
+  30% {
+    opacity: 0.15;
+    transform: translate(60px, 60px) scale(0.7) rotate(5deg);
+    filter: blur(90px);
+  }
+  45% {
+    opacity: 0.2;
+    transform: translate(30px, 30px) scale(0.85) rotate(2deg);
+    filter: blur(60px);
+  }
+  60% {
+    opacity: 0.23;
+    transform: translate(10px, 10px) scale(0.95) rotate(1deg);
+    filter: blur(40px);
+  }
+  75% {
+    opacity: 0.25;
+    transform: translate(5px, 5px) scale(1.02) rotate(0deg);
+    filter: blur(20px);
+  }
+  90% {
+    opacity: 0.25;
+    transform: translate(0, 0) scale(1.01) rotate(0deg);
+    filter: blur(10px);
   }
   100% {
-    opacity: 0.22;
+    opacity: 0.25;
     transform: translate(0, 0) scale(1) rotate(0deg);
+    filter: blur(100px);
   }
 }
 
 @keyframes dramaticWash3 {
   0% {
     opacity: 0;
-    transform: translate(-50%, -50%) scale(0.3) rotate(-5deg);
+    transform: translate(-50%, -50%) scale(0.25) rotate(-10deg);
+    filter: blur(150px);
+  }
+  20% {
+    opacity: 0.12;
+    transform: translate(-50%, -50%) scale(0.45) rotate(-6deg);
+    filter: blur(120px);
   }
   40% {
-    opacity: 0.3;
-    transform: translate(-50%, -50%) scale(0.6) rotate(-2deg);
+    opacity: 0.18;
+    transform: translate(-50%, -50%) scale(0.65) rotate(-3deg);
+    filter: blur(80px);
+  }
+  60% {
+    opacity: 0.23;
+    transform: translate(-50%, -50%) scale(0.85) rotate(-1deg);
+    filter: blur(40px);
+  }
+  80% {
+    opacity: 0.25;
+    transform: translate(-50%, -50%) scale(1.02) rotate(0deg);
+    filter: blur(20px);
+  }
+  90% {
+    opacity: 0.25;
+    transform: translate(-50%, -50%) scale(1.01) rotate(0deg);
+    filter: blur(10px);
   }
   100% {
-    opacity: 0.22;
+    opacity: 0.25;
     transform: translate(-50%, -50%) scale(1) rotate(0deg);
+    filter: blur(100px);
   }
 }
 
@@ -1121,17 +1411,39 @@ const hideAI = computed(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  animation: emblemFadeIn 0.4s ease-out 0.15s both;
+  animation: emblemFadeIn 2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 @keyframes emblemFadeIn {
   0% {
     opacity: 0;
-    transform: scale(0.7) rotate(-10deg);
+    transform: scale(0.5) rotate(-15deg);
+    filter: blur(20px);
+  }
+  20% {
+    opacity: 0.3;
+    transform: scale(0.7) rotate(-8deg);
+    filter: blur(10px);
+  }
+  40% {
+    opacity: 0.6;
+    transform: scale(0.85) rotate(-3deg);
+    filter: blur(5px);
+  }
+  60% {
+    opacity: 0.85;
+    transform: scale(0.95) rotate(-1deg);
+    filter: blur(2px);
+  }
+  80% {
+    opacity: 0.95;
+    transform: scale(1.02) rotate(0deg);
+    filter: blur(0);
   }
   100% {
     opacity: 1;
     transform: scale(1) rotate(0deg);
+    filter: blur(0);
   }
 }
 
@@ -1301,146 +1613,207 @@ const hideAI = computed(() => {
 /* 移动设备 - 优化触摸交互和性能 */
 @media (max-width: 768px) {
   .classical-frame {
-    inset: 20px;
+    inset: 15px;
   }
   
   .frame-border.top,
   .frame-border.bottom {
-    left: 30px;
-    right: 30px;
+    left: 25px;
+    right: 25px;
   }
   
   .frame-border.left,
   .frame-border.right {
-    top: 30px;
-    bottom: 30px;
+    top: 25px;
+    bottom: 25px;
   }
   
   .frame-corner {
-    width: 40px;
-    height: 40px;
+    width: 30px;
+    height: 30px;
   }
   
   .center-emblem {
-    width: 200px;
-    height: 200px;
+    width: 180px;
+    height: 180px;
   }
   
   .center-icon {
-    font-size: 48px;
+    font-size: 42px;
   }
   
   .center-glow {
-    width: 120px;
-    height: 120px;
+    width: 100px;
+    height: 100px;
   }
   
   .classical-text {
-    font-size: 20px;
-    bottom: 12%;
+    font-size: 18px;
+    bottom: 10%;
   }
   
   .main-text {
-    letter-spacing: 4px;
-    margin: 0 8px;
+    letter-spacing: 3px;
+    margin: 0 6px;
   }
   
   .bottom-decoration {
-    bottom: 6%;
-    gap: 12px;
+    bottom: 5%;
+    gap: 10px;
   }
   
   .deco-line {
-    width: 50px;
+    width: 40px;
   }
   
   .deco-pattern {
-    width: 8px;
-    height: 8px;
+    width: 6px;
+    height: 6px;
   }
   
-  /* 移动设备水墨效果优化 */
-  .wash-1 { width: 300px; height: 300px; }
-  .wash-2 { width: 250px; height: 250px; }
-  .wash-3 { width: 200px; height: 200px; }
+  /* 移动设备水墨效果优化 - 增强笔触质感 */
+  .wash-1 { width: 280px; height: 280px; filter: blur(40px); }
+  .wash-2 { width: 220px; height: 220px; filter: blur(35px); }
+  .wash-3 { width: 180px; height: 180px; filter: blur(30px); }
   
   .ink-wash {
-    filter: blur(40px);
-    /* 减少动画复杂度以提升性能 */
-    animation-duration: 0.3s !important;
+    opacity: 0.16;
+    /* 移动设备缩短动画时长以提升性能 */
+    animation-duration: 1.5s !important;
+    /* 增强笔触边缘 */
+    box-shadow: 
+      inset 0 0 60px rgba(201, 169, 110, 0.35),
+      inset -20px -20px 40px rgba(139, 122, 82, 0.25),
+      inset 20px 20px 40px rgba(212, 184, 122, 0.25),
+      0 0 50px rgba(201, 169, 110, 0.08);
+  }
+  
+  /* 移动设备宣纸纹理优化 */
+  .rice-paper {
+    opacity: 0.85;
+    /* 移动设备简化纹理以提升性能 */
+    background-image: 
+      radial-gradient(circle at 20% 30%, rgba(201, 169, 110, 0.04) 0%, transparent 50%),
+      radial-gradient(circle at 80% 70%, rgba(201, 169, 110, 0.03) 0%, transparent 40%);
   }
   
   /* 移动设备云纹优化 */
   .cloud-decoration {
-    opacity: 0.6;
+    opacity: 0.4;
   }
   
   /* 移动设备笔触优化 */
   .brush-strokes {
-    opacity: 0.5;
+    opacity: 0.35;
+  }
+  
+  .stroke-1 { stroke-width: 4; }
+  .stroke-2 { stroke-width: 3; }
+  .stroke-3 { stroke-width: 2; }
+  .stroke-4 { stroke-width: 1.5; }
+  
+  /* 移动设备页面过渡动画优化 */
+  .page-unfurl-enter-active {
+    animation-duration: 1.2s !important;
+  }
+  
+  .page-unfurl-leave-active {
+    animation-duration: 0.8s !important;
+  }
+  
+  .ink-transition-enter-active,
+  .ink-transition-leave-active {
+    transition-duration: 0.6s !important;
   }
 }
 
 /* 平板设备 - 平衡视觉效果和性能 */
 @media (min-width: 769px) and (max-width: 1024px) {
   .classical-frame {
-    inset: 30px;
+    inset: 25px;
   }
   
   .center-emblem {
-    width: 250px;
-    height: 250px;
+    width: 220px;
+    height: 220px;
   }
   
   .center-icon {
-    font-size: 60px;
+    font-size: 54px;
   }
   
   .classical-text {
-    font-size: 24px;
+    font-size: 22px;
   }
   
   /* 平板设备水墨效果优化 */
-  .wash-1 { width: 400px; height: 400px; }
-  .wash-2 { width: 350px; height: 350px; }
-  .wash-3 { width: 280px; height: 280px; }
+  .wash-1 { width: 380px; height: 380px; filter: blur(55px); }
+  .wash-2 { width: 320px; height: 320px; filter: blur(45px); }
+  .wash-3 { width: 260px; height: 260px; filter: blur(40px); }
   
   .ink-wash {
     filter: blur(50px);
     animation-duration: 0.35s !important;
+    /* 平板设备增强笔触质感 */
+    box-shadow: 
+      inset 0 0 80px rgba(201, 169, 110, 0.38),
+      inset -25px -25px 50px rgba(139, 122, 82, 0.28),
+      inset 25px 25px 50px rgba(212, 184, 122, 0.28),
+      0 0 65px rgba(201, 169, 110, 0.09);
+  }
+  
+  /* 平板设备宣纸纹理优化 */
+  .rice-paper {
+    opacity: 0.9;
   }
 }
 
-/* 大屏幕设备 */
+/* 大屏幕设备 - 增强水墨效果 */
 @media (min-width: 1921px) {
   .classical-frame {
-    inset: 60px;
+    inset: 50px;
   }
   
   .frame-corner {
-    width: 80px;
-    height: 80px;
+    width: 70px;
+    height: 70px;
   }
   
   .center-emblem {
-    width: 400px;
-    height: 400px;
+    width: 380px;
+    height: 380px;
   }
   
   .center-icon {
-    font-size: 96px;
+    font-size: 88px;
   }
   
   .classical-text {
-    font-size: 36px;
+    font-size: 32px;
   }
   
-  .wash-1 { width: 800px; height: 800px; }
-  .wash-2 { width: 700px; height: 700px; }
-  .wash-3 { width: 600px; height: 600px; }
+  .wash-1 { width: 750px; height: 750px; }
+  .wash-2 { width: 650px; height: 650px; }
+  .wash-3 { width: 550px; height: 550px; }
   
   .ink-wash {
-    filter: blur(80px);
+    filter: blur(90px);
+    /* 大屏幕增强笔触质感 */
+    box-shadow: 
+      inset 0 0 120px rgba(201, 169, 110, 0.45),
+      inset -35px -35px 70px rgba(139, 122, 82, 0.35),
+      inset 35px 35px 70px rgba(212, 184, 122, 0.35),
+      0 0 100px rgba(201, 169, 110, 0.12);
+  }
+  
+  /* 大屏幕增强宣纸纹理 */
+  .rice-paper {
+    opacity: 1;
+    background-image: 
+      radial-gradient(circle at 20% 30%, rgba(201, 169, 110, 0.06) 0%, transparent 50%),
+      radial-gradient(circle at 80% 70%, rgba(201, 169, 110, 0.05) 0%, transparent 40%),
+      radial-gradient(circle at 50% 50%, rgba(212, 184, 122, 0.04) 0%, transparent 60%),
+      url("data:image/svg+xml,%3Csvg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.08'/%3E%3C/svg%3E");
   }
 }
 
@@ -1590,45 +1963,65 @@ const hideAI = computed(() => {
 
 /* 轻盈飘逸方案的快速页面切换 */
 .scheme-light .page-unfurl-enter-active {
-  animation: pageUnfurlIn 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  animation: pageUnfurlIn 2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
 .scheme-light .page-unfurl-leave-active {
-  animation: pageUnfurlOut 0.3s cubic-bezier(0.55, 0, 1, 0.45);
+  animation: pageUnfurlOut 1.5s cubic-bezier(0.55, 0, 1, 0.45);
 }
 
 /* 水墨晕染方案的适中页面切换 */
 .scheme-ink-wash .page-unfurl-enter-active {
-  animation: pageUnfurlIn 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  animation: pageUnfurlIn 2.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
 .scheme-ink-wash .page-unfurl-leave-active {
-  animation: pageUnfurlOut 0.4s cubic-bezier(0.55, 0, 1, 0.45);
+  animation: pageUnfurlOut 2s cubic-bezier(0.55, 0, 1, 0.45);
 }
 
 /* 笔走龙蛇方案的戏剧性页面切换 */
 .scheme-dramatic .page-unfurl-enter-active {
-  animation: pageUnfurlIn 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  animation: pageUnfurlIn 3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
 .scheme-dramatic .page-unfurl-leave-active {
-  animation: pageUnfurlOut 0.5s cubic-bezier(0.55, 0, 1, 0.45);
+  animation: pageUnfurlOut 2.5s cubic-bezier(0.55, 0, 1, 0.45);
 }
 
 /* 默认页面展开动画（兼容无scheme的情况） */
 .page-unfurl-enter-active {
-  animation: pageUnfurlIn 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  animation: pageUnfurlIn 2.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
 .page-unfurl-leave-active {
-  animation: pageUnfurlOut 0.4s cubic-bezier(0.55, 0, 1, 0.45);
+  animation: pageUnfurlOut 2s cubic-bezier(0.55, 0, 1, 0.45);
 }
 
 @keyframes pageUnfurlIn {
   0% {
     opacity: 0;
+    transform: scale(0.85) translateY(50px);
+    filter: blur(20px);
+  }
+  20% {
+    opacity: 0.3;
     transform: scale(0.9) translateY(30px);
-    filter: blur(12px);
+    filter: blur(15px);
+  }
+  40% {
+    opacity: 0.6;
+    transform: scale(0.95) translateY(15px);
+    filter: blur(8px);
+  }
+  60% {
+    opacity: 0.85;
+    transform: scale(0.98) translateY(5px);
+    filter: blur(3px);
+  }
+  80% {
+    opacity: 0.95;
+    transform: scale(1.01) translateY(-2px);
+    filter: blur(0);
   }
   100% {
     opacity: 1;
@@ -1641,11 +2034,32 @@ const hideAI = computed(() => {
   0% {
     opacity: 1;
     transform: scale(1) translateY(0);
+    filter: blur(0);
+  }
+  20% {
+    opacity: 0.9;
+    transform: scale(1.01) translateY(-5px);
+    filter: blur(2px);
+  }
+  40% {
+    opacity: 0.7;
+    transform: scale(1.02) translateY(-10px);
+    filter: blur(4px);
+  }
+  60% {
+    opacity: 0.5;
+    transform: scale(1.03) translateY(-15px);
+    filter: blur(6px);
+  }
+  80% {
+    opacity: 0.25;
+    transform: scale(1.04) translateY(-18px);
+    filter: blur(10px);
   }
   100% {
     opacity: 0;
     transform: scale(1.05) translateY(-20px);
-    filter: blur(6px);
+    filter: blur(15px);
   }
 }
 

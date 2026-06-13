@@ -217,8 +217,8 @@ export const assistantApi = {
       http.post<{ success: boolean; data: any }>('/assistant/chat', { message, ai_id, enhancedCheck }),
   chatStream: (message: string, ai_id?: number, enhancedCheck?: boolean) =>
       http.post('/assistant/chat-stream', { message, ai_id, enhancedCheck }),
-  getAIList: () => http.get<{ success: boolean; data: any[] }>('/admin/ai-configs'),
-  getAllList: () => http.get<{ success: boolean; data: any[] }>('/admin/ai-configs'), // 兼容别名
+  getAIList: () => http.get<{ success: boolean; data: any[] }>('/assistant/ai-configs'),
+  getAllList: () => http.get<{ success: boolean; data: any[] }>('/assistant/ai-configs'), // 兼容别名
   getHistory: () => http.get<{ success: boolean; data: any[] }>('/assistant/history'),
   clearHistory: () => http.delete('/assistant/clear'),
   testAI: (id: number, message?: string) =>

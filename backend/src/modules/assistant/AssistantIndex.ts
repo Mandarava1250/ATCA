@@ -64,7 +64,8 @@ async function callAIProvider(ai: any, message: string): Promise<string> {
   
   const systemPrompt = ai.system_prompt || '你是华夏营造的AI助手，精通中国古代建筑文化。请用专业但易懂的方式回答用户的问题。';
   const temperatureRaw = ai.temperature != null ? Number(ai.temperature) : NaN;
-  const temperature = isNaN(temperatureRaw) || temperatureRaw === 0 ? 0.7 : Math.min(Math.max(temperatureRaw, 0.01), 2);
+  // 只在NaN时使用默认值0.7，保留用户明确设置的0值（0表示完全确定性输出）
+  const temperature = isNaN(temperatureRaw) ? 0.7 : Math.min(Math.max(temperatureRaw, 0), 2);
   const maxTokensRaw = ai.max_tokens != null ? Number(ai.max_tokens) : NaN;
   const maxTokens = isNaN(maxTokensRaw) || maxTokensRaw <= 0 ? 2048 : Math.min(maxTokensRaw, 8192);
 
@@ -1490,6 +1491,27 @@ router.post('/local-ai/initialize', asyncHandler(async (_req, res) => {
       error: { message: '初始化失败: ' + error.message }
     });
   }
+}));
+
+/**
+ * 公开的AI配置列表接口
+ * GET /ai-configs
+ * 返回所有启用的AI配置（不含敏感信息）
+ */
+router.get('/ai-configs', asyncHandler(async (_req, res) => {
+  if (isMockMode()) {
+    res.json({
+      success: true,
+      data: [
+        { ai_id: 1, name: '华夏营造AI', provider: 'qwan', model: 'qwen-turbo', is_active: true, is_default: true },
+        { ai_id: 2, name: '智能顾问', provider: 'kimi', model: 'moonshot-v1-8k', is_active: true, is_default: false },
+      ]
+    });
+    return;
+  }
+
+  const result = await query('user', 'SELECT ai_id, name, provider, model, is_active, is_default, max_concurrent, max_queue_size, queue_timeout FROM [ai_config] WHERE [is_active] = 1');
+  res.json({ success: true, data: result });
 }));
 
 export default router;

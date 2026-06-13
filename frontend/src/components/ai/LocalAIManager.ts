@@ -106,6 +106,11 @@ class LocalAIManager {
         headers: { 'Content-Type': 'application/json' }
       });
       
+      // 检查HTTP响应状态
+      if (!response.ok) {
+        throw new Error(`HTTP error: ${response.status} ${response.statusText}`);
+      }
+      
       const result: ApiResponse = await response.json();
       
       if (!result.success) {
@@ -176,6 +181,11 @@ class LocalAIManager {
         })
       });
       
+      // 检查HTTP响应状态
+      if (!response.ok) {
+        throw new Error(`HTTP error: ${response.status} ${response.statusText}`);
+      }
+      
       const result: ApiResponse<QueryResult> = await response.json();
       
       // 等待进度动画完成
@@ -216,6 +226,11 @@ class LocalAIManager {
       body: JSON.stringify({ response })
     });
     
+    // 检查HTTP响应状态
+    if (!res.ok) {
+      throw new Error(`HTTP error: ${res.status} ${res.statusText}`);
+    }
+    
     const result: ApiResponse<ConflictReport> = await res.json();
     
     if (!result.success) {
@@ -230,6 +245,12 @@ class LocalAIManager {
    */
   async getStats(): Promise<any> {
     const response = await fetch(`${API_BASE}/local-ai/stats`);
+    
+    // 检查HTTP响应状态
+    if (!response.ok) {
+      throw new Error(`HTTP error: ${response.status} ${response.statusText}`);
+    }
+    
     const result: ApiResponse = await response.json();
     
     if (!result.success) {

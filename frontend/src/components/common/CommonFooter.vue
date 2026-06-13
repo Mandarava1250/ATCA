@@ -50,7 +50,9 @@
 
       <!-- Bottom -->
       <div class="footer-bottom">
-        <p> 2024 华夏营造 Ancient Chinese Architecture Digital Exhibition &nbsp;|&nbsp; 京ICP备2024000000号</p>
+        <p> 2024 华夏营造 Ancient Chinese Architecture Digital Exhibition &nbsp;|&nbsp; 
+          <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer" class="icp-link">沪ICP备2026025927号</a>
+        </p>
       </div>
     </div>
   </footer>
@@ -169,6 +171,14 @@
   color: var(--text-muted);
   font-size: 0.75rem;
   letter-spacing: 0.03em;
+}
+.footer-bottom .icp-link {
+  color: inherit;
+  text-decoration: none;
+}
+.footer-bottom .icp-link:hover {
+  color: var(--gold);
+  text-decoration: underline;
 }
 
 @media (max-width: 768px) {

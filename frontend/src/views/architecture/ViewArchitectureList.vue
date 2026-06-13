@@ -76,8 +76,7 @@
         <!-- 省份地图 -->
         <!-- Province map selector removed - use /architecture/map for full map -->
 
-        <!-- 朝代时间轴 -->
-        <DynastyTimeline v-model="filterDynasty" />
+        <!-- 朝代时间轴 - 已移除，改用侧边栏筛选 -->
 
         <div class="sort-bar">
           <router-link to="/architecture/map" class="sort-btn map-btn">

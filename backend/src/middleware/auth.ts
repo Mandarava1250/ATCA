@@ -16,17 +16,90 @@ export interface AuthRequest extends Request {
   };
 }
 
-// 内存中的Token黑名单（生产环境应使用Redis）
-const tokenBlacklist = new Set<string>();
-
-export function addToBlacklist(token: string): void {
-  tokenBlacklist.add(token);
-  // 24小时后自动清理
-  setTimeout(() => tokenBlacklist.delete(token), 24 * 60 * 60 * 1000);
+// Token 黑名单存储接口
+interface TokenBlacklistStore {
+  add(token: string, ttlSeconds: number): Promise<void>;
+  has(token: string): Promise<boolean>;
 }
 
-export function isBlacklisted(token: string): boolean {
-  return tokenBlacklist.has(token);
+// 内存存储实现（开发环境使用）
+class MemoryBlacklistStore implements TokenBlacklistStore {
+  private store = new Set<string>();
+
+  async add(token: string, ttlSeconds: number): Promise<void> {
+    this.store.add(token);
+    setTimeout(() => this.store.delete(token), ttlSeconds * 1000);
+  }
+
+  async has(token: string): Promise<boolean> {
+    return this.store.has(token);
+  }
+}
+
+// Redis 存储实现（生产环境使用）
+class RedisBlacklistStore implements TokenBlacklistStore {
+  private client: any = null;
+
+  private async ensureClient(): Promise<void> {
+    if (this.client) return;
+    
+    try {
+      // 动态加载 ioredis，避免强制依赖
+      // @ts-ignore
+      const redisModule = require('ioredis');
+      const RedisClass = redisModule.default || redisModule;
+      this.client = new RedisClass({
+        host: process.env.REDIS_HOST || 'localhost',
+        port: parseInt(process.env.REDIS_PORT || '6379'),
+        password: process.env.REDIS_PASSWORD,
+        db: parseInt(process.env.REDIS_DB || '0'),
+      });
+      await this.client.ping();
+    } catch (error) {
+      console.warn('[Auth] Redis 连接失败，降级到内存存储:', (error as Error).message);
+      this.client = null;
+    }
+  }
+
+  async add(token: string, ttlSeconds: number): Promise<void> {
+    await this.ensureClient();
+    if (this.client) {
+      try {
+        await this.client.set(`blacklist:${token}`, 'true', 'EX', ttlSeconds);
+      } catch (error) {
+        console.warn('[Auth] Redis 添加黑名单失败:', (error as Error).message);
+      }
+    }
+  }
+
+  async has(token: string): Promise<boolean> {
+    await this.ensureClient();
+    if (this.client) {
+      try {
+        const result = await this.client.get(`blacklist:${token}`);
+        return result === 'true';
+      } catch (error) {
+        console.warn('[Auth] Redis 查询黑名单失败:', (error as Error).message);
+      }
+    }
+    return false;
+  }
+}
+
+// 根据环境选择存储实现
+const isProduction = config.nodeEnv === 'production';
+const BLACKLIST_TTL_SECONDS = 24 * 60 * 60; // 24小时
+
+const blacklistStore: TokenBlacklistStore = isProduction
+  ? new RedisBlacklistStore()
+  : new MemoryBlacklistStore();
+
+export async function addToBlacklist(token: string): Promise<void> {
+  await blacklistStore.add(token, BLACKLIST_TTL_SECONDS);
+}
+
+export async function isBlacklisted(token: string): Promise<boolean> {
+  return blacklistStore.has(token);
 }
 
 export function generateTokens(userId: number, username: string, role: string): { accessToken: string; refreshToken: string } {
@@ -45,9 +118,9 @@ export function generateTokens(userId: number, username: string, role: string): 
   return { accessToken, refreshToken };
 }
 
-export function verifyAccessToken(token: string): { userId: number; username: string; role: string } | null {
+export async function verifyAccessToken(token: string): Promise<{ userId: number; username: string; role: string } | null> {
   try {
-    if (isBlacklisted(token)) return null;
+    if (await isBlacklisted(token)) return null;
     const decoded = jwt.verify(token, config.jwt.secret as Secret) as jwt.JwtPayload;
     if (decoded.type !== 'access') return null;
     return { userId: decoded.userId as number, username: decoded.username as string, role: decoded.role as string };
@@ -66,7 +139,7 @@ export function verifyRefreshToken(token: string): { userId: number; username: s
   }
 }
 
-export function authMiddleware(req: AuthRequest, res: Response, next: NextFunction): void {
+export async function authMiddleware(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
   // 支持Header和Query参数（SSE EventSource无法自定义Header）
   let token: string | null = null;
   const authHeader = req.headers.authorization;
@@ -81,7 +154,7 @@ export function authMiddleware(req: AuthRequest, res: Response, next: NextFuncti
     return;
   }
 
-  const decoded = verifyAccessToken(token);
+  const decoded = await verifyAccessToken(token);
   if (!decoded) {
     res.status(401).json({ success: false, error: { code: 'AUTH_002', message: '令牌已过期或无效' } });
     return;
@@ -117,7 +190,7 @@ export async function checkMuteMiddleware(req: AuthRequest, res: Response, next:
   next();
 }
 
-export function optionalAuthMiddleware(req: AuthRequest, res: Response, next: NextFunction): void {
+export async function optionalAuthMiddleware(req: AuthRequest, _res: Response, next: NextFunction): Promise<void> {
   let token: string | null = null;
   const authHeader = req.headers.authorization;
   if (authHeader && authHeader.startsWith('Bearer ')) {
@@ -126,7 +199,7 @@ export function optionalAuthMiddleware(req: AuthRequest, res: Response, next: Ne
     token = req.query.token;
   }
   if (token) {
-    const decoded = verifyAccessToken(token);
+    const decoded = await verifyAccessToken(token);
     if (decoded) {
       req.user = decoded;
     }

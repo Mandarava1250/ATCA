@@ -11,19 +11,19 @@ export type AnimationScheme = 'light' | 'ink-wash' | 'dramatic';
  *    - 特点：轻巧、柔和、现代
  *    - 适用场景：日常浏览、快速操作、注重效率的场景
  *    - 复杂度：★☆☆☆☆
- *    - 时长：0.3秒
+ *    - 时长：2秒
  * 
  * 2. ink-wash（水墨晕染）- 经典水墨晕染效果
  *    - 特点：层次分明、意境深远、文化气息浓厚
  *    - 适用场景：主页面切换、内容展示、文化体验
  *    - 复杂度：★★★☆☆
- *    - 时长：0.4秒
+ *    - 时长：2.5秒
  * 
  * 3. dramatic（笔走龙蛇）- 大气磅礴的书写效果
  *    - 特点：动感强烈、视觉冲击、戏剧性
  *    - 适用场景：重要功能切换、特殊时刻、深度体验
  *    - 复杂度：★★★★★
- *    - 时长：0.5秒
+ *    - 时长：3秒
  */
 
 export interface AnimationSettings {
@@ -94,13 +94,13 @@ export const useAnimationSettingsStore = defineStore('animationSettings', () => 
   function getSchemeDuration(): number {
     switch (scheme.value) {
       case 'light':
-        return 300; // 0.3秒
+        return 2000; // 2秒 - 轻盈飘逸
       case 'ink-wash':
-        return 400; // 0.4秒
+        return 2500; // 2.5秒 - 水墨晕染
       case 'dramatic':
-        return 500; // 0.5秒
+        return 3000; // 3秒 - 笔走龙蛇
       default:
-        return 400;
+        return 2500;
     }
   }
 

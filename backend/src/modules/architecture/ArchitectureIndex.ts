@@ -70,12 +70,15 @@ async function handleListQuery(req: any, res: any, isMock: boolean) {
   let favSelect = ', CAST(0 AS BIT) AS is_favorited';
   if (userId) {
     logger.info('用户已登录，查询收藏状态', { userId });
-    favJoin = ` LEFT JOIN [architecture_favorites] f ON a.[architecture_id] = f.[architecture_id] AND f.[user_id] = ${parseInt(userId)}`;
+    favJoin = ` LEFT JOIN [architecture_favorites] f ON a.[architecture_id] = f.[architecture_id] AND f.[user_id] = @userId`;
     favSelect = ', CAST(CASE WHEN f.[user_id] IS NOT NULL THEN 1 ELSE 0 END AS BIT) AS is_favorited';
+    params.userId = String(parseInt(userId));
   }
 
   try {
-    const items = await query('architecture', `SELECT a.*, ISNULL(p.[total_views], 0) AS view_count${favSelect} FROM [ancient_architecture] a LEFT JOIN [architecture_popularity] p ON a.[architecture_id] = p.[architecture_id]${favJoin} ${whereClause} ORDER BY a.[architecture_id] DESC OFFSET ${offset} ROWS FETCH NEXT ${parseInt(limit)} ROWS ONLY`, params);
+    params.offset = offset;
+    params.limit = parseInt(limit);
+    const items = await query('architecture', `SELECT a.*, ISNULL(p.[total_views], 0) AS view_count${favSelect} FROM [ancient_architecture] a LEFT JOIN [architecture_popularity] p ON a.[architecture_id] = p.[architecture_id]${favJoin} ${whereClause} ORDER BY a.[architecture_id] DESC OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY`, params);
     const [countRes] = await query('architecture', `SELECT COUNT(*) as total FROM [ancient_architecture] ${whereClause}`, params);
     const total = (countRes as any)?.total || 0;
     const totalPages = Math.ceil(total / parseInt(limit));

@@ -164,10 +164,9 @@ export const useAIConcurrencyStore = defineStore('aiConcurrency', () => {
   function processNextInQueue() {
     if (queue.value.length === 0) return;
     
-    // 按时间戳排序（FIFO）
-    const sortedQueue = [...queue.value].sort((a, b) => a.timestamp - b.timestamp);
-    
-    for (const request of sortedQueue) {
+    // 直接遍历队列（队列已按时间戳顺序排列，FIFO）
+    // 找到第一个可执行的请求
+    for (const request of queue.value) {
       if (canExecute(request.ai_id)) {
         // 增加计数
         activeCounts.value.set(request.ai_id, getActiveCount(request.ai_id) + 1);

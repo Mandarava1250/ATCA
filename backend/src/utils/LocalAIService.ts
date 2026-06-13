@@ -5,8 +5,34 @@
  */
 
 import { createLogger, AIReasoningStep } from '../utils/logger';
+import * as fs from 'fs';
+import * as path from 'path';
 
 const logger = createLogger('LocalAI');
+
+// 知识数据配置文件路径
+// 支持多种路径解析方式，兼容开发环境和编译后环境
+function resolveKnowledgeDataPath(): string {
+  // 尝试多个可能的位置
+  const candidates = [
+    path.join(__dirname, '../data/knowledgeData.json'),
+    path.join(__dirname, '../../src/data/knowledgeData.json'),
+    path.join(__dirname, '../../../src/data/knowledgeData.json'),
+    path.join(process.cwd(), 'src/data/knowledgeData.json'),
+    path.join(process.cwd(), 'data/knowledgeData.json'),
+  ];
+  
+  for (const candidate of candidates) {
+    if (fs.existsSync(candidate)) {
+      return candidate;
+    }
+  }
+  
+  // 返回默认路径（用于错误日志）
+  return candidates[0];
+}
+
+const KNOWLEDGE_DATA_PATH = resolveKnowledgeDataPath();
 
 // 知识图谱实体接口
 interface KnowledgeEntity {
@@ -159,6 +185,8 @@ class LocalAIService {
   private knowledgeGraph: KnowledgeEntity[] = [];
   private domainRules: DomainRule[] = [];
   private initialized = false;
+  // 实体名称到实体的索引映射，用于快速查找
+  private entityNameIndex: Map<string, KnowledgeEntity> = new Map();
   
   /**
    * 初始化知识库
@@ -168,262 +196,74 @@ class LocalAIService {
     
     logger.info('初始化本地AI知识库...');
     
-    // 加载核心知识库
-    this.knowledgeBase = [
-      {
-        id: 1,
-        topic: '抬梁式结构',
-        content: '抬梁式（叠梁式）是中国古建筑最主要的木结构形式。特点：柱上承梁，梁上抬梁，逐层缩短，最上层立脊瓜柱承脊檩。适用于宫殿、庙宇等大型建筑。代表：北京故宫太和殿。',
-        keywords: ['抬梁', '抬梁式', '叠梁', '梁柱', '梁架', 'tailiang', 'beam'],
-        source: '华夏营造知识库',
-        confidence: 0.98
-      },
-      {
-        id: 2,
-        topic: '穿斗式结构',
-        content: '穿斗式（立贴式）是南方常见木结构形式。特点：柱距较密，柱头直接承檩，以穿枋连接各柱形成框架。用料省、整体性强，适用于民居等中小型建筑。',
-        keywords: ['穿斗', '穿斗式', '穿枋', '立贴', '檩柱', 'chuandou'],
-        source: '华夏营造知识库',
-        confidence: 0.98
-      },
-      {
-        id: 3,
-        topic: '庑殿顶',
-        content: '庑殿顶（四阿顶）是中国古建筑最高等级的屋顶形制，有一条正脊和四条垂脊，四面斜坡。用于皇宫、庙宇主殿。重檐庑殿顶为最高等级，如太和殿。',
-        keywords: ['庑殿', '庑殿顶', '四阿顶', '五脊顶', 'hipped', 'wudian'],
-        source: '华夏营造知识库',
-        confidence: 0.99
-      },
-      {
-        id: 4,
-        topic: '歇山顶',
-        content: '歇山顶（九脊顶）等级仅次于庑殿顶，由正脊、垂脊、戗脊组成，上半部为悬山或硬山式，下半部为四面坡。常用于宫殿次要建筑和庙宇。',
-        keywords: ['歇山', '歇山顶', '九脊顶', 'xieshan', 'gable'],
-        source: '华夏营造知识库',
-        confidence: 0.98
-      },
-      {
-        id: 5,
-        topic: '斗拱',
-        content: '斗拱是中国古建筑特有的结构构件，位于柱头与梁架之间，由斗、拱、昂等构件组成。功能：承托屋檐重量、传递荷载、增加出檐深度。清代称"斗科"。斗口为模数单位。',
-        keywords: ['斗拱', '铺作', '斗栱', '斗科', '栌斗', '华拱', '昂', '斗口', 'dougong', 'bracket'],
-        source: '华夏营造知识库',
-        confidence: 0.99
-      },
-      {
-        id: 6,
-        topic: '榫卯结构',
-        content: '榫卯是中国古代木构件的连接方式，通过凹凸结合实现连接，不用一钉一铆。类型包括燕尾榫、槽口榫、粽角榫等。体现以柔克刚的营造智慧。',
-        keywords: ['榫卯', '榫头', '卯眼', '凹凸结合', '燕尾榫', '槽口榫', '粽角榫'],
-        source: '华夏营造知识库',
-        confidence: 0.97
-      },
-      {
-        id: 7,
-        topic: '材分制',
-        content: '材分制是宋《营造法式》确立的模数制度。"材"为基本模数，按拱高分为八等（一等材高9寸，八等材高4.5寸）。所有构件尺寸均以材的倍数确定。实现了标准化设计与施工。',
-        keywords: ['材', '材分制', '材分', '宋式', '营造法式', 'cai fen', 'song style'],
-        source: '华夏营造知识库',
-        confidence: 0.98
-      },
-      {
-        id: 8,
-        topic: '斗口制',
-        content: '斗口制是清《工程做法》确立的模数制度。以坐斗斗口宽度为基本模数，分为十一等（一等斗口6寸，十一等斗口1寸）。柱径、梁高、檩径等均以斗口倍数计算。',
-        keywords: ['斗口', '斗口制', '清式', '工程做法', 'doukou', 'qing style'],
-        source: '华夏营造知识库',
-        confidence: 0.98
-      },
-      {
-        id: 9,
-        topic: '彩画',
-        content: '古建筑彩画等级：和玺彩画（最高，用于皇宫，以龙凤为主要题材）、旋子彩画（次之，用于庙宇）、苏式彩画（最次，用于园林，以山水人物为题材）。',
-        keywords: ['彩画', '和玺', '旋子', '苏式', '龙凤', '山水人物'],
-        source: '华夏营造知识库',
-        confidence: 0.95
-      },
-      {
-        id: 10,
-        topic: '基座与台基',
-        content: '古建筑台基高度有严格等级规定：皇宫太和殿台基最高（三层须弥座），民居台基最低。须弥座为最高等级台基，源于佛教须弥山造型。',
-        keywords: ['台基', '基座', '须弥座', '台阶', '三层台基'],
-        source: '华夏营造知识库',
-        confidence: 0.96
+    try {
+      // 从JSON配置文件加载知识数据
+      if (fs.existsSync(KNOWLEDGE_DATA_PATH)) {
+        const fileStat = fs.statSync(KNOWLEDGE_DATA_PATH);
+        
+        // 检查文件是否为空
+        if (fileStat.size === 0) {
+          logger.warn('知识数据配置文件为空，使用空数据', {
+            file: KNOWLEDGE_DATA_PATH
+          });
+          this.knowledgeBase = [];
+          this.knowledgeGraph = [];
+          this.domainRules = [];
+          this.entityNameIndex.clear();
+        } else {
+          const rawData = fs.readFileSync(KNOWLEDGE_DATA_PATH, 'utf-8');
+          
+          // 验证JSON格式
+          let knowledgeData;
+          try {
+            knowledgeData = JSON.parse(rawData);
+          } catch (parseError) {
+            logger.error('知识数据文件JSON格式错误，使用空数据', {
+              file: KNOWLEDGE_DATA_PATH,
+              error: (parseError as Error).message
+            });
+            this.knowledgeBase = [];
+            this.knowledgeGraph = [];
+            this.domainRules = [];
+            this.entityNameIndex.clear();
+          }
+          
+          if (knowledgeData) {
+            this.knowledgeBase = Array.isArray(knowledgeData.knowledgeBase) ? knowledgeData.knowledgeBase : [];
+            this.knowledgeGraph = Array.isArray(knowledgeData.knowledgeGraph) ? knowledgeData.knowledgeGraph : [];
+            this.domainRules = Array.isArray(knowledgeData.domainRules) ? knowledgeData.domainRules : [];
+            
+            // 构建实体名称索引，用于快速查找
+            this.buildEntityNameIndex();
+            
+            logger.info('从配置文件加载知识数据成功', {
+              file: KNOWLEDGE_DATA_PATH,
+              knowledgeCount: this.knowledgeBase.length,
+              graphEntityCount: this.knowledgeGraph.length,
+              ruleCount: this.domainRules.length
+            });
+          }
+        }
+      } else {
+        logger.warn('知识数据配置文件不存在，使用空数据', {
+          expectedPath: KNOWLEDGE_DATA_PATH,
+          suggestion: '请确保知识数据文件存在于正确路径，或创建默认数据文件'
+        });
+        this.knowledgeBase = [];
+        this.knowledgeGraph = [];
+        this.domainRules = [];
+        this.entityNameIndex.clear();
       }
-    ];
-    
-    // 加载知识图谱实体
-    this.knowledgeGraph = [
-      {
-        id: 'entity_1',
-        name: '斗拱',
-        type: '建筑构件',
-        attributes: {
-          '别名': '铺作、斗栱、斗科',
-          '组成': '斗、拱、昂',
-          '功能': '承托屋檐、传递荷载、增加出檐深度',
-          '应用朝代': '唐宋至明清'
-        },
-        relations: [
-          { targetId: 'entity_2', targetName: '抬梁式结构', type: '属于', confidence: 0.98 },
-          { targetId: 'entity_3', targetName: '斗口制', type: '应用于', confidence: 0.95 },
-          { targetId: 'entity_4', targetName: '太和殿', type: '使用', confidence: 0.99 }
-        ]
-      },
-      {
-        id: 'entity_2',
-        name: '抬梁式结构',
-        type: '结构形式',
-        attributes: {
-          '别名': '叠梁式',
-          '特点': '柱上承梁，梁上抬梁',
-          '适用建筑': '宫殿、庙宇',
-          '代表建筑': '北京故宫太和殿'
-        },
-        relations: [
-          { targetId: 'entity_1', targetName: '斗拱', type: '包含', confidence: 0.98 },
-          { targetId: 'entity_5', targetName: '榫卯结构', type: '使用', confidence: 0.95 }
-        ]
-      },
-      {
-        id: 'entity_3',
-        name: '斗口制',
-        type: '模数制度',
-        attributes: {
-          '确立朝代': '清代',
-          '出处': '工程做法',
-          '基本模数': '斗口宽度',
-          '等级数量': '十一等'
-        },
-        relations: [
-          { targetId: 'entity_1', targetName: '斗拱', type: '规定', confidence: 0.99 },
-          { targetId: 'entity_6', targetName: '材分制', type: '替代', confidence: 0.90 }
-        ]
-      },
-      {
-        id: 'entity_4',
-        name: '太和殿',
-        type: '建筑',
-        attributes: {
-          '位置': '北京故宫',
-          '建造朝代': '明永乐',
-          '屋顶形式': '重檐庑殿顶',
-          '地位': '中国现存最大木构大殿'
-        },
-        relations: [
-          { targetId: 'entity_1', targetName: '斗拱', type: '使用', confidence: 0.99 },
-          { targetId: 'entity_2', targetName: '抬梁式结构', type: '采用', confidence: 0.99 }
-        ]
-      },
-      {
-        id: 'entity_5',
-        name: '榫卯结构',
-        type: '连接方式',
-        attributes: {
-          '特点': '凹凸结合，不用钉铆',
-          '类型': '燕尾榫、槽口榫、粽角榫等',
-          '优势': '抗震性能优良'
-        },
-        relations: [
-          { targetId: 'entity_2', targetName: '抬梁式结构', type: '应用于', confidence: 0.95 }
-        ]
-      },
-      {
-        id: 'entity_6',
-        name: '材分制',
-        type: '模数制度',
-        attributes: {
-          '确立朝代': '宋代',
-          '出处': '营造法式',
-          '基本模数': '材',
-          '等级数量': '八等'
-        },
-        relations: [
-          { targetId: 'entity_3', targetName: '斗口制', type: '被替代', confidence: 0.90 }
-        ]
-      },
-      {
-        id: 'entity_7',
-        name: '庑殿顶',
-        type: '屋顶形式',
-        attributes: {
-          '别名': '四阿顶',
-          '等级': '最高',
-          '结构': '一条正脊、四条垂脊',
-          '适用': '皇宫主殿、庙宇'
-        },
-        relations: [
-          { targetId: 'entity_8', targetName: '歇山顶', type: '高于', confidence: 0.99 },
-          { targetId: 'entity_4', targetName: '太和殿', type: '使用', confidence: 0.99 }
-        ]
-      },
-      {
-        id: 'entity_8',
-        name: '歇山顶',
-        type: '屋顶形式',
-        attributes: {
-          '别名': '九脊顶',
-          '等级': '仅次于庑殿顶',
-          '结构': '正脊、垂脊、戗脊',
-          '适用': '宫殿次要建筑、庙宇'
-        },
-        relations: [
-          { targetId: 'entity_7', targetName: '庑殿顶', type: '低于', confidence: 0.99 }
-        ]
-      }
-    ];
-    
-    // 加载领域规则
-    this.domainRules = [
-      {
-        id: 'rule_1',
-        name: '屋顶等级规则',
-        description: '中国古建筑屋顶等级从高到低依次为：重檐庑殿顶 > 重檐歇山顶 > 庑殿顶 > 歇山顶 > 悬山顶 > 硬山顶',
-        conditions: ['提及屋顶等级', '比较不同屋顶形式'],
-        consequences: ['必须遵循等级顺序', '不能出现等级颠倒'],
-        severity: 'high'
-      },
-      {
-        id: 'rule_2',
-        name: '模数制度时间规则',
-        description: '宋代使用材分制（《营造法式》），清代使用斗口制（《工程做法》），两者不可混淆',
-        conditions: ['提及模数制度', '提及朝代'],
-        consequences: ['宋代建筑应使用材分制', '清代建筑应使用斗口制'],
-        severity: 'high'
-      },
-      {
-        id: 'rule_3',
-        name: '斗拱功能规则',
-        description: '斗拱的核心功能是：1.承托屋檐重量 2.传递荷载 3.增加出檐深度 4.装饰作用',
-        conditions: ['提及斗拱功能', '解释斗拱作用'],
-        consequences: ['必须包含核心功能描述', '不能遗漏主要作用'],
-        severity: 'medium'
-      },
-      {
-        id: 'rule_4',
-        name: '结构形式适用规则',
-        description: '抬梁式适用于大型建筑（宫殿、庙宇），穿斗式适用于中小型建筑（民居）',
-        conditions: ['提及结构形式', '提及建筑类型'],
-        consequences: ['抬梁式对应大型建筑', '穿斗式对应中小型建筑'],
-        severity: 'medium'
-      },
-      {
-        id: 'rule_5',
-        name: '彩画等级规则',
-        description: '彩画等级从高到低：和玺彩画 > 旋子彩画 > 苏式彩画',
-        conditions: ['提及彩画', '比较彩画等级'],
-        consequences: ['必须遵循等级顺序', '和玺彩画仅限皇宫使用'],
-        severity: 'high'
-      },
-      {
-        id: 'rule_6',
-        name: '台基等级规则',
-        description: '台基等级：三层须弥座（最高，用于皇宫主殿）> 单层须弥座 > 普通台基（用于民居）',
-        conditions: ['提及台基', '提及建筑等级'],
-        consequences: ['台基等级应与建筑等级匹配', '民居不得使用须弥座'],
-        severity: 'high'
-      }
-    ];
+    } catch (error) {
+      logger.error('加载知识数据失败，使用空数据', {
+        file: KNOWLEDGE_DATA_PATH,
+        error: error instanceof Error ? error.message : String(error)
+      });
+      this.knowledgeBase = [];
+      this.knowledgeGraph = [];
+      this.domainRules = [];
+      this.entityNameIndex.clear();
+    }
     
     this.initialized = true;
     logger.info('本地AI知识库初始化完成', { 
@@ -431,6 +271,18 @@ class LocalAIService {
       graphEntityCount: this.knowledgeGraph.length,
       ruleCount: this.domainRules.length
     });
+  }
+  
+  /**
+   * 构建实体名称索引
+   * 将实体名称映射到实体对象，用于快速查找
+   */
+  private buildEntityNameIndex(): void {
+    this.entityNameIndex.clear();
+    for (const entity of this.knowledgeGraph) {
+      // 使用实体名称作为索引键（不区分大小写）
+      this.entityNameIndex.set(entity.name.toLowerCase(), entity);
+    }
   }
   
   /**
@@ -1034,12 +886,30 @@ class LocalAIService {
 
   /**
    * 检测关系冲突
+   * 优化：使用实体名称预索引，只检索句子中出现的实体，避免全量遍历
    */
   private detectRelationConflicts(sentence: string): AnalyzedConflict[] {
     const conflicts: AnalyzedConflict[] = [];
     
-    for (const entity of this.knowledgeGraph) {
+    // 优化：先从句子中提取所有存在的实体，避免遍历整个知识图谱
+    const entitiesInSentence: KnowledgeEntity[] = [];
+    const sentenceLower = sentence.toLowerCase();
+    
+    // 遍历实体索引，检查实体名称是否在句子中出现
+    for (const [nameLower, entity] of this.entityNameIndex) {
+      if (sentenceLower.includes(nameLower)) {
+        entitiesInSentence.push(entity);
+      }
+    }
+    
+    // 只对句子中出现的实体进行关系冲突检测
+    for (const entity of entitiesInSentence) {
       for (const relation of entity.relations) {
+        // 首先检查目标实体是否也在句子中
+        if (!sentenceLower.includes(relation.targetName.toLowerCase())) {
+          continue;
+        }
+        
         // 检查关系是否在句子中被错误描述
         const relationPattern = new RegExp(`${entity.name}[与和]${relation.targetName}[的是]?(\\S+关系)?`, 'i');
         const match = sentence.match(relationPattern);

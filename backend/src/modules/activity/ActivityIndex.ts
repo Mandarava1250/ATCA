@@ -18,7 +18,11 @@ router.get('/', asyncHandler(async (req, res) => {
   const { page = '1', limit = '20' } = req.query as Record<string, string>;
   if (isMockMode()) { res.json({ success: true, data: mockActivities }); return; }
   const offset = (parseInt(page) - 1) * parseInt(limit);
-  const activities = await query('activity', `SELECT [activity_id], [title], [description], [start_date], [end_date], [activity_type], [banner_url], [reward_points], [max_participants], [current_participants], [is_active], [created_at] FROM [activity] WHERE [is_active] = 1 AND [end_date] > GETDATE() ORDER BY [start_date] DESC OFFSET ${offset} ROWS FETCH NEXT ${parseInt(limit)} ROWS ONLY`);
+  const params = {
+    offset: offset,
+    limit: parseInt(limit)
+  };
+  const activities = await query('activity', `SELECT [activity_id], [title], [description], [start_date], [end_date], [activity_type], [banner_url], [reward_points], [max_participants], [current_participants], [is_active], [created_at] FROM [activity] WHERE [is_active] = 1 AND [end_date] > GETDATE() ORDER BY [start_date] DESC OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY`, params);
   res.json({ success: true, data: activities });
 }));
 
