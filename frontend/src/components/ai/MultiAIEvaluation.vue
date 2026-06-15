@@ -9,7 +9,7 @@
       </div>
       <div class="status-text">
         <div class="status-title">正在进行多AI模型评估</div>
-        <div class="status-detail">分析 {{ aiCount }} 个AI模型的输出内容...</div>
+        <div class="status-detail">分析 {{ evaluationResult?.performance?.aiCount || props.aiResponses.length }} 个AI模型的输出内容...</div>
       </div>
     </div>
 
@@ -104,7 +104,7 @@
             :key="key"
             class="dimension-item"
           >
-            <div class="dim-name">{{ getDimensionName(key) }}</div>
+            <div class="dim-name">{{ getDimensionName(String(key)) }}</div>
             <div class="dim-best">
               <span class="dim-label">最佳:</span>
               <span class="dim-value">{{ dim.best }}</span>
@@ -131,13 +131,13 @@
         </div>
         <div class="evaluations-list">
           <div 
-            v-for="eval in evaluationResult.individualEvaluations" 
-            :key="eval.aiId"
+            v-for="evaluation in evaluationResult.individualEvaluations" 
+            :key="evaluation.aiId"
             class="evaluation-card"
           >
             <div class="eval-header">
-              <div class="eval-ai-name">{{ eval.aiName }}</div>
-              <div class="eval-overall-score">{{ eval.evaluation.overallScore }}分</div>
+              <div class="eval-ai-name">{{ evaluation.aiName }}</div>
+              <div class="eval-overall-score">{{ evaluation.evaluation.overallScore }}分</div>
             </div>
             
             <!-- 评分详情 -->
@@ -145,37 +145,37 @@
               <div class="score-row">
                 <span class="score-label">准确性</span>
                 <div class="score-bar">
-                  <div class="score-fill" :style="{ width: (eval.evaluation.accuracy.score * 100) + '%' }"></div>
+                  <div class="score-fill" :style="{ width: (evaluation.evaluation.accuracy.score * 100) + '%' }"></div>
                 </div>
-                <span class="score-value">{{ (eval.evaluation.accuracy.score * 100).toFixed(0) }}%</span>
+                <span class="score-value">{{ (evaluation.evaluation.accuracy.score * 100).toFixed(0) }}%</span>
               </div>
               <div class="score-row">
                 <span class="score-label">相关性</span>
                 <div class="score-bar">
-                  <div class="score-fill" :style="{ width: (eval.evaluation.relevance.score * 100) + '%' }"></div>
+                  <div class="score-fill" :style="{ width: (evaluation.evaluation.relevance.score * 100) + '%' }"></div>
                 </div>
-                <span class="score-value">{{ (eval.evaluation.relevance.score * 100).toFixed(0) }}%</span>
+                <span class="score-value">{{ (evaluation.evaluation.relevance.score * 100).toFixed(0) }}%</span>
               </div>
               <div class="score-row">
                 <span class="score-label">完整性</span>
                 <div class="score-bar">
-                  <div class="score-fill" :style="{ width: (eval.evaluation.completeness.score * 100) + '%' }"></div>
+                  <div class="score-fill" :style="{ width: (evaluation.evaluation.completeness.score * 100) + '%' }"></div>
                 </div>
-                <span class="score-value">{{ (eval.evaluation.completeness.score * 100).toFixed(0) }}%</span>
+                <span class="score-value">{{ (evaluation.evaluation.completeness.score * 100).toFixed(0) }}%</span>
               </div>
               <div class="score-row">
                 <span class="score-label">逻辑性</span>
                 <div class="score-bar">
-                  <div class="score-fill" :style="{ width: (eval.evaluation.logic.score * 100) + '%' }"></div>
+                  <div class="score-fill" :style="{ width: (evaluation.evaluation.logic.score * 100) + '%' }"></div>
                 </div>
-                <span class="score-value">{{ (eval.evaluation.logic.score * 100).toFixed(0) }}%</span>
+                <span class="score-value">{{ (evaluation.evaluation.logic.score * 100).toFixed(0) }}%</span>
               </div>
               <div class="score-row">
                 <span class="score-label">专业性</span>
                 <div class="score-bar">
-                  <div class="score-fill" :style="{ width: (eval.evaluation.professionalism.score * 100) + '%' }"></div>
+                  <div class="score-fill" :style="{ width: (evaluation.evaluation.professionalism.score * 100) + '%' }"></div>
                 </div>
-                <span class="score-value">{{ (eval.evaluation.professionalism.score * 100).toFixed(0) }}%</span>
+                <span class="score-value">{{ (evaluation.evaluation.professionalism.score * 100).toFixed(0) }}%</span>
               </div>
             </div>
 
@@ -184,29 +184,29 @@
               <div class="sw-section strengths">
                 <div class="sw-title">优势</div>
                 <ul class="sw-list">
-                  <li v-for="strength in eval.evaluation.strengths" :key="strength">{{ strength }}</li>
+                  <li v-for="strength in evaluation.evaluation.strengths" :key="strength">{{ strength }}</li>
                 </ul>
               </div>
               <div class="sw-section weaknesses">
                 <div class="sw-title">不足</div>
                 <ul class="sw-list">
-                  <li v-for="weakness in eval.evaluation.weaknesses" :key="weakness">{{ weakness }}</li>
+                  <li v-for="weakness in evaluation.evaluation.weaknesses" :key="weakness">{{ weakness }}</li>
                 </ul>
               </div>
             </div>
 
             <!-- 专业术语 -->
-            <div v-if="eval.evaluation.professionalism.keyTerms.length > 0" class="eval-key-terms">
+            <div v-if="evaluation.evaluation.professionalism.keyTerms.length > 0" class="eval-key-terms">
               <div class="kt-title">专业术语</div>
               <div class="kt-list">
-                <span v-for="term in eval.evaluation.professionalism.keyTerms" :key="term" class="kt-tag">{{ term }}</span>
+                <span v-for="term in evaluation.evaluation.professionalism.keyTerms" :key="term" class="kt-tag">{{ term }}</span>
               </div>
             </div>
 
             <!-- 冲突检测 -->
-            <div v-if="eval.evaluation.conflictDetection.hasConflicts" class="eval-conflicts">
+            <div v-if="evaluation.evaluation.conflictDetection.hasConflicts" class="eval-conflicts">
               <div class="conflicts-title">⚠️ 检测到冲突</div>
-              <div class="conflicts-summary">{{ eval.evaluation.conflictDetection.summary }}</div>
+              <div class="conflicts-summary">{{ evaluation.evaluation.conflictDetection.summary }}</div>
             </div>
           </div>
         </div>
@@ -312,7 +312,7 @@ async function evaluate() {
     if (response.success) {
       evaluationResult.value = response.data;
     } else {
-      error.value = response.error?.message || '评估失败';
+      error.value = (response as any).error?.message || '评估失败';
     }
   } catch (err: any) {
     error.value = err.message || '评估失败';

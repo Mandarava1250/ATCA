@@ -47,7 +47,6 @@ const app = express();
 // 安全中间件链
 // ============================================
 
-// 1. 基础安全头（使用helmet）
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
@@ -64,13 +63,9 @@ app.use(helmet({
   },
 }));
 
-// 2. 自定义安全头
 app.use(securityHeaders);
-
-// 3. HTTP方法限制
 app.use(restrictHttpMethods);
 
-// 4. 根据环境配置CORS
 const isProduction = config.nodeEnv === 'production';
 const corsOrigin = isProduction 
   ? config.cors.productionOrigins 
@@ -85,54 +80,42 @@ app.use(cors({
   maxAge: config.cors.maxAge,
 }));
 
-// 5. API密钥验证（可选）
 app.use(apiKeyValidation);
 
-// 6. 日志 — 只记录错误请求
 const morganFormat = isProduction 
   ? ':method :url :status - :response-time ms'
   : '[:date[iso]] :method :url :status :response-time ms - :res[content-length]';
 
 app.use(morgan(morganFormat, {
-  // 跳过所有成功响应 (2xx/3xx)，只记录错误
   skip: (req, res) => res.statusCode < 400,
 }));
 
-// 7. 安全日志记录
 app.use(securityLogger);
-
-// 8. 请求大小限制
 app.use(validateRequestSize);
-
-// 9. SQL注入检测
 app.use(sqlInjectionDetection);
-
-// 10. 路径遍历防护
 app.use(pathTraversalProtection);
-
-// 11. 通用速率限制
 app.use(generalRateLimiter);
-
-// 12. 解析请求体 — 支持最大 100MB（3D模型文件批量导入需要较大空间）
 app.use(express.json({ limit: '100mb' }));
 app.use(express.urlencoded({ extended: true, limit: '100mb' }));
-
-// 13. 会话超时检查（需要在路由前应用）
 app.use(sessionTimeoutCheck);
 
-// 静态文件
+// ============================================
+// 路由注册（严格顺序：API优先，SPA fallback最后）
+// ============================================
+
+// 1. 上传文件
 app.use('/uploads', express.static(path.resolve(__dirname, '../uploads')));
 
-// 健康检查
+// 2. 健康检查
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString(), version: '1.0.0' });
 });
 
-// Swagger API文档
+// 3. Swagger API文档
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
-// API路由
-const apiPrefix = config.apiPrefix;
+// 4. API路由
+const apiPrefix = '/api/v1';
 app.use(`${apiPrefix}/auth`, authRouter);
 app.use(`${apiPrefix}/architecture`, architectureRouter);
 app.use(`${apiPrefix}/quiz`, quizRouter);
@@ -146,17 +129,38 @@ app.use(`${apiPrefix}/i18n`, i18nRouter);
 app.use(`${apiPrefix}/social`, socialRouter);
 app.use(`${apiPrefix}/knowledge`, knowledgeRouter);
 
-// 404
-app.use(notFoundHandler);
+// 5. 前端静态文件服务（生产环境）— 放在API路由之后
+const frontendDistPath = path.resolve(__dirname, '../../frontend/dist');
+if (require('fs').existsSync(frontendDistPath)) {
+  app.use(express.static(frontendDistPath));
+  
+  // SPA路由支持 — 绝对禁止拦截 /api /uploads /health /api-docs
+  app.get('*', (req, res, next) => {
+    const reqPath = req.path;
+    if (
+      reqPath.startsWith('/api/') ||
+      reqPath.startsWith('/uploads/') ||
+      reqPath === '/health' ||
+      reqPath.startsWith('/api-docs')
+    ) {
+      return next(); // 交给 404 处理，返回 JSON 错误而非 HTML
+    }
+    res.sendFile(path.join(frontendDistPath, 'index.html'));
+  });
+} else {
+  console.warn(`[Static] 前端dist目录不存在: ${frontendDistPath}`);
+}
 
-// 错误处理
+// 6. 404 和全局错误处理
+app.use(notFoundHandler);
 app.use(errorHandler);
 
+// ============================================
 // 启动服务器
+// ============================================
 const PORT = config.port;
 
 async function startServer() {
-  // 尝试预连接所有数据库，失败则启用 Mock 模式
   try {
     await preconnectAll();
   } catch (error: any) {
@@ -165,19 +169,16 @@ async function startServer() {
     setMockMode(true);
   }
 
-  // 即使没有数据库连接，也要启动服务器（使用 Mock 模式）
-  const server = app.listen(PORT, 'localhost', () => {
-    console.log(`[ATCA Server] 运行于端口 ${PORT}`);
-    console.log(`[ATCA Server] API地址: http://localhost:${PORT}${apiPrefix}`);
-    console.log(`[ATCA Server] API文档: http://localhost:${PORT}/api-docs`);
+  const server = app.listen(PORT, '0.0.0.0', () => {
+    console.log(`[ATCA Server] 运行于 http://0.0.0.0:${PORT}`);
+    console.log(`[ATCA Server] API地址: http://0.0.0.0:${PORT}${apiPrefix}`);
+    console.log(`[ATCA Server] 健康检查: http://0.0.0.0:${PORT}/health`);
     console.log(`[ATCA Server] 环境: ${config.nodeEnv}`);
     if (isMockMode()) {
       console.log(`[ATCA Server] 当前使用 Mock 数据模式（无需数据库）`);
-      console.log(`[ATCA Server] 健康检查地址: http://localhost:${PORT}/health`);
     }
   });
 
-  // 防止未捕获异常导致进程崩溃
   process.on('uncaughtException', (err) => {
     console.error('[ATCA Server] 未捕获异常:', err.message || err);
   });
@@ -185,7 +186,6 @@ async function startServer() {
     console.error('[ATCA Server] 未处理的Promise拒绝:', reason?.message || reason);
   });
 
-  // 优雅关闭
   const gracefulShutdown = async (signal: string) => {
     console.log(`[ATCA Server] 收到 ${signal}，开始优雅关闭...`);
     server.close(async () => {
@@ -199,7 +199,6 @@ async function startServer() {
   process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 }
 
-// 未捕获异常处理
 process.on('uncaughtException', (err) => {
   console.error('[Uncaught Exception]', err);
   process.exit(1);

@@ -707,7 +707,7 @@ server {
 
     # 后端API代理
     location /api/ {
-        proxy_pass http://localhost:3456/api/;
+        proxy_pass http://localhost:3000/api/;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
     }

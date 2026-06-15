@@ -14,27 +14,6 @@ export default defineConfig({
     port: 3000,
     host: '127.0.0.1',
     strictPort: false,
-    proxy: {
-      '/api': {
-        target: 'http://localhost:3456/api',
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, ''),
-      },
-      '/api/v1': {
-        target: 'http://localhost:3456/api',
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, ''),
-      },
-      '/v1': {
-        target: 'http://localhost:3456/api',
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/v1/, '/v1'),
-      },
-      '/uploads': {
-        target: 'http://localhost:3456',
-        changeOrigin: true,
-      },
-    },
   },
   build: {
     outDir: 'dist',

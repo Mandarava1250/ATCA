@@ -1,4 +1,6 @@
 /.idea
+/.trae
+/.github
 /node_modules
 /backend/dist
 /backend/node_modules

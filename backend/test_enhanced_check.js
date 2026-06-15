@@ -5,7 +5,7 @@ let token = '';
 // 登录获取token
 async function login() {
   try {
-    const response = await axios.post('http://localhost:3456/api/v1/auth/login', {
+    const response = await axios.post('http://localhost:3000/api/v1/auth/login', {
       username: 'testuser',
       password: 'Test@12345'
     }, { timeout: 10000 });
@@ -29,7 +29,7 @@ async function testEnhancedCheck() {
   
   // 获取AI列表
   console.log('获取AI列表...');
-  const aiListResponse = await axios.get('http://localhost:3456/api/v1/assistant/ai-list', { timeout: 10000 });
+  const aiListResponse = await axios.get('http://localhost:3000/api/v1/assistant/ai-list', { timeout: 10000 });
   console.log('可用AI:', JSON.stringify(aiListResponse.data.data.map(a => ({id: a.ai_id, name: a.name})), null, 2));
   
   const aiId = aiListResponse.data.data[0]?.ai_id || 1;
@@ -45,7 +45,7 @@ async function testEnhancedCheck() {
     console.log('发送请求... (可能需要等待30-60秒)');
     const startTime = Date.now();
     
-    const response = await axios.post('http://localhost:3456/api/v1/assistant/chat', {
+    const response = await axios.post('http://localhost:3000/api/v1/assistant/chat', {
       message: testInput1,
       ai_id: aiId,
       enhancedCheck: true

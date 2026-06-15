@@ -109,7 +109,7 @@ async function sendMessage() {
   streamContent.value = '';
 
   try {
-    const res = await assistantApi.chat(text, undefined, selectedProvider.value || undefined);
+    const res = await assistantApi.chat(text, selectedProvider.value ? parseInt(selectedProvider.value) : undefined, true);
     if (res.success && res.data) {
       const assistantMsg: Message = {
         id: (Date.now() + 1).toString(),
