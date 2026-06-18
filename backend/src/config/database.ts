@@ -5,6 +5,7 @@
 // ============================================
 
 import sql from 'mssql';
+import { queryCache } from '../services/queryCache';
 
 export interface DbConfig {
   server: string;
@@ -218,8 +219,17 @@ export async function preconnectAll(): Promise<void> {
 export async function query<T = any>(
     dbName: keyof typeof dbConfigs,
     sqlString: string,
-    params?: any
+    params?: any,
+    useCache: boolean = true
 ): Promise<T[]> {
+  // 如果启用缓存，先尝试从缓存获取
+  if (useCache && !mockMode) {
+    const cachedData = queryCache.get(dbName, sqlString, params);
+    if (cachedData !== null) {
+      return cachedData;
+    }
+  }
+
   const pool = await getPool(dbName);
   const request = pool.request();
 
@@ -238,7 +248,14 @@ export async function query<T = any>(
   }
 
   const result = await request.query(sqlString);
-  return result.recordset as T[];
+  const data = result.recordset as T[];
+
+  // 如果启用缓存，将结果存入缓存
+  if (useCache && !mockMode) {
+    queryCache.set(dbName, sqlString, params, data);
+  }
+
+  return data;
 }
 
 export async function execute(

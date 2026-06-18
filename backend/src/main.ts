@@ -9,6 +9,7 @@ import morgan from 'morgan';
 import path from 'path';
 import dotenv from 'dotenv';
 import swaggerUi from 'swagger-ui-express';
+import compression from 'compression';
 
 dotenv.config({ path: '.env.db' });
 
@@ -26,6 +27,13 @@ import {
 } from './middleware/security';
 import { authRateLimiter, generalRateLimiter } from './middleware/rateLimiter';
 import { sessionTimeoutCheck, apiKeyValidation } from './middleware/accessControl';
+import { 
+  browseStateDetection, 
+  getClientStateStats, 
+  triggerCleanup,
+  initBrowseStateStore 
+} from './middleware/browseState';
+import { createConditionalOutput } from './middleware/conditionalOutput';
 
 // 模块路由
 import authRouter from './modules/auth/AuthIndex';
@@ -82,6 +90,32 @@ app.use(cors({
 
 app.use(apiKeyValidation);
 
+// ============================================
+// 性能优化中间件
+// ============================================
+
+// 响应压缩 - 减少传输数据量
+app.use(compression({
+  level: 6,
+  threshold: 1024,
+}));
+
+// ETag支持 - 使用 Express 内置支持（替代自定义实现）
+// Express 内置 ETag 支持所有响应类型（字符串、Buffer、JSON）
+app.set('etag', 'weak'); // 使用弱 ETag，适合动态内容
+
+// 静态资源缓存控制
+app.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
+  if (req.path.startsWith('/uploads/')) {
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+  } else if (req.path.startsWith('/api/')) {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+  }
+  next();
+});
+
 const morganFormat = isProduction 
   ? ':method :url :status - :response-time ms'
   : '[:date[iso]] :method :url :status :response-time ms - :res[content-length]';
@@ -97,7 +131,51 @@ app.use(pathTraversalProtection);
 app.use(generalRateLimiter);
 app.use(express.json({ limit: '100mb' }));
 app.use(express.urlencoded({ extended: true, limit: '100mb' }));
-app.use(sessionTimeoutCheck);
+
+// ============================================
+// 浏览状态检测与条件性数据输出中间件
+// ============================================
+app.use(browseStateDetection);
+
+// 客户端状态监控端点
+app.get('/api/monitor/client-states', async (req, res) => {
+  try {
+    const stats = await getClientStateStats();
+    res.json({
+      success: true,
+      data: stats,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: '获取客户端状态统计失败',
+    });
+  }
+});
+
+// 手动触发客户端状态清理
+app.post('/api/monitor/cleanup', async (req, res) => {
+  try {
+    const cleaned = await triggerCleanup();
+    res.json({
+      success: true,
+      message: `已清理 ${cleaned} 条过期客户端状态`,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: '客户端状态清理失败',
+    });
+  }
+});
+
+// 条件性输出中间件配置
+// 对知识图谱和架构浏览相关API启用浏览状态检测
+const conditionalOutput = createConditionalOutput({
+  blockBots: true,
+  enableCache: true,
+  cacheTTL: 60,
+});
 
 // ============================================
 // 路由注册（严格顺序：API优先，SPA fallback最后）
@@ -117,7 +195,10 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 // 4. API路由
 const apiPrefix = '/api/v1';
 app.use(`${apiPrefix}/auth`, authRouter);
-app.use(`${apiPrefix}/architecture`, architectureRouter);
+
+// 架构浏览API - 启用条件性输出（浏览状态检测）
+app.use(`${apiPrefix}/architecture`, conditionalOutput, architectureRouter);
+
 app.use(`${apiPrefix}/quiz`, quizRouter);
 app.use(`${apiPrefix}/assistant`, assistantRouter);
 app.use(`${apiPrefix}/models`, model3dRouter);
@@ -127,7 +208,9 @@ app.use(`${apiPrefix}/activities`, activityRouter);
 app.use(`${apiPrefix}/admin`, adminRouter);
 app.use(`${apiPrefix}/i18n`, i18nRouter);
 app.use(`${apiPrefix}/social`, socialRouter);
-app.use(`${apiPrefix}/knowledge`, knowledgeRouter);
+
+// 知识库API - 启用条件性输出（浏览状态检测）
+app.use(`${apiPrefix}/knowledge`, conditionalOutput, knowledgeRouter);
 
 // 5. 前端静态文件服务（生产环境）— 放在API路由之后
 const frontendDistPath = path.resolve(__dirname, '../../frontend/dist');
@@ -161,6 +244,10 @@ app.use(errorHandler);
 const PORT = config.port;
 
 async function startServer() {
+  // 初始化浏览状态存储（默认内存模式，适合 2核2G 服务器）
+  // 如需 Redis 存储，可传入配置: initBrowseStateStore({ type: 'redis', redis: {...} })
+  initBrowseStateStore({ type: 'memory' });
+  
   try {
     await preconnectAll();
   } catch (error: any) {

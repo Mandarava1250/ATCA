@@ -697,7 +697,7 @@ docker-compose logs -f
 ```nginx
 server {
     listen 80;
-    server_name your-domain.com;
+    server_name atca.xin;
 
     # 前端静态文件
     location / {
