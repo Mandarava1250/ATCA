@@ -401,10 +401,14 @@ import type { Note } from '@/utils/noteManager';
 import NoteEditor from '@/components/notes/NoteEditor.vue';
 import { useI18n } from 'vue-i18n';
 import { useAnimationSettingsStore } from '@/stores/animationSettings';
+import { useUserStore } from '@/stores';
+import { API_BASE } from '@/services/api';
+import { compressImage, isValidImageType, formatFileSize } from '@/utils/imageCompressor';
 
 const router = useRouter();
 const { t } = useI18n();
 const animationSettings = useAnimationSettingsStore();
+const userStore = useUserStore();
 const profile = ref<any>(null);
 const userNotes = ref<Note[]>(noteManager.getAll());
 const showNoteEditor = ref(false);
@@ -450,15 +454,30 @@ const totalPointsSpent = computed(() => {
 
 const avatarFullUrl = computed(() => {
   const avatar = profile.value?.avatar;
-  if (!avatar) return '/images/default-avatar.png';
-  // 如果avatar以/uploads/开头，拼接后端API根地址
-  if (avatar.startsWith('/uploads/')) {
-    const host = API_HOST || window.location.origin;
-    return host + avatar;
-  }
-  // 如果是完整URL或base64
+  if (!avatar) return '/images/default-avatar.svg';
+
+  // 如果是绝对URL或base64，直接返回
   if (avatar.startsWith('http') || avatar.startsWith('data:')) return avatar;
-  return '/images/default-avatar.png';
+
+  // 如果是/uploads/开头
+  if (avatar.startsWith('/uploads/')) {
+    // 在开发环境或后端直连模式下，使用API_BASE路径
+    // 在生产环境通过Nginx代理时，使用相对路径
+    const isProduction = import.meta.env.PROD;
+    if (isProduction) {
+      // 生产环境：假设Nginx正确代理了/uploads路径
+      return avatar;
+    } else {
+      // 开发环境：拼接API基础路径
+      const apiBase = API_BASE || '/api/v1';
+      // 去掉/api/v1部分，只保留完整路径
+      const baseUrl = apiBase.replace(/\/api\/v1$/, '');
+      return `${baseUrl}${avatar}`;
+    }
+  }
+
+  // 其他情况返回默认头像
+  return '/images/default-avatar.svg';
 });
 
 const roleLabel = computed(() => {
@@ -756,29 +775,86 @@ function triggerAvatarUpload() {
 async function handleAvatarChange(e: Event) {
   const file = (e.target as HTMLInputElement).files?.[0];
   if (!file) return;
-  if (file.size > 2 * 1024 * 1024) {
-    alert('图片大小不能超过2MB');
+
+  // 文件类型验证
+  if (!isValidImageType(file)) {
+    alert('只支持 JPG、PNG、GIF 或 WebP 格式的图片');
     return;
   }
-  // 本地预览
-  const reader = new FileReader();
-  reader.onload = (ev) => {
-    if (profile.value) profile.value.avatar = ev.target?.result as string;
-  };
-  reader.readAsDataURL(file);
-  // 实际上传到后端
+
+  // 显示上传中状态
+  const originalAvatar = profile.value?.avatar;
+  const isLargeFile = file.size > 2 * 1024 * 1024;
+
   try {
+    // 客户端压缩图片
+    console.log(`[Profile] 原始图片大小: ${formatFileSize(file.size)}`);
+    
+    const compressedFile = await compressImage(file, {
+      maxSize: 2 * 1024 * 1024, // 2MB
+      maxWidth: 800,
+      maxHeight: 800,
+      quality: 0.7
+    });
+
+    console.log(`[Profile] 压缩后图片大小: ${formatFileSize(compressedFile.size)}`);
+
+    // 如果是大文件压缩，提示用户压缩情况
+    if (isLargeFile && compressedFile.size < file.size) {
+      console.log(`[Profile] 图片已从 ${formatFileSize(file.size)} 压缩至 ${formatFileSize(compressedFile.size)}`);
+    }
+
+    // 本地预览压缩后的图片
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      if (profile.value) profile.value.avatar = ev.target?.result as string;
+    };
+    reader.readAsDataURL(compressedFile);
+
+    // 上传压缩后的图片
     const formData = new FormData();
-    formData.append('avatar', file);
+    formData.append('avatar', compressedFile);
     const res = await authApi.uploadAvatar(formData);
+
     if (res.success && profile.value) {
-      profile.value.avatar = res.data.avatarUrl || profile.value.avatar;
-      alert('头像上传成功');
+      const newAvatarUrl = res.data?.avatarUrl || (res as any).avatarUrl;
+      profile.value.avatar = newAvatarUrl || profile.value.avatar;
+
+      // 同步更新 userStore 中的 avatar，确保 Navbar 实时更新
+      if (userStore.user) {
+        userStore.user.avatar = newAvatarUrl || userStore.user.avatar;
+        localStorage.setItem('atca_user', JSON.stringify(userStore.user));
+      }
+
+      alert('头像上传成功！');
+      console.log('[Profile] 头像上传成功', { avatarUrl: newAvatarUrl });
+    } else {
+      // 上传失败，恢复原头像
+      const errorMsg = (res as any)?.error?.message || '服务器错误，请重试';
+      alert('头像上传失败：' + errorMsg);
+      if (profile.value) profile.value.avatar = originalAvatar;
     }
   } catch (e: any) {
     console.error('[Profile] 头像上传失败:', e);
-    // 仅预览模式也接受
+    // 恢复原头像
+    if (profile.value) profile.value.avatar = originalAvatar;
+
+    // 提供更友好的错误提示
+    if (e.message?.includes('压缩')) {
+      alert('图片压缩失败，请尝试选择其他图片');
+    } else if (e.response?.status === 401) {
+      alert('登录已过期，请重新登录后再试');
+    } else if (e.response?.status === 413) {
+      alert('图片太大，请选择更小的图片（不超过2MB）');
+    } else if (e.response?.data?.error?.message) {
+      alert('上传失败：' + e.response.data.error.message);
+    } else {
+      alert('头像上传失败，请检查网络连接后重试');
+    }
   }
+
+  // 清空input，允许重新选择同一文件
+  if (avatarInput.value) avatarInput.value.value = '';
 }
 
 function editModel(id: number) {

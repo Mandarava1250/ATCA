@@ -26,7 +26,78 @@ router.get('/', asyncHandler(async (req, res) => {
   res.json({ success: true, data: activities });
 }));
 
-// 获取活动详情
+// 获取成就列表（必须在 /:id 之前）
+router.get('/achievements', asyncHandler(async (_req, res) => {
+  if (isMockMode()) { res.json({ success: true, data: mockAchievements }); return; }
+  const achievements = await query('activity', 'SELECT [achievement_id], [achievement_name], [description], [achievement_type], [required_points], [required_actions], [icon], [badge_url], [created_at] FROM [achievement] ORDER BY [required_points]');
+  res.json({ success: true, data: achievements });
+}));
+
+// 获取用户成就（必须在 /:id 之前）
+router.get('/user-achievements', authMiddleware, asyncHandler(async (req: AuthRequest, res) => {
+  if (isMockMode()) { res.json({ success: true, data: [] }); return; }
+  
+  try {
+    // 先查询用户成就记录
+    const userAchievements = await query('user', 
+      `SELECT [achievement_record_id], [achievement_id], [external_user_id], [obtained_at] 
+       FROM dbo.user_achievement 
+       WHERE [external_user_id] = @userId 
+       ORDER BY [obtained_at] DESC`, 
+      { userId: req.user!.userId }
+    );
+    
+    // 如果没有成就记录，返回空数组
+    if (!userAchievements || userAchievements.length === 0) {
+      res.json({ success: true, data: [] });
+      return;
+    }
+    
+    // 获取成就ID列表
+    const achievementIds = userAchievements.map((ua: any) => ua.achievement_id);
+    
+    // 查询成就详情（从 Activity 数据库）
+    const achievements = await query('activity',
+      `SELECT [achievement_id], [achievement_name], [description], [icon], [badge_url], [required_points]
+       FROM dbo.[achievement]
+       WHERE [achievement_id] IN (${achievementIds.join(',')})`
+    );
+    
+    // 合并数据
+    const result = userAchievements.map((ua: any) => {
+      const achievement = achievements.find((a: any) => a.achievement_id === ua.achievement_id);
+      return {
+        ...ua,
+        achievement_name: achievement?.achievement_name || '',
+        description: achievement?.description || '',
+        icon: achievement?.icon || '',
+        badge_url: achievement?.badge_url || '',
+        required_points: achievement?.required_points || 0,
+      };
+    });
+    
+    res.json({ success: true, data: result });
+  } catch (error: any) {
+    // 如果表不存在或其他错误，返回空数组
+    console.warn('[Activity] user-achievements 查询失败:', error.message);
+    res.json({ success: true, data: [] });
+  }
+}));
+
+// 获取每日任务（必须在 /:id 之前）
+router.get('/daily-tasks', asyncHandler(async (_req, res) => {
+  if (isMockMode()) {
+    res.json({ success: true, data: [
+      { task_id: 1, task_name: '浏览3个古建筑', description: '在详情页浏览任意3个古建筑', points_reward: 10, required_action: 'view_architecture', action_count: 3, created_at: '2024-01-01' },
+      { task_id: 2, task_name: '完成一次竞赛', description: '参与任意模式的知识竞赛', points_reward: 20, required_action: 'play_quiz', action_count: 1, created_at: '2024-01-01' },
+    ]});
+    return;
+  }
+  const tasks = await query('activity', 'SELECT [task_id], [task_name], [description], [points_reward], [required_action], [action_count] FROM [daily_tasks] ORDER BY [task_id]');
+  res.json({ success: true, data: tasks });
+}));
+
+// 获取活动详情（参数化路由必须放在最后）
 router.get('/:id', validateParams(idParamSchema), asyncHandler(async (req, res) => {
   const id = parseInt(req.params.id);
   if (isMockMode()) {
@@ -45,33 +116,6 @@ router.post('/:id/join', authMiddleware, validateParams(idParamSchema), asyncHan
   const id = parseInt(req.params.id);
   await execute('activity', `IF NOT EXISTS (SELECT 1 FROM [user_activities] WHERE [user_id] = @userId AND [activity_id] = @id) INSERT INTO [user_activities] ([user_id], [activity_id], [joined_at]) VALUES (@userId, @id, GETDATE())`, { userId: req.user!.userId, id });
   res.json({ success: true, message: '参与成功' });
-}));
-
-// 获取成就列表
-router.get('/achievements', asyncHandler(async (_req, res) => {
-  if (isMockMode()) { res.json({ success: true, data: mockAchievements }); return; }
-  const achievements = await query('activity', 'SELECT [achievement_id], [achievement_name], [description], [achievement_type], [required_points], [required_actions], [icon], [badge_url], [created_at] FROM [achievement] ORDER BY [required_points]');
-  res.json({ success: true, data: achievements });
-}));
-
-// 获取用户成就
-router.get('/user-achievements', authMiddleware, asyncHandler(async (req: AuthRequest, res) => {
-  if (isMockMode()) { res.json({ success: true, data: [] }); return; }
-  const achievements = await query('user', `SELECT ua.*, a.[achievement_name], a.[description], a.[icon], a.[badge_url], a.[required_points] FROM dbo.user_achievement ua JOIN Activity.dbo.[achievement] a ON ua.[achievement_id] = a.[achievement_id] WHERE ua.[external_user_id] = @userId ORDER BY ua.[obtained_at] DESC`, { userId: req.user!.userId });
-  res.json({ success: true, data: achievements });
-}));
-
-// 获取每日任务
-router.get('/daily-tasks', asyncHandler(async (_req, res) => {
-  if (isMockMode()) {
-    res.json({ success: true, data: [
-      { task_id: 1, task_name: '浏览3个古建筑', description: '在详情页浏览任意3个古建筑', points_reward: 10, required_action: 'view_architecture', action_count: 3, created_at: '2024-01-01' },
-      { task_id: 2, task_name: '完成一次竞赛', description: '参与任意模式的知识竞赛', points_reward: 20, required_action: 'play_quiz', action_count: 1, created_at: '2024-01-01' },
-    ]});
-    return;
-  }
-  const tasks = await query('activity', 'SELECT [task_id], [task_name], [description], [points_reward], [required_action], [action_count] FROM [daily_tasks] ORDER BY [task_id]');
-  res.json({ success: true, data: tasks });
 }));
 
 export default router;

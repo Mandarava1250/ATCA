@@ -42,7 +42,7 @@ if (!jwtSecret || !jwtRefreshSecret) {
 
 export const config = {
   nodeEnv,
-  port: parseInt(process.env.PORT || '3001', 10),
+  port: parseInt(process.env.PORT || '3000', 10),
   apiPrefix: process.env.API_PREFIX || '/api/v1',
 
   jwt: {
@@ -92,7 +92,8 @@ export const config = {
   },
 
   upload: {
-    dir: process.env.UPLOAD_DIR || './uploads',
+    // 使用绝对路径，确保上传目录和静态文件目录一致
+    dir: process.env.UPLOAD_DIR || path.resolve(__dirname, '../../uploads'),
     maxSize: parseInt(process.env.MAX_FILE_SIZE || '52428800', 10),
   },
 

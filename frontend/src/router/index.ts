@@ -183,9 +183,18 @@ router.beforeEach((to, _from, next) => {
     return;
   }
 
-  // 仅游客
-  if (to.meta.guestOnly && isLoggedIn) {
-    next({ name: 'Home' });
+  // 仅游客页面（登录、注册）：如果用户已登录，重定向到首页
+  // 注意：必须确保user和tokens都已加载完成才能判断
+  // 使用isLoggedIn确保两者都存在，避免token存在但user尚未加载完成时的误判
+  if (to.meta.guestOnly) {
+    // 检查是否真正已登录（同时有user和tokens）
+    if (isLoggedIn) {
+      // 用户已登录，不允许访问登录/注册页面
+      next({ name: 'Home' });
+      return;
+    }
+    // 用户未登录，允许访问登录/注册页面
+    next();
     return;
   }
 

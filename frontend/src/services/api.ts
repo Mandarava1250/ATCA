@@ -353,6 +353,7 @@ export const adminApi = {
       http.get<{ success: boolean; data: { dates: string[]; userCounts: number[]; dauCounts: number[] } }>('/admin/user-growth', { days }),
   getDashboard: () => http.get<{ success: boolean; data: any }>('/admin/dashboard'),
   getUsers: (params?: any) => http.get<{ success: boolean; data: any[]; meta?: any }>('/admin/users', params),
+  createUser: (data: any) => http.post('/admin/users', data),
   updateUser: (id: number, data: any) => http.put(`/admin/users/${id}`, data),
   deleteUser: (id: number) => http.delete(`/admin/users/${id}`),
   batchDeleteUsers: (ids: number[]) => http.post('/admin/users/batch-delete', { ids }),

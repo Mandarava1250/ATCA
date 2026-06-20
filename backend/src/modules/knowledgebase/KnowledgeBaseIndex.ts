@@ -28,6 +28,22 @@ router.get('/categories', asyncHandler(async (_req, res) => {
 }));
 
 /**
+ * 搜索知识（必须在 /:id 之前）
+ * GET /knowledge/search?q=xxx&limit=10
+ */
+router.get('/search/query', asyncHandler(async (req, res) => {
+  const { q, limit } = req.query;
+  
+  if (!q || typeof q !== 'string') {
+    res.status(400).json({ success: false, error: { message: '搜索关键词不能为空' } });
+    return;
+  }
+
+  const results = await knowledgeBaseService.search(q, parseInt(limit as string) || 10);
+  res.json({ success: true, data: results });
+}));
+
+/**
  * 获取知识列表
  * GET /knowledge?category=xxx
  */
@@ -38,7 +54,7 @@ router.get('/', asyncHandler(async (req, res) => {
 }));
 
 /**
- * 获取单条知识详情
+ * 获取单条知识详情（参数化路由必须放在最后）
  * GET /knowledge/:id
  */
 router.get('/:id', asyncHandler(async (req, res) => {
@@ -55,22 +71,6 @@ router.get('/:id', asyncHandler(async (req, res) => {
   }
 
   res.json({ success: true, data: topic });
-}));
-
-/**
- * 搜索知识
- * GET /knowledge/search?q=xxx&limit=10
- */
-router.get('/search/query', asyncHandler(async (req, res) => {
-  const { q, limit } = req.query;
-  
-  if (!q || typeof q !== 'string') {
-    res.status(400).json({ success: false, error: { message: '搜索关键词不能为空' } });
-    return;
-  }
-
-  const results = await knowledgeBaseService.search(q, parseInt(limit as string) || 10);
-  res.json({ success: true, data: results });
 }));
 
 /**

@@ -65,9 +65,10 @@ function buildConfig(
       trustServerCertificate: process.env[trustEnv] === 'true',
     },
     pool: {
-      max: 10,
-      min: 0,
-      idleTimeoutMillis: 30000,
+      // 针对 2核2GiB 服务器优化：降低连接数
+      max: 3,        // 最大连接数（原10，降低到3）
+      min: 0,        // 最小连接数
+      idleTimeoutMillis: 15000,  // 空闲超时（原30秒，降低到15秒）
     },
   };
 }
@@ -126,8 +127,9 @@ async function connectWithRetry(
         password: config.password,
         options: config.options,
         pool: config.pool,
-        connectionTimeout: 15000, // 15秒连接超时
-        requestTimeout: 30000,    // 30秒请求超时
+        // 针对 2核2GiB 服务器优化：降低超时时间
+        connectionTimeout: 10000, // 10秒连接超时（原15秒）
+        requestTimeout: 20000,    // 20秒请求超时（原30秒）
       });
 
       const connected = await pool.connect();

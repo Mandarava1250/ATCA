@@ -1,14 +1,9 @@
 import { defineConfig } from 'vite';
 import vue from '@vitejs/plugin-vue';
 import { resolve } from 'path';
-import { visualizer } from 'rollup-plugin-visualizer';
 
 export default defineConfig({
-  plugins: [
-    vue(),
-    // 构建分析工具（仅在生产环境）
-    ...(process.env.NODE_ENV === 'production' ? [visualizer()] : []),
-  ],
+  plugins: [vue()],
   resolve: {
     alias: {
       '@': resolve(__dirname, 'src'),
@@ -25,14 +20,8 @@ export default defineConfig({
     sourcemap: false,
     chunkSizeWarningLimit: 1500,
     assetsDir: 'assets',
-    minify: 'terser',
-    terserOptions: {
-      compress: {
-        drop_console: true,
-        drop_debugger: true,
-        pure_funcs: ['console.log', 'console.debug', 'console.warn'],
-      },
-    },
+    // 使用esbuild进行压缩
+    minify: 'esbuild',
     rollupOptions: {
       output: {
         manualChunks(id) {
@@ -61,16 +50,6 @@ export default defineConfig({
         chunkFileNames: 'assets/[name]-[hash].js',
         entryFileNames: 'assets/[name]-[hash].js',
       },
-    },
-  },
-  css: {
-    devSourcemap: false,
-    postcss: {
-      plugins: [
-        require('cssnano')({
-          preset: 'default',
-        }),
-      ],
     },
   },
   optimizeDeps: {

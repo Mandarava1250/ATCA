@@ -47,7 +47,7 @@
 
         <template v-if="userStore.isLoggedIn">
           <router-link to="/profile" class="nav-user">
-            <img :src="userStore.user?.avatar || '/images/default-avatar.png'" class="nav-avatar" alt="avatar" />
+            <img :src="avatarUrl" class="nav-avatar" alt="avatar" @error="handleAvatarError" />
             <span class="nav-username">{{ userStore.user?.nickname || userStore.user?.username }}</span>
           </router-link>
           <button class="nav-logout" @click="logout" :title="$t('nav.logout')">
@@ -126,6 +126,41 @@ let lastScrollY = 0;
 const currentLang = computed(() => locale.value);
 
 const isLoggedIn = computed(() => userStore.isLoggedIn);
+
+// 头像URL处理（与 ViewProfile.vue 保持一致）
+const avatarUrl = computed(() => {
+  const avatar = userStore.user?.avatar;
+  if (!avatar) return '/images/default-avatar.svg';
+
+  // 如果是绝对URL或base64，直接返回
+  if (avatar.startsWith('http') || avatar.startsWith('data:')) return avatar;
+
+  // 如果是/uploads/开头
+  if (avatar.startsWith('/uploads/')) {
+    // 在开发环境或后端直连模式下，使用API_BASE路径
+    // 在生产环境通过Nginx代理时，使用相对路径
+    const isProduction = import.meta.env.PROD;
+    if (isProduction) {
+      // 生产环境：假设Nginx正确代理了/uploads路径
+      return avatar;
+    } else {
+      // 开发环境：拼接API基础路径
+      const apiBase = '/api/v1'; // 保持与API_BASE一致
+      // 去掉/api/v1部分，只保留完整路径
+      const baseUrl = apiBase.replace(/\/api\/v1$/, '');
+      return `${baseUrl}${avatar}`;
+    }
+  }
+
+  // 其他情况返回默认头像
+  return '/images/default-avatar.svg';
+});
+
+// 头像加载失败处理
+function handleAvatarError(event: Event) {
+  const img = event.target as HTMLImageElement;
+  img.src = '/images/default-avatar.svg';
+}
 
 const navItems = computed(() => {
   const items = [

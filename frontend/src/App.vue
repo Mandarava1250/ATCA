@@ -337,6 +337,13 @@ const transitionPages = [
   '/admin',          // 管理
 ];
 
+// 不应显示转场动画的页面（登录、注册等）
+const noTransitionPages = [
+  '/login',          // 登录
+  '/register',       // 注册
+  '/splash',         // 启动页
+];
+
 // 页面配置
 const pageConfig: Record<string, {
   icon: string;
@@ -458,37 +465,53 @@ watch(() => route.path, (newPath, oldPath) => {
   });
   
   // 检查是否需要显示转场动画：只有在指定页面之间跳转时才显示
-  // 特殊情况：从序幕动画 (/splash) 跳转到其他页面时也需要显示转场
-  const isFromSplash = fromPath === '/splash' || fromPath === '/';
-  const shouldShowTransition = (transitionPages.includes(newPath) && 
-                                transitionPages.includes(fromPath)) ||
-                               (isFromSplash && transitionPages.includes(newPath));
+// 特殊情况：从序幕动画 (/splash) 跳转到其他页面时也需要显示转场
+// 排除：登录、注册页面不应显示转场动画
+const isFromSplash = fromPath === '/splash' || fromPath === '/';
+const isNoTransitionPage = noTransitionPages.includes(newPath) || noTransitionPages.includes(fromPath);
+const shouldShowTransition = !isNoTransitionPage && 
+                           ((transitionPages.includes(newPath) && 
+                             transitionPages.includes(fromPath)) ||
+                            (isFromSplash && transitionPages.includes(newPath)));
+
+logger.debug('转场动画判断', {
+  isFromSplash,
+  isNoTransitionPage,
+  newPathInList: transitionPages.includes(newPath),
+  fromPathInList: transitionPages.includes(fromPath),
+  shouldShowTransition,
+});
+
+// 如果用户设置跳过转场动画，或者当前页面不需要转场动画，则直接完成路由变化
+// 重要：如果是登录/注册页面，需要立即隐藏任何正在显示的遮罩
+if (animationSettings.skipTransition || !shouldShowTransition) {
+  // 如果是登录/注册页面，强制隐藏遮罩
+  if (isNoTransitionPage) {
+    isTransitioning.value = false;
+    isFadingOut.value = false;
+    logger.info('强制隐藏过渡遮罩（登录/注册页面）', {
+      fromPath: fromPath,
+      toPath: newPath,
+      timestamp: Date.now(),
+    });
+  }
   
-  logger.debug('转场动画判断', {
-    isFromSplash,
-    newPathInList: transitionPages.includes(newPath),
-    fromPathInList: transitionPages.includes(fromPath),
-    shouldShowTransition,
+  const skipReason = animationSettings.skipTransition ? '用户设置跳过' : (isNoTransitionPage ? '登录/注册页面' : '非指定页面');
+  logger.info('跳过转场动画', {
+    fromPath: fromPath,
+    toPath: newPath,
+    reason: skipReason,
+    timestamp: Date.now(),
   });
   
-  // 如果用户设置跳过转场动画，或者当前页面不需要转场动画，则直接完成路由变化
-  if (animationSettings.skipTransition || !shouldShowTransition) {
-    const skipReason = animationSettings.skipTransition ? '用户设置跳过' : '非指定页面';
-    logger.info('跳过转场动画', {
-      fromPath: fromPath,
-      toPath: newPath,
-      reason: skipReason,
-      timestamp: Date.now(),
-    });
-    
-    logger.info('路由变化完成', {
-      fromPath: fromPath,
-      toPath: newPath,
-      totalDuration: Date.now() - watchStartTime,
-      timestamp: Date.now(),
-    });
-    return;
-  }
+  logger.info('路由变化完成', {
+    fromPath: fromPath,
+    toPath: newPath,
+    totalDuration: Date.now() - watchStartTime,
+    timestamp: Date.now(),
+  });
+  return;
+}
   
   // 重置动画状态
   isTransitioning.value = false;

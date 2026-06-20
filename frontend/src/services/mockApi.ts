@@ -687,6 +687,11 @@ export const mockAdminApi = {
     };
   },
 
+  createUser: async (data: any) => {
+    await delay();
+    return { success: true, data: { user_id: Date.now(), ...data } };
+  },
+
   getAIConfigs: async () => {
     await delay();
     return {
