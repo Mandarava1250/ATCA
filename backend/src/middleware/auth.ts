@@ -39,9 +39,15 @@ class MemoryBlacklistStore implements TokenBlacklistStore {
 // Redis 存储实现（生产环境使用）
 class RedisBlacklistStore implements TokenBlacklistStore {
   private client: any = null;
+  private connectionFailed = false;
+  private initAttempted = false;
 
   private async ensureClient(): Promise<void> {
     if (this.client) return;
+    if (this.connectionFailed) return; // 已确认连接失败，不再尝试
+    if (this.initAttempted) return; // 已尝试初始化，不再重复
+    
+    this.initAttempted = true;
     
     try {
       // 动态加载 ioredis，避免强制依赖
@@ -53,10 +59,23 @@ class RedisBlacklistStore implements TokenBlacklistStore {
         port: parseInt(process.env.REDIS_PORT || '6379'),
         password: process.env.REDIS_PASSWORD,
         db: parseInt(process.env.REDIS_DB || '0'),
+        maxRetriesPerRequest: 1,  // 最多重试1次
+        retryStrategy: () => null, // 禁用自动重连
+        enableReadyCheck: false,
+        lazyConnect: true,  // 懒加载连接
       });
+      
+      // 抑制所有错误事件日志
+      this.client.on('error', () => {
+        // 静默处理，不输出日志
+      });
+      
+      await this.client.connect();
       await this.client.ping();
+      console.log('[Auth] Redis 黑名单存储已连接');
     } catch (error) {
-      console.warn('[Auth] Redis 连接失败，降级到内存存储:', (error as Error).message);
+      console.warn('[Auth] Redis 连接失败，降级到内存存储');
+      this.connectionFailed = true;
       this.client = null;
     }
   }

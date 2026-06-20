@@ -34,6 +34,11 @@ import {
   initBrowseStateStore 
 } from './middleware/browseState';
 import { createConditionalOutput } from './middleware/conditionalOutput';
+import { 
+  performanceMonitor, 
+  performanceEndpoint, 
+  startPeriodicCheck 
+} from './middleware/performanceMonitor';
 
 // 模块路由
 import authRouter from './modules/auth/AuthIndex';
@@ -93,6 +98,9 @@ app.use(apiKeyValidation);
 // ============================================
 // 性能优化中间件
 // ============================================
+
+// 性能监控（针对2核2GiB服务器）
+app.use(performanceMonitor());
 
 // 响应压缩 - 减少传输数据量
 app.use(compression({
@@ -178,16 +186,30 @@ const conditionalOutput = createConditionalOutput({
 });
 
 // ============================================
-// 路由注册（严格顺序：API优先，SPA fallback最后）
+// 路由注册（严格顺序：静态文件优先，API其次，SPA fallback最后）
 // ============================================
 
-// 1. 上传文件
-app.use('/uploads', express.static(path.resolve(__dirname, '../uploads')));
+// 0. 上传文件静态服务 - 放在最前面，避免被安全中间件拦截
+const uploadsPath = path.resolve(__dirname, '../uploads');
+console.log(`[Static] 上传文件目录: ${uploadsPath}`);
+app.use('/uploads', express.static(uploadsPath, {
+  setHeaders: (res, filePath) => {
+    // 头像文件：短缓存时间，确保上传后能及时更新
+    if (filePath.includes('/avatars/')) {
+      res.setHeader('Cache-Control', 'public, max-age=300, must-revalidate'); // 5分钟
+    } else {
+      res.setHeader('Cache-Control', 'public, max-age=86400'); // 其他文件1天
+    }
+  },
+}));
 
-// 2. 健康检查
+// 1. 健康检查
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString(), version: '1.0.0' });
 });
+
+// 3. 性能监控端点
+app.get('/api/monitor/performance', performanceEndpoint);
 
 // 3. Swagger API文档
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
@@ -260,10 +282,14 @@ async function startServer() {
     console.log(`[ATCA Server] 运行于 http://0.0.0.0:${PORT}`);
     console.log(`[ATCA Server] API地址: http://0.0.0.0:${PORT}${apiPrefix}`);
     console.log(`[ATCA Server] 健康检查: http://0.0.0.0:${PORT}/health`);
+    console.log(`[ATCA Server] 性能监控: http://0.0.0.0:${PORT}/api/monitor/performance`);
     console.log(`[ATCA Server] 环境: ${config.nodeEnv}`);
     if (isMockMode()) {
       console.log(`[ATCA Server] 当前使用 Mock 数据模式（无需数据库）`);
     }
+    
+    // 启动定期性能检查（针对2核2GiB服务器）
+    startPeriodicCheck();
   });
 
   process.on('uncaughtException', (err) => {

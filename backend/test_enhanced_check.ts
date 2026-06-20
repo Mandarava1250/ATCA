@@ -1,11 +1,62 @@
-const axios = require('axios');
+import axios, { AxiosResponse } from 'axios';
 
 let token = '';
 
+// 登录响应接口
+interface LoginResponse {
+  success: boolean;
+  data: {
+    tokens: {
+      accessToken: string;
+    };
+  };
+}
+
+// AI列表响应接口
+interface AIListResponse {
+  success: boolean;
+  data: Array<{
+    ai_id: number;
+    name: string;
+  }>;
+}
+
+// 冲突详情接口
+interface Conflict {
+  type: string;
+  severity: string;
+  conflictingStatement: string;
+  analysis: string;
+  correctionSuggestion: string;
+}
+
+// 冲突报告接口
+interface ConflictReport {
+  conflicts: Conflict[];
+  severityLevel: string;
+  summary: string;
+  knowledgeCoverage: string;
+}
+
+// 增强检查结果接口
+interface EnhancedCheck {
+  localCheckDuration: string;
+  conflictReport: ConflictReport;
+}
+
+// 聊天响应接口
+interface ChatResponse {
+  success: boolean;
+  data: {
+    response: string;
+    enhancedCheck?: EnhancedCheck;
+  };
+}
+
 // 登录获取token
-async function login() {
+async function login(): Promise<void> {
   try {
-    const response = await axios.post('http://localhost:3000/api/v1/auth/login', {
+    const response: AxiosResponse<LoginResponse> = await axios.post('http://localhost:3000/api/v1/auth/login', {
       username: 'testuser',
       password: 'Test@12345'
     }, { timeout: 10000 });
@@ -21,7 +72,7 @@ async function login() {
 }
 
 // 测试增强检查模式的分析报告功能
-async function testEnhancedCheck() {
+async function testEnhancedCheck(): Promise<void> {
   console.log('=== 测试增强检查模式分析报告 ===\n');
   
   // 先登录
@@ -29,7 +80,7 @@ async function testEnhancedCheck() {
   
   // 获取AI列表
   console.log('获取AI列表...');
-  const aiListResponse = await axios.get('http://localhost:3000/api/v1/assistant/ai-list', { timeout: 10000 });
+  const aiListResponse: AxiosResponse<AIListResponse> = await axios.get('http://localhost:3000/api/v1/assistant/ai-list', { timeout: 10000 });
   console.log('可用AI:', JSON.stringify(aiListResponse.data.data.map(a => ({id: a.ai_id, name: a.name})), null, 2));
   
   const aiId = aiListResponse.data.data[0]?.ai_id || 1;
@@ -45,7 +96,7 @@ async function testEnhancedCheck() {
     console.log('发送请求... (可能需要等待30-60秒)');
     const startTime = Date.now();
     
-    const response = await axios.post('http://localhost:3000/api/v1/assistant/chat', {
+    const response: AxiosResponse<ChatResponse> = await axios.post('http://localhost:3000/api/v1/assistant/chat', {
       message: testInput1,
       ai_id: aiId,
       enhancedCheck: true

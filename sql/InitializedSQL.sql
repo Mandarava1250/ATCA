@@ -2,8 +2,9 @@
 -- 华夏营造 (ATCA) - 完整数据库初始化脚本
 -- 包含：建库、建表、索引、约束、触发器、视图、存储过程、数据插入
 -- 数据库：Architecture, ATCA_User, Competition, Social, Media_3D, Activity
--- 生成时间：2026-06-04
+-- 生成时间：2026-06-20
 -- 执行说明：在 MSSQL 中直接执行此单一文件即可
+-- 数据来源：backend\src\config\DB 目录下的所有SQL文件已整合
 -- ============================================
 
 -- 创建所有数据库（如不存在）
@@ -52,7 +53,7 @@ IF OBJECT_ID('dbo.atca_user', 'U') IS NULL
                                        [nickname] VARCHAR(50) NULL,
                                        [password] VARCHAR(255) NOT NULL,
                                        [email] VARCHAR(100) NOT NULL UNIQUE,
-                                       [avatar] VARCHAR(255) DEFAULT '/images/default-avatar.png',
+                                       [avatar] VARCHAR(255) DEFAULT '/images/default-avatar.svg',
                                        [points] INT DEFAULT 0,
                                        [level] INT DEFAULT 1,
                                        [created_at] DATETIME DEFAULT GETDATE(),
@@ -550,7 +551,7 @@ IF OBJECT_ID('dbo.atca_user', 'U') IS NULL
                                        [nickname] VARCHAR(50) NULL,
                                        [password] VARCHAR(255) NOT NULL,
                                        [email] VARCHAR(100) NOT NULL,
-                                       [avatar] VARCHAR(255) DEFAULT '/images/default-avatar.png',
+                                       [avatar] VARCHAR(255) DEFAULT '/images/default-avatar.svg',
                                        [points] INT DEFAULT 0,
                                        [level] INT DEFAULT 1,
                                        [created_at] DATETIME DEFAULT GETDATE(),
@@ -777,10 +778,32 @@ IF OBJECT_ID('dbo.ai_config', 'U') IS NULL
                                        [is_default] BIT NOT NULL DEFAULT 0,
                                        [temperature] DECIMAL(3,2) DEFAULT 0.70,
                                        [max_tokens] INT DEFAULT 2048,
+                                       [max_concurrent] INT DEFAULT 3,
+                                       [max_queue_size] INT DEFAULT 20,
+                                       [queue_timeout] INT DEFAULT 60,
                                        [created_at] DATETIME DEFAULT GETDATE(),
                                        [updated_at] DATETIME DEFAULT GETDATE()
         );
     END
+GO
+
+-- 添加并发设置字段（如果不存在）
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE name = 'max_concurrent' AND object_id = OBJECT_ID('dbo.ai_config'))
+BEGIN
+    ALTER TABLE dbo.ai_config ADD [max_concurrent] INT DEFAULT 3;
+END
+GO
+
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE name = 'max_queue_size' AND object_id = OBJECT_ID('dbo.ai_config'))
+BEGIN
+    ALTER TABLE dbo.ai_config ADD [max_queue_size] INT DEFAULT 20;
+END
+GO
+
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE name = 'queue_timeout' AND object_id = OBJECT_ID('dbo.ai_config'))
+BEGIN
+    ALTER TABLE dbo.ai_config ADD [queue_timeout] INT DEFAULT 60;
+END
 GO
 
 -- ai_config 表更新触发器
@@ -816,11 +839,11 @@ GO
 MERGE INTO dbo.ai_config AS target
 USING (
     VALUES
-        (1, N'通用AI助手', 'openai', NULL, NULL, NULL, 'gpt-4o', 'https://api.openai.com/v1/chat/completions', 'gpt-4o', N'你是华夏营造的AI助手，精通中国古代建筑文化。请用专业但易懂的方式回答用户的问题。', N'通用型AI助手，适合解答古建筑知识', 1, 1, 0.70, 2048),
-        (2, N'建筑技术专家', 'openai', NULL, NULL, NULL, 'gpt-4o', 'https://api.openai.com/v1/chat/completions', 'gpt-4o', N'你是一位古建筑技术专家，专注于斗拱、榫卯、营造法式等技术细节。请从技术角度详细解答问题。', N'专注建筑技术细节的专家', 1, 0, 0.50, 2048),
-        (3, N'历史学者', 'openai', NULL, NULL, NULL, 'gpt-4o', 'https://api.openai.com/v1/chat/completions', 'gpt-4o', N'你是一位研究中国古代建筑史的学者，精通各朝代建筑风格和演变。请从历史角度解答问题。', N'专注历史文化的学者', 1, 0, 0.60, 2048),
-        (4, N'讯飞星火Lite', 'spark', NULL, NULL, NULL, 'lite', 'wss://spark-api.xf-yun.com/v1.1/chat', 'lite', N'你是华夏营造的AI助手，精通中国古代建筑文化。请用专业但易懂的方式回答用户的问题。', N'讯飞星火Spark Lite（WebSocket协议）支持自选版本: lite/generalv3/pro-128k/generalv3.5/max-32k/4.0Ultra', 1, 0, 0.50, 2048)
-) AS source ([ai_id], [name], [provider], [app_id], [api_key], [api_secret], [version], [api_endpoint], [model], [system_prompt], [description], [is_active], [is_default], [temperature], [max_tokens])
+        (1, N'通用AI助手', 'openai', NULL, NULL, NULL, 'gpt-4o', 'https://api.openai.com/v1/chat/completions', 'gpt-4o', N'你是华夏营造的AI助手，精通中国古代建筑文化。请用专业但易懂的方式回答用户的问题。', N'通用型AI助手，适合解答古建筑知识', 1, 1, 0.70, 2048, 3, 20, 60),
+        (2, N'建筑技术专家', 'openai', NULL, NULL, NULL, 'gpt-4o', 'https://api.openai.com/v1/chat/completions', 'gpt-4o', N'你是一位古建筑技术专家，专注于斗拱、榫卯、营造法式等技术细节。请从技术角度详细解答问题。', N'专注建筑技术细节的专家', 1, 0, 0.50, 2048, 3, 20, 60),
+        (3, N'历史学者', 'openai', NULL, NULL, NULL, 'gpt-4o', 'https://api.openai.com/v1/chat/completions', 'gpt-4o', N'你是一位研究中国古代建筑史的学者，精通各朝代建筑风格和演变。请从历史角度解答问题。', N'专注历史文化的学者', 1, 0, 0.60, 2048, 3, 20, 60),
+        (4, N'讯飞星火Lite', 'spark', NULL, NULL, NULL, 'lite', 'wss://spark-api.xf-yun.com/v1.1/chat', 'lite', N'你是华夏营造的AI助手，精通中国古代建筑文化。请用专业但易懂的方式回答用户的问题。', N'讯飞星火Spark Lite（WebSocket协议）支持自选版本: lite/generalv3/pro-128k/generalv3.5/max-32k/4.0Ultra', 1, 0, 0.50, 2048, 3, 20, 60)
+) AS source ([ai_id], [name], [provider], [app_id], [api_key], [api_secret], [version], [api_endpoint], [model], [system_prompt], [description], [is_active], [is_default], [temperature], [max_tokens], [max_concurrent], [max_queue_size], [queue_timeout])
 ON target.[ai_id] = source.[ai_id]
 WHEN MATCHED THEN
     UPDATE SET
@@ -837,10 +860,13 @@ WHEN MATCHED THEN
                [is_active] = source.[is_active],
                [is_default] = source.[is_default],
                [temperature] = source.[temperature],
-               [max_tokens] = source.[max_tokens]
+               [max_tokens] = source.[max_tokens],
+               [max_concurrent] = source.[max_concurrent],
+               [max_queue_size] = source.[max_queue_size],
+               [queue_timeout] = source.[queue_timeout]
 WHEN NOT MATCHED THEN
-    INSERT ([name], [provider], [app_id], [api_key], [api_secret], [version], [api_endpoint], [model], [system_prompt], [description], [is_active], [is_default], [temperature], [max_tokens])
-    VALUES (source.[name], source.[provider], source.[app_id], source.[api_key], source.[api_secret], source.[version], source.[api_endpoint], source.[model], source.[system_prompt], source.[description], source.[is_active], source.[is_default], source.[temperature], source.[max_tokens]);
+    INSERT ([name], [provider], [app_id], [api_key], [api_secret], [version], [api_endpoint], [model], [system_prompt], [description], [is_active], [is_default], [temperature], [max_tokens], [max_concurrent], [max_queue_size], [queue_timeout])
+    VALUES (source.[name], source.[provider], source.[app_id], source.[api_key], source.[api_secret], source.[version], source.[api_endpoint], source.[model], source.[system_prompt], source.[description], source.[is_active], source.[is_default], source.[temperature], source.[max_tokens], source.[max_concurrent], source.[max_queue_size], source.[queue_timeout]);
 GO
 
 PRINT 'ATCA_User 数据库初始化完成';
@@ -5704,7 +5730,7 @@ IF NOT EXISTS (SELECT 1 FROM dbo.atca_user WHERE [username] = 'admin')
     BEGIN
         INSERT INTO dbo.atca_user ([user_id], [username], [nickname], [password], [email], [avatar], [points], [level], [created_at], [updated_at], [last_login], [is_active], [role])
         VALUES
-            (1, 'admin', N'管理员', '$2b$10$bH3.WAX5668Ze9tDyj2DQuxf5e6Wb3Po3YqjcYhzQFWHsbtYnUWbS', 'admin@example.com', '/images/default-avatar.png', 1000, 10, DATEADD(day, -30, GETDATE()), NULL, DATEADD(day, -1, GETDATE()), 1, 'admin'),
+            (1, 'admin', N'管理员', '$2b$10$bH3.WAX5668Ze9tDyj2DQuxf5e6Wb3Po3YqjcYhzQFWHsbtYnUWbS', 'admin@example.com', '/images/default-avatar.svg', 1000, 10, DATEADD(day, -30, GETDATE()), NULL, DATEADD(day, -1, GETDATE()), 1, 'admin'),
             (2, 'zhangsan', N'张三', '$2b$10$example_hash_1', 'zhangsan@example.com', '/images/avatars/user1.png', 850, 5, DATEADD(day, -25, GETDATE()), NULL, DATEADD(day, -2, GETDATE()), 1, 'user'),
             (3, 'lisi', N'李四', '$2b$10$example_hash_2', 'lisi@example.com', '/images/avatars/user2.png', 1200, 7, DATEADD(day, -20, GETDATE()), NULL, DATEADD(day, -1, GETDATE()), 1, 'user'),
             (4, 'wangwu', N'王五', '$2b$10$example_hash_3', 'wangwu@example.com', '/images/avatars/user3.png', 2300, 9, DATEADD(day, -15, GETDATE()), NULL, DATEADD(day, -3, GETDATE()), 1, 'user'),

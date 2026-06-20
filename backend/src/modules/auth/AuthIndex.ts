@@ -26,9 +26,65 @@ import { validatePassword } from '../../middleware/security';
 const router = Router();
 const logger = createLogger('Auth');
 
-// 头像上传配置
+// 头像上传目录和备份目录
 const avatarUploadDir = path.resolve(config.upload.dir, 'avatars');
+const avatarBackupDir = path.resolve(config.upload.dir, 'avatars_backup');
+
+// 确保目录存在
 if (!fs.existsSync(avatarUploadDir)) { fs.mkdirSync(avatarUploadDir, { recursive: true }); }
+if (!fs.existsSync(avatarBackupDir)) { fs.mkdirSync(avatarBackupDir, { recursive: true }); }
+
+// 清理超过24小时的备份文件
+function cleanupOldBackups() {
+  try {
+    const files = fs.readdirSync(avatarBackupDir);
+    const now = Date.now();
+    const maxAge = 24 * 60 * 60 * 1000; // 24小时
+
+    files.forEach(file => {
+      const filePath = path.join(avatarBackupDir, file);
+      try {
+        const stats = fs.statSync(filePath);
+        if (now - stats.mtimeMs > maxAge) {
+          fs.unlinkSync(filePath);
+          logger.info('已删除过期头像备份', { file, deletedAt: new Date().toISOString() });
+        }
+      } catch (err) {
+        logger.error('删除过期头像备份失败', { file, error: err });
+      }
+    });
+  } catch (err) {
+    logger.error('清理头像备份失败', { error: err });
+  }
+}
+
+// 启动时清理一次，然后每6小时清理一次
+cleanupOldBackups();
+setInterval(cleanupOldBackups, 6 * 60 * 60 * 1000);
+
+// 将旧头像移到备份目录
+function moveToBackup(oldAvatarUrl: string | null): string | null {
+  if (!oldAvatarUrl) return null;
+
+  // 只处理本系统上传的头像
+  if (!oldAvatarUrl.startsWith('/uploads/avatars/')) return null;
+
+  const filename = path.basename(oldAvatarUrl);
+  const backupPath = path.join(avatarBackupDir, filename);
+  const originalPath = path.join(avatarUploadDir, filename);
+
+  try {
+    if (fs.existsSync(originalPath)) {
+      fs.renameSync(originalPath, backupPath);
+      logger.info('头像已备份', { original: oldAvatarUrl, backup: backupPath });
+      return backupPath;
+    }
+  } catch (err) {
+    logger.error('头像备份失败', { original: oldAvatarUrl, error: err });
+  }
+
+  return null;
+}
 
 const avatarStorage = multer.diskStorage({
   destination: (_req, _file, cb) => cb(null, avatarUploadDir),
@@ -42,8 +98,13 @@ const avatarUpload = multer({
   storage: avatarStorage,
   limits: { fileSize: 2 * 1024 * 1024 }, // 2MB
   fileFilter: (_req, file, cb) => {
-    if (file.mimetype.startsWith('image/')) cb(null, true);
-    else cb(new Error('只允许上传图片文件') as any);
+    // 允许的图片类型
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('只允许上传 JPG、PNG、GIF 或 WebP 格式的图片') as any);
+    }
   },
 });
 
@@ -135,7 +196,7 @@ router.post(
       logger.info('用户注册成功', { userId, username, role: 'user' });
       res.status(201).json({
         success: true,
-        data: { user: { userId, username, nickname: nickname || username, email, role: 'user', points: 0, level: 1, avatar: '/images/default-avatar.png' }, tokens },
+        data: { user: { userId, username, nickname: nickname || username, email, role: 'user', points: 0, level: 1, avatar: '/images/default-avatar.svg' }, tokens },
         message: '注册成功（Mock 模式）',
       });
       return;
@@ -183,7 +244,7 @@ router.post(
     logger.info('用户注册成功', { userId, username, role: 'user' });
     res.status(201).json({
       success: true,
-      data: { user: { userId, username, nickname: nickname || username, email, role: 'user', points: 0, level: 1, avatar: '/images/default-avatar.png' }, tokens },
+      data: { user: { userId, username, nickname: nickname || username, email, role: 'user', points: 0, level: 1, avatar: '/images/default-avatar.svg' }, tokens },
       message: '注册成功',
     });
   })
@@ -368,17 +429,73 @@ router.put('/profile', authMiddleware, asyncHandler(async (req: AuthRequest, res
 
 // 头像上传
 router.post('/avatar', authMiddleware, avatarUpload.single('avatar'), asyncHandler(async (req: AuthRequest, res) => {
-  if (!req.file) { res.status(400).json({ success: false, error: { message: '未收到文件' } }); return; }
+  if (!req.file) {
+    res.status(400).json({ success: false, error: { message: '未收到文件' } });
+    return;
+  }
+
   const avatarUrl = `/uploads/avatars/${req.file.filename}`;
   const userId = req.user!.userId;
+
+  logger.info('头像上传请求', {
+    userId,
+    filename: req.file.filename,
+    originalname: req.file.originalname,
+    size: req.file.size,
+    mimetype: req.file.mimetype,
+    ip: req.ip
+  });
+
   if (isMockMode()) {
+    // Mock模式下也需要备份旧头像
     const user = mockUsers.find((u) => u.user_id === userId);
+    if (user && user.avatar) {
+      moveToBackup(user.avatar);
+    }
     if (user) user.avatar = avatarUrl;
     res.json({ success: true, data: { avatarUrl } });
     return;
   }
-  await execute('user', 'UPDATE dbo.atca_user SET [avatar] = @avatar WHERE [user_id] = @userId', { avatar: avatarUrl, userId });
-  res.json({ success: true, data: { avatarUrl } });
+
+  try {
+    // 获取用户的旧头像（用于备份）
+    const oldUsers = await query('user', 'SELECT [avatar] FROM dbo.atca_user WHERE [user_id] = @userId', { userId });
+    const oldAvatar = oldUsers.length > 0 ? (oldUsers[0] as any).avatar : null;
+
+    // 更新数据库中的头像URL
+    await execute('user', 'UPDATE dbo.atca_user SET [avatar] = @avatar WHERE [user_id] = @userId', { avatar: avatarUrl, userId });
+
+    // 将旧头像移动到备份目录（在新头像成功更新数据库后再执行）
+    if (oldAvatar && oldAvatar !== avatarUrl) {
+      const backupPath = moveToBackup(oldAvatar);
+      if (backupPath) {
+        logger.info('旧头像已备份', {
+          userId,
+          oldAvatar,
+          backupPath,
+          backupUntil: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+        });
+      }
+    }
+
+    res.json({
+      success: true,
+      data: { avatarUrl },
+      message: '头像上传成功'
+    });
+  } catch (err: any) {
+    logger.error('头像上传失败', { userId, error: err.message, stack: err.stack });
+    // 如果数据库更新失败，删除刚上传的文件
+    try {
+      fs.unlinkSync(req.file.path);
+    } catch (unlinkErr) {
+      logger.error('删除失败的头像文件失败', { path: req.file.path, error: unlinkErr });
+    }
+    res.status(500).json({
+      success: false,
+      error: { message: '头像上传失败，请重试' }
+    });
+  }
 }));
 
 // 修改密码

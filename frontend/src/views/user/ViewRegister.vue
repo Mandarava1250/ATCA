@@ -112,7 +112,7 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref, computed } from 'vue';
+import { reactive, ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { authApi } from '@/services/api';
@@ -130,6 +130,7 @@ const userStore = useUserStore();
 const { t } = useI18n();
 const loading = ref(false);
 const error = ref('');
+const isMounted = ref(false);
 
 const form = reactive({
   username: '',
@@ -141,6 +142,15 @@ const form = reactive({
 const strength = ref(0);
 
 const strengthPct = computed(() => Math.min(strength.value * 25, 100));
+
+// 组件挂载时确保页面正确显示
+onMounted(() => {
+  isMounted.value = true;
+  // 确保页面可见性
+  document.body.style.overflow = 'auto';
+  
+  console.log('[Register] 注册页面已挂载');
+});
 const strengthColor = computed(() => {
   const c = ['#C75C3A', '#C75C3A', '#C9A96E', '#7CB342', '#7CB342'];
   return c[strength.value] || '#C75C3A';
@@ -221,27 +231,41 @@ const handleRegister = preventDoubleClick(async () => {
 <style scoped>
 .auth-page {
   position: fixed;
-  inset: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   overflow-y: auto;
   overflow-x: hidden;
+  min-height: 100vh;
+  z-index: 100;
+  background: #1A1714;
 }
 
 /* 背景 */
 .auth-bg {
   position: fixed;
-  inset: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   z-index: 0;
   background-image: url('/images/hero-bg.jpg');
   background-size: cover;
   background-position: center;
   transform: scale(1.05);
+  background-repeat: no-repeat;
+  opacity: 0.6;
 }
 .auth-bg-overlay {
   position: fixed;
-  inset: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   z-index: 0;
   background: linear-gradient(135deg, rgba(15,12,8,0.95) 0%, rgba(26,23,20,0.92) 50%, rgba(15,12,8,0.95) 100%);
 }
@@ -258,11 +282,16 @@ const handleRegister = preventDoubleClick(async () => {
   border-radius: 50%;
   background: var(--gold);
   opacity: 0;
-  animation-name: aFloat infinite ease-in-out;
+  -webkit-animation: aFloat 3s ease-in-out infinite;
+  animation: aFloat 3s ease-in-out infinite;
 }
-@keyframes aFloat {
+@-webkit-keyframes aFloat {
   0%, 100% { opacity: 0; transform: scale(0.5); }
   50% { opacity: 0.4; transform: scale(1); }
+}
+@keyframes aFloat {
+  0%, 100% { opacity: 0; -webkit-transform: scale(0.5); transform: scale(0.5); }
+  50% { opacity: 0.4; -webkit-transform: scale(1); transform: scale(1); }
 }
 
 /* 中央区域 */
@@ -275,6 +304,7 @@ const handleRegister = preventDoubleClick(async () => {
   display: flex;
   flex-direction: column;
   align-items: center;
+  box-sizing: border-box;
 }
 
 /* Logo */
@@ -285,15 +315,21 @@ const handleRegister = preventDoubleClick(async () => {
   gap: 10px;
   margin-bottom: 24px;
   text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
 }
 .auth-logo {
   width: 52px;
   height: 52px;
+  -webkit-animation: logoGlow 3s ease-in-out infinite;
   animation: logoGlow 3s ease-in-out infinite;
 }
+@-webkit-keyframes logoGlow {
+  0%, 100% { -webkit-filter: drop-shadow(0 0 6px rgba(201,169,110,0.3)); filter: drop-shadow(0 0 6px rgba(201,169,110,0.3)); }
+  50% { -webkit-filter: drop-shadow(0 0 18px rgba(201,169,110,0.6)); filter: drop-shadow(0 0 18px rgba(201,169,110,0.6)); }
+}
 @keyframes logoGlow {
-  0%, 100% { filter: drop-shadow(0 0 6px rgba(201,169,110,0.3)); }
-  50% { filter: drop-shadow(0 0 18px rgba(201,169,110,0.6)); }
+  0%, 100% { -webkit-filter: drop-shadow(0 0 6px rgba(201,169,110,0.3)); filter: drop-shadow(0 0 6px rgba(201,169,110,0.3)); }
+  50% { -webkit-filter: drop-shadow(0 0 18px rgba(201,169,110,0.6)); filter: drop-shadow(0 0 18px rgba(201,169,110,0.6)); }
 }
 .auth-brand {
   font-family: var(--font-serif);
@@ -307,11 +343,20 @@ const handleRegister = preventDoubleClick(async () => {
 .auth-card {
   width: 100%;
   padding: 32px 28px;
-  background: rgba(30, 26, 22, 0.85);
-  backdrop-filter: blur(20px);
+  background: rgba(30, 26, 22, 0.95);
   border: 1px solid rgba(201, 169, 110, 0.12);
   border-radius: var(--r-lg);
   box-shadow: 0 24px 60px rgba(0,0,0,0.5), inset 0 1px 0 rgba(201,169,110,0.06);
+  box-sizing: border-box;
+  position: relative;
+}
+/* 毛玻璃效果（支持的浏览器） */
+@supports (-webkit-backdrop-filter: blur(20px)) or (backdrop-filter: blur(20px)) {
+  .auth-card {
+    background: rgba(30, 26, 22, 0.75);
+    -webkit-backdrop-filter: blur(20px);
+    backdrop-filter: blur(20px);
+  }
 }
 .auth-title {
   font-family: var(--font-serif);
@@ -340,8 +385,11 @@ const handleRegister = preventDoubleClick(async () => {
   grid-template-columns: 1fr 1fr;
   gap: 12px;
 }
-@media (max-width: 480px) {
-  .form-row { grid-template-columns: 1fr; }
+.form-group {
+  position: relative;
+}
+.form-group.half {
+  min-width: 0;
 }
 .form-group label {
   display: block;
@@ -360,6 +408,10 @@ const handleRegister = preventDoubleClick(async () => {
   font-size: 0.875rem;
   outline: none;
   transition: all 0.2s ease;
+  box-sizing: border-box;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
 }
 .auth-input:focus {
   border-color: var(--gold-dim);
@@ -367,6 +419,10 @@ const handleRegister = preventDoubleClick(async () => {
 }
 .auth-input::placeholder {
   color: var(--text-dim);
+}
+.auth-input:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0 30px rgba(36, 32, 28, 0.9) inset;
+  -webkit-text-fill-color: var(--text);
 }
 
 /* 密码强度 */
@@ -391,6 +447,7 @@ const handleRegister = preventDoubleClick(async () => {
 .strength-label {
   font-size: 0.6875rem;
   flex-shrink: 0;
+  white-space: nowrap;
 }
 
 .auth-error {
@@ -420,21 +477,34 @@ const handleRegister = preventDoubleClick(async () => {
   align-items: center;
   justify-content: center;
   min-height: 42px;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  -webkit-tap-highlight-color: transparent;
 }
 .auth-btn:hover:not(:disabled) {
   background: var(--gold-light);
   box-shadow: 0 4px 16px rgba(201,169,110,0.25);
 }
-.auth-btn:disabled { opacity: 0.7; cursor: wait; }
+.auth-btn:active:not(:disabled) {
+  transform: scale(0.98);
+}
+.auth-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background: var(--gold-dim);
+}
 .btn-spinner {
   width: 18px;
   height: 18px;
   border: 2px solid rgba(26,23,20,0.3);
   border-top-color: #1A1714;
   border-radius: 50%;
+  -webkit-animation: spin 0.8s linear infinite;
   animation: spin 0.8s linear infinite;
 }
-@keyframes spin { to { transform: rotate(360deg); } }
+@-webkit-keyframes spin { to { -webkit-transform: rotate(360deg); transform: rotate(360deg); } }
+@keyframes spin { to { -webkit-transform: rotate(360deg); transform: rotate(360deg); } }
 
 /* 分隔 */
 .auth-or {
@@ -465,6 +535,7 @@ const handleRegister = preventDoubleClick(async () => {
   text-decoration: none;
   transition: all 0.2s ease;
   margin-bottom: 14px;
+  -webkit-tap-highlight-color: transparent;
 }
 .auth-link-btn:hover {
   border-color: var(--gold-dim);
@@ -482,6 +553,56 @@ const handleRegister = preventDoubleClick(async () => {
   color: var(--text-muted);
   text-decoration: none;
   transition: color 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
 }
 .auth-back-link:hover { color: var(--gold); }
+
+/* 响应式布局 */
+@media screen and (max-width: 480px) {
+  .auth-center {
+    padding: 16px 12px;
+  }
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+  .auth-card {
+    padding: 24px 20px;
+  }
+  .auth-logo {
+    width: 44px;
+    height: 44px;
+  }
+  .auth-brand {
+    font-size: 0.9375rem;
+  }
+}
+
+@media screen and (max-width: 360px) {
+  .auth-center {
+    padding: 12px 8px;
+  }
+  .auth-card {
+    padding: 20px 16px;
+  }
+  .auth-input {
+    padding: 8px 10px;
+    font-size: 0.8125rem;
+  }
+  .auth-btn {
+    padding: 10px;
+    font-size: 0.875rem;
+  }
+}
+
+/* Safari 特殊处理 */
+@media not all and (min-resolution:.001dpcm) {
+  @supports (-webkit-appearance:none) and (stroke-color:transparent) {
+    .auth-card {
+      background: rgba(30, 26, 22, 0.95);
+    }
+    .auth-input {
+      background: rgba(36, 32, 28, 0.9);
+    }
+  }
+}
 </style>

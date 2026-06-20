@@ -104,7 +104,7 @@
         <div v-if="leaderboard.length" class="leaderboard-table">
           <div v-for="(entry, idx) in leaderboard" :key="entry.user_id || idx" class="leaderboard-row">
             <span class="lb-rank" :class="{ 'top3': idx < 3 }">{{ idx + 1 }}</span>
-            <img :src="entry.avatar || '/images/default-avatar.png'" class="lb-avatar" @error="handleAvatarError" />
+            <img :src="entry.avatar || '/images/default-avatar.svg'" class="lb-avatar" @error="handleAvatarError" />
             <span class="lb-name">{{ entry.nickname || entry.username || '匿名' }}</span>
             <span class="lb-points">{{ entry.points || 0 }}{{ $t('quiz.points') }}</span>
             <span class="lb-level">Lv.{{ entry.level || 1 }}</span>
@@ -219,7 +219,7 @@ function goLogin() {
 
 function handleAvatarError(e: Event) {
   const img = e.target as HTMLImageElement;
-  img.src = '/images/default-avatar.png';
+  img.src = '/images/default-avatar.svg';
 }
 
 onMounted(async () => {

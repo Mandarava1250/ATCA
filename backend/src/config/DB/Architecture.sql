@@ -20,7 +20,7 @@ BEGIN
         [nickname] VARCHAR(50) NULL,
         [password] VARCHAR(255) NOT NULL,
         [email] VARCHAR(100) NOT NULL UNIQUE,
-        [avatar] VARCHAR(255) DEFAULT '/images/default-avatar.png',
+        [avatar] VARCHAR(255) DEFAULT '/images/default-avatar.svg',
         [points] INT DEFAULT 0,
         [level] INT DEFAULT 1,
         [created_at] DATETIME DEFAULT GETDATE(),
