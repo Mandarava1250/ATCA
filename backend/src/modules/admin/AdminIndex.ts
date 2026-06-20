@@ -11,6 +11,39 @@ import { buildSparkAuthUrl, callSparkWebSocket, getSparkEndpoint } from '../../u
 const router = Router();
 router.use(authMiddleware as any, adminMiddleware as any);
 
+// 用户数据缓存（用于提升查询性能）
+const userCache = {
+  data: [] as any[],
+  timestamp: 0,
+  ttl: 60000, // 缓存有效期60秒
+};
+
+function getUserCacheKey(params: { search?: string; page: number; limit: number }) {
+  return `${params.search || ''}_${params.page}_${params.limit}`;
+}
+
+const userQueryCache = new Map<string, { data: any[]; meta: any; timestamp: number }>();
+
+function getCachedUserQuery(key: string) {
+  const cached = userQueryCache.get(key);
+  if (cached && Date.now() - cached.timestamp < userCache.ttl) {
+    return cached;
+  }
+  userQueryCache.delete(key);
+  return null;
+}
+
+function setCachedUserQuery(key: string, data: any[], meta: any) {
+  userQueryCache.set(key, { data, meta, timestamp: Date.now() });
+  // 限制缓存数量
+  if (userQueryCache.size > 50) {
+    const oldestKey = Array.from(userQueryCache.keys()).sort((a, b) => 
+      userQueryCache.get(a)!.timestamp - userQueryCache.get(b)!.timestamp
+    )[0];
+    userQueryCache.delete(oldestKey);
+  }
+}
+
 // ============ 用户增长趋势 ============
 router.get('/user-growth', asyncHandler(async (req: any, res) => {
   const days = parseInt(req.query.days) || 7;
@@ -119,7 +152,9 @@ router.get('/dashboard', asyncHandler(async (_req, res) => {
 // ============ 用户管理 ============
 router.get('/users', asyncHandler(async (req: any, res) => {
   const { page = '1', limit = '20', search = '' } = req.query as Record<string, string>;
-  const offset = (parseInt(page) - 1) * parseInt(limit);
+  const pageNum = parseInt(page);
+  const limitNum = parseInt(limit);
+  const offset = (pageNum - 1) * limitNum;
 
   if (isMockMode()) {
     const users = [
@@ -127,19 +162,46 @@ router.get('/users', asyncHandler(async (req: any, res) => {
       { user_id: 2, username: 'user1', nickname: '建筑达人', email: 'user1@example.com', role: 'user', is_active: true, created_at: '2024-01-15' },
     ];
     const filtered = search ? users.filter((u: any) => u.username.includes(search) || u.nickname?.includes(search)) : users;
-    res.json({ success: true, data: filtered, meta: { total: filtered.length, page: parseInt(page), limit: parseInt(limit) } });
+    res.json({ success: true, data: filtered, meta: { total: filtered.length, page: pageNum, limit: limitNum } });
+    return;
+  }
+
+  // 尝试从缓存获取
+  const cacheKey = getUserCacheKey({ search, page: pageNum, limit: limitNum });
+  const cachedResult = getCachedUserQuery(cacheKey);
+  if (cachedResult) {
+    res.json({ success: true, data: cachedResult.data, meta: cachedResult.meta, cached: true });
     return;
   }
 
   try {
     let whereClause = 'WHERE 1=1';
     const params: any = {};
-    if (search) { whereClause += ' AND ([username] LIKE @search OR [nickname] LIKE @search)'; params.search = `%${search}%`; }
+    if (search) { 
+      whereClause += ' AND ([username] LIKE @search OR [nickname] LIKE @search)'; 
+      params.search = `%${search}%`; 
+    }
 
-    const users = await query('user', `SELECT [user_id], [username], [nickname], [email], [role], [is_active], [avatar], [created_at] FROM [atca_user] ${whereClause} ORDER BY [user_id] DESC OFFSET ${offset} ROWS FETCH NEXT ${parseInt(limit)} ROWS ONLY`, params);
+    // 使用参数化查询提升安全性和性能
+    const users = await query('user', 
+      `SELECT [user_id], [username], [nickname], [email], [role], [is_active], [avatar], [created_at] 
+       FROM [atca_user] ${whereClause} 
+       ORDER BY [user_id] DESC 
+       OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY`, 
+      { ...params, offset, limit: limitNum });
+    
     const [countRes] = await query('user', `SELECT COUNT(*) as total FROM [atca_user] ${whereClause}`, params);
-    res.json({ success: true, data: users, meta: { total: (countRes as any)?.total || 0, page: parseInt(page), limit: parseInt(limit) } });
-  } catch (err: any) { console.error('[Admin Users] 查询失败:', err.message || err); res.json({ success: true, data: [], meta: { total: 0 } }); }
+    const total = (countRes as any)?.total || 0;
+    const meta = { total, page: pageNum, limit: limitNum };
+    
+    // 缓存结果
+    setCachedUserQuery(cacheKey, users, meta);
+    
+    res.json({ success: true, data: users, meta, cached: false });
+  } catch (err: any) { 
+    console.error('[Admin Users] 查询失败:', err.message || err); 
+    res.json({ success: true, data: [], meta: { total: 0, page: pageNum, limit: limitNum } }); 
+  }
 }));
 
 // 管理员禁言/解禁用户
@@ -177,6 +239,8 @@ router.put('/users/:id', validateBody(z.object({ nickname: z.string().optional()
     if (body.is_active !== undefined) { fields.push('[is_active] = @is_active'); params.is_active = body.is_active ? 1 : 0; }
     if (fields.length === 0) { res.json({ success: false, error: { message: '没有要更新的字段' } }); return; }
     await execute('user', `UPDATE [atca_user] SET ${fields.join(', ')} WHERE [user_id] = @id`, params);
+    // 清除用户缓存
+    userQueryCache.clear();
     res.json({ success: true, data: { user_id: parseInt(id) } });
   } catch (e: any) { res.json({ success: false, error: { message: e.message || '更新失败' } }); }
 }));
@@ -184,8 +248,59 @@ router.put('/users/:id', validateBody(z.object({ nickname: z.string().optional()
 router.delete('/users/:id', asyncHandler(async (req: any, res) => {
   const { id } = req.params;
   if (isMockMode()) { res.json({ success: true }); return; }
-  try { await execute('user', 'DELETE FROM [atca_user] WHERE [user_id] = @id', { id: parseInt(id) }); res.json({ success: true }); }
+  try { 
+    await execute('user', 'DELETE FROM [atca_user] WHERE [user_id] = @id', { id: parseInt(id) }); 
+    // 清除用户缓存
+    userQueryCache.clear();
+    res.json({ success: true }); 
+  }
   catch (e: any) { res.json({ success: false, error: { message: e.message || '删除失败' } }); }
+}));
+
+// 创建用户
+router.post('/users', validateBody(z.object({ 
+  username: z.string().min(3).max(50), 
+  password: z.string().min(6).max(100),
+  nickname: z.string().max(50).optional(),
+  email: z.string().email().optional(),
+  role: z.enum(['user', 'admin', 'moderator']).optional()
+})), asyncHandler(async (req: any, res) => {
+  const { username, password, nickname, email, role = 'user' } = req.body;
+  if (isMockMode()) { 
+    res.json({ success: true, data: { user_id: 999 } }); 
+    return; 
+  }
+  try {
+    // 检查用户名是否已存在
+    const [existing] = await query('user', 'SELECT [user_id] FROM [atca_user] WHERE [username] = @username', { username });
+    if (existing) {
+      res.status(400).json({ success: false, error: { message: '用户名已存在' } });
+      return;
+    }
+    // 检查邮箱是否已存在
+    if (email) {
+      const [emailExists] = await query('user', 'SELECT [user_id] FROM [atca_user] WHERE [email] = @email', { email });
+      if (emailExists) {
+        res.status(400).json({ success: false, error: { message: '邮箱已被使用' } });
+        return;
+      }
+    }
+    // 创建用户
+    const result = await execute('user', 
+      'INSERT INTO [atca_user] ([username], [password], [nickname], [email], [role], [is_active]) OUTPUT INSERTED.[user_id] VALUES (@username, @password, @nickname, @email, @role, 1)',
+      { username, password, nickname: nickname || null, email: email || null, role }
+    );
+    const userId = (result as any)?.[0]?.user_id;
+    if (userId) {
+      // 清除用户缓存
+      userQueryCache.clear();
+      res.json({ success: true, data: { user_id: userId } });
+    } else {
+      res.status(500).json({ success: false, error: { message: '创建用户失败' } });
+    }
+  } catch (e: any) { 
+    res.status(500).json({ success: false, error: { message: e.message || '创建用户失败' } }); 
+  }
 }));
 
 // 中英文建筑名称映射
@@ -1029,16 +1144,20 @@ router.post('/models/batch-delete', adminMiddleware, asyncHandler(async (req, re
   res.json({ success: true, data: { deleted: ids.length } });
 }));
 
-router.post('/users/batch-delete', adminMiddleware, asyncHandler(async (req, res) => {
-  const ids = req.body.ids;
+router.post('/users/batch-delete', asyncHandler(async (req, res) => {
+  const { ids } = req.body;
   if (!Array.isArray(ids) || ids.length === 0) { res.status(400).json({ success: false, error: { message: '缺少id列表' } }); return; }
+  let deleted = 0;
   for (const id of ids) {
     // 保护管理员账户
     const [user] = await query('user', 'SELECT [role] FROM [atca_user] WHERE [user_id] = @id', { id });
     if (user && (user as any).role === 'admin') continue;
     await execute('user', 'DELETE FROM [atca_user] WHERE [user_id] = @id', { id });
+    deleted++;
   }
-  res.json({ success: true, data: { deleted: ids.length } });
+  // 清除用户缓存
+  userQueryCache.clear();
+  res.json({ success: true, data: { deleted } });
 }));
 
 // ============ 活动管理 ============
