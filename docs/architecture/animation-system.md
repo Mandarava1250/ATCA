@@ -1,386 +1,679 @@
 # 华夏营造 - 页面转场动画系统
 
-## 📖 概述
+## 概述
 
-本项目实现了三种不同风格的东方写意与水墨元素页面转场动画，为用户提供多样化的视觉体验选择。所有动画均经过优化，确保用户能够完整浏览动画效果，动画时长调整为2-3秒，既保证视觉效果又不影响交互响应速度。
+华夏营造项目采用现代化的页面转场动画系统，基于 Vue.js 3 和 CSS3 动画实现流畅的页面切换效果。动画系统支持多种动画类型，可根据不同场景灵活配置。
 
-## 🎨 三种动画方案
+---
 
-### 1. 轻盈飘逸（Light）⭐☆☆☆☆
+## 动画类型
 
-**特点**：
-- 简洁淡雅的过渡效果
-- 轻巧、柔和、现代感强
-- 较快的响应速度
-- 资源占用较低
+### 1. 淡入淡出 (Fade)
 
-**动画时长**：2秒
+**适用场景**: 页面内容差异较大的场景
 
-**适用场景**：
-- 日常浏览和快速操作
-- 需要高效响应的场景
-- 性能较弱的设备
-- 用户偏好简洁风格时
+```typescript
+import { useAnimation } from '@/composables/useAnimation';
 
-**实现复杂度**：★☆☆☆☆（最简单）
+const { animateFade } = useAnimation();
 
-**视觉表现**：
-- 使用径向渐变遮罩
-- 优雅的淡入淡出效果，带有模糊过渡
-- 水墨笔触边缘效果
-- 云纹装饰动画
-- 适合追求效率的用户
-
-### 2. 水墨晕染（Ink Wash）★★★☆☆
-
-**特点**：
-- 经典水墨晕染效果
-- 层次分明、意境深远
-- 文化气息浓厚
-- 视觉效果丰富
-- 平衡了性能和美观
-
-**动画时长**：2.5秒
-
-**适用场景**：
-- 主页面之间的切换
-- 内容展示页面
-- 文化体验功能
-- 推荐的默认方案
-
-**实现复杂度**：★★★☆☆（中等）
-
-**视觉表现**：
-- 宣纸纹理背景（增强留白艺术）
-- 动态水墨晕染效果（多层次、不规则边缘）
-- 古典祥云装饰（漂浮动画）
-- 窗格图案和古典边框
-- 旋转的中央图案（渐显效果）
-- 可选的页面名称显示（书法风格）
-
-### 3. 笔走龙蛇（Dramatic）★★★★★
-
-**特点**：
-- 大气磅礴的书写效果
-- 动感强烈、视觉冲击大
-- 戏剧性效果突出
-- 最华丽的视觉体验
-- 最沉浸式的感受
-
-**动画时长**：3秒
-
-**适用场景**：
-- 重要功能切换
-- 特殊时刻和仪式感
-- 深度体验模式
-- 用户主动选择
-
-**实现复杂度**：★★★★★（最复杂）
-
-**视觉表现**：
-- 动态笔触绘制效果
-- 多层次的水墨晕染
-- 古典边框和装饰
-- 强调的中央图案
-- 底部装饰线条
-- 完整的视觉盛宴
-
-## 🔧 配置选项
-
-### 动画强度调节
-
-除了选择不同的方案，用户还可以通过`intensity`参数（0-100）调节动画的强烈程度：
-
-- **0-30**：微弱效果，减少视觉干扰
-- **31-60**：适中效果，平衡性能和美观（推荐）
-- **61-100**：强烈效果，最大化视觉冲击
-
-### 页面名称显示
-
-通过`showPageName`选项控制是否显示古典装饰文字：
-
-- `true`：显示『营造』等页面名称
-- `false`：隐藏文字，仅显示视觉动画
-
-### 跳过动画
-
-通过`skipTransition`选项：
-
-- `true`：完全跳过转场动画
-- `false`：启用转场动画（默认）
-
-## 📱 响应式设计
-
-动画系统针对不同设备进行了优化：
-
-### 移动设备（< 768px）
-- 减小装饰元素尺寸
-- 降低水墨模糊程度
-- 优化触摸交互
-- 减少性能消耗
-
-### 平板设备（769px - 1024px）
-- 适中的装饰尺寸
-- 平衡的视觉效果
-- 优化的动画曲线
-
-### 桌面设备（1025px - 1920px）
-- 完整的视觉体验
-- 标准尺寸的装饰元素
-- 最佳的动画效果
-
-### 大屏幕设备（> 1921px）
-- 放大所有装饰元素
-- 增强的视觉冲击
-- 充分利用屏幕空间
-
-## ♿ 无障碍支持
-
-### 减少动画偏好
-
-系统自动检测用户的`prefers-reduced-motion`偏好：
-
-- **启用**：所有动画立即停止，仅保留基本的状态变化
-- **禁用**：正常播放所有动画
-
-### 高对比度模式
-
-为高对比度偏好用户优化：
-
-- 加粗边框线条
-- 增强装饰元素可见度
-- 提高文字对比度
-
-## 🎯 技术实现
-
-### 文件结构
-
-```
-frontend/src/
-├── stores/
-│   └── animationSettings.ts      # 动画设置状态管理
-└── App.vue                       # 主应用组件（包含动画实现）
+// 使用示例
+await animateFade({
+  element: document.getElementById('app'),
+  duration: 300,
+  direction: 'in' // 'in' | 'out'
+});
 ```
 
-### 核心组件
+### 2. 滑动 (Slide)
 
-1. **animationSettings.ts**：管理动画配置的Pinia Store
-2. **App.vue**：实现所有动画效果的Vue组件
+**适用场景**: 内容相关的页面切换
 
-### 性能优化
+```typescript
+import { useAnimation } from '@/composables/useAnimation';
 
-- 使用CSS transforms而非布局属性
-- 优化动画的GPU加速
-- 减少重绘和重排
-- 智能的资源加载策略
-- 动画时长优化：轻盈飘逸2秒、水墨晕染2.5秒、笔走龙蛇3秒
-- 移动设备动画时长自适应（缩短至1.5秒）
-- 响应式设计确保不同设备的最佳体验
+const { animateSlide } = useAnimation();
 
-## 🚀 使用指南
+// 从右侧滑入
+await animateSlide({
+  element: document.getElementById('content'),
+  direction: 'right', // 'left' | 'right' | 'top' | 'bottom'
+  duration: 400
+});
+```
+
+### 3. 缩放 (Scale)
+
+**适用场景**: 模态框、弹窗等组件
+
+```typescript
+import { useAnimation } from '@/composables/useAnimation';
+
+const { animateScale } = useAnimation();
+
+// 缩放动画
+await animateScale({
+  element: document.getElementById('modal'),
+  from: 0.8,
+  to: 1,
+  duration: 250
+});
+```
+
+### 4. 旋转 (Rotate)
+
+**适用场景**: 特殊效果、图标动画
+
+```typescript
+import { useAnimation } from '@/composables/useAnimation';
+
+const { animateRotate } = useAnimation();
+
+// 360度旋转
+await animateRotate({
+  element: document.getElementById('icon'),
+  degrees: 360,
+  duration: 1000
+});
+```
+
+### 5. 组合动画 (Combine)
+
+**适用场景**: 需要多种效果叠加的场景
+
+```typescript
+import { useAnimation } from '@/composables/useAnimation';
+
+const { animateCombine } = useAnimation();
+
+// 同时执行淡入和缩放
+await animateCombine([
+  {
+    type: 'fade',
+    options: { duration: 300 }
+  },
+  {
+    type: 'scale',
+    options: { from: 0.9, to: 1, duration: 300 }
+  }
+], document.getElementById('container'));
+```
+
+---
+
+## 动画配置
 
 ### 默认配置
 
 ```typescript
-// animationSettings.ts 默认值
-{
-  skipTransition: false,        // 启用转场动画
-  scheme: 'ink-wash',          // 默认方案：水墨晕染
-  showPageName: true,          // 显示页面名称
-  intensity: 80                // 动画强度：80%
-}
+// 默认动画配置
+const defaultAnimationConfig = {
+  duration: 300,           // 动画时长(ms)
+  easing: 'ease-out',      // 缓动函数
+  delay: 0,                // 延迟执行(ms)
+  fillMode: 'forwards',    // 动画结束后状态
+  iterationCount: 1        // 循环次数
+};
 ```
 
-### 动态调整
+### 缓动函数支持
 
-```typescript
-import { useAnimationSettingsStore } from '@/stores/animationSettings';
-
-const animationSettings = useAnimationSettingsStore();
-
-// 切换方案
-animationSettings.setScheme('light');     // 轻盈飘逸
-animationSettings.setScheme('ink-wash');  // 水墨晕染
-animationSettings.setScheme('dramatic'); // 笔走龙蛇
-
-// 调节强度
-animationSettings.intensity = 50;  // 50%强度
-
-// 显示/隐藏页面名称
-animationSettings.showPageName = false;
-
-// 完全禁用动画
-animationSettings.skipTransition = true;
-```
-
-### 在组件中使用
-
-```vue
-<template>
-  <div class="my-component" :class="animationSettings.schemeClass">
-    <!-- 组件内容 -->
-  </div>
-</template>
-
-<script setup>
-import { useAnimationSettingsStore } from '@/stores/animationSettings';
-
-const animationSettings = useAnimationSettingsStore();
-</script>
-```
-
-## 🎭 动画时序
-
-### 轻盈飘逸（Light）
-
-```
-0ms      100ms    200ms    300ms
-|----------|--------|--------|
-淡入渐变   保持     淡出     完成
-```
-
-### 水墨晕染（Ink Wash）
-
-```
-0ms      133ms    266ms    400ms
-|----------|--------|--------|
-宣纸纹理   水墨晕染  边框显示  完成
-         +祥云
-```
-
-### 笔走龙蛇（Dramatic）
-
-```
-0ms      166ms    333ms    500ms
-|----------|--------|--------|
-笔触绘制   水墨晕染  边框显示  完成
-         +图案
-         +文字
-```
-
-## 🎨 视觉元素说明
-
-### 宣纸纹理
-- 模拟传统宣纸的质感
-- 微妙的噪点纹理
-- 温暖的米色调
-
-### 水墨晕染
-- 三个不同位置的水墨球
-- 动态流动效果
-- 层次分明的透明度
-
-### 古典祥云
-- SVG矢量图形
-- 优雅的曲线造型
-- 柔和的金色渐变
-
-### 窗格图案
-- 重复的几何图案
-- 模拟古典建筑窗格
-- 微妙的闪烁效果
-
-### 古典边框
-- 四边装饰线条
-- 角落装饰图案
-- 动态发光效果
-
-### 中央图案
-- 三层旋转圆环
-- 发光的中心图标
-- 四象装饰点
-
-### 装饰文字
-- 古典引号装饰
-- 书法风格字体
-- 优雅的字间距
-
-## 🔄 浏览器兼容性
-
-### 支持的浏览器
-- Chrome 90+
-- Firefox 88+
-- Safari 14+
-- Edge 90+
-
-### CSS特性依赖
-- CSS Custom Properties
-- CSS Animations
-- CSS Transitions
-- CSS Transforms
-- SVG
-
-## 📊 性能指标
-
-### 动画帧率目标
-- 60 FPS（流畅）
-- 30 FPS（可接受）
-- < 30 FPS（自动降级）
-
-### 内存占用
-- Light：~2MB
-- Ink Wash：~5MB
-- Dramatic：~8MB
-
-### CPU占用
-- Light：最低
-- Ink Wash：中等
-- Dramatic：最高
-
-## 🎯 最佳实践
-
-### 1. 选择合适的方案
-- 日常使用推荐**水墨晕染**
-- 性能优先选择**轻盈飘逸**
-- 特殊时刻使用**笔走龙蛇**
-
-### 2. 调节动画强度
-- 快速操作场景降低强度
-- 沉浸体验场景提高强度
-- 根据用户反馈动态调整
-
-### 3. 考虑设备性能
-- 移动设备建议轻盈飘逸
-- 桌面设备可选择所有方案
-- 老旧设备禁用动画
-
-### 4. 尊重用户偏好
-- 自动检测系统偏好
-- 提供便捷的切换方式
-- 保存用户选择
-
-## 🔮 未来规划
-
-- [ ] 添加更多动画方案
-- [ ] 支持自定义动画参数
-- [ ] 增加更多装饰元素
-- [ ] 优化移动端性能
-- [ ] 添加动画预览功能
-- [ ] 支持主题色适配
-
-## 📝 更新日志
-
-### v2.0.0
-- 新增三种动画方案
-- 优化动画时长至0.3-0.5秒
-- 增强响应式设计
-- 添加无障碍支持
-- 改善性能表现
-
-### v1.0.0
-- 初始水墨转场动画实现
-- 基础的功能框架
-
-## 🤝 贡献指南
-
-欢迎提交Issue和Pull Request来帮助改进动画系统！
-
-### 提交规范
-- 遵循项目代码规范
-- 添加必要的测试
-- 更新相关文档
-- 描述更改内容
+| 缓动函数 | 说明 | 适用场景 |
+|---------|------|----------|
+| `linear` | 线性 | 匀速移动 |
+| `ease` | 缓入缓出 | 默认 |
+| `ease-in` | 缓入 | 退出动画 |
+| `ease-out` | 缓出 | 进入动画 |
+| `ease-in-out` | 缓入缓出 | 对称动画 |
+| `cubic-bezier(x1,y1,x2,y2)` | 自定义 | 精细控制 |
 
 ---
 
-**让每一次页面切换都成为一次视觉享受！🎨**
+## 路由过渡组件
+
+### 基础用法
+
+```vue
+<!-- App.vue -->
+<router-view v-slot="{ Component }">
+  <transition name="fade" mode="out-in">
+    <component :is="Component" />
+  </transition>
+</router-view>
+```
+
+### 自定义过渡
+
+```vue
+<!-- App.vue -->
+<router-view v-slot="{ Component, route }">
+  <transition :name="getTransitionName(route)" mode="out-in">
+    <component :is="Component" />
+  </transition>
+</router-view>
+```
+
+```typescript
+// 动态选择过渡效果
+function getTransitionName(route: RouteLocation) {
+  const transitionMap: Record<string, string> = {
+    'architecture-detail': 'slide-left',
+    'quiz': 'scale',
+    'profile': 'fade'
+  };
+  return transitionMap[route.name as string] || 'fade';
+}
+```
+
+---
+
+## CSS动画类
+
+### 通用动画类
+
+```css
+/* 淡入淡出 */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+/* 滑入 */
+.slide-left-enter-active,
+.slide-left-leave-active {
+  transition: all 0.4s ease-out;
+}
+
+.slide-left-enter-from {
+  transform: translateX(100%);
+  opacity: 0;
+}
+
+.slide-left-leave-to {
+  transform: translateX(-100%);
+  opacity: 0;
+}
+
+/* 缩放 */
+.scale-enter-active,
+.scale-leave-active {
+  transition: all 0.25s ease;
+}
+
+.scale-enter-from {
+  transform: scale(0.8);
+  opacity: 0;
+}
+
+.scale-leave-to {
+  transform: scale(0.8);
+  opacity: 0;
+}
+```
+
+### 弹性动画
+
+```css
+.bounce-enter-active {
+  animation: bounce-in 0.5s ease;
+}
+
+.bounce-leave-active {
+  animation: bounce-in 0.3s ease reverse;
+}
+
+@keyframes bounce-in {
+  0% {
+    transform: scale(0.5);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+```
+
+---
+
+## 动画工具函数
+
+### useAnimation Composable
+
+```typescript
+// src/composables/useAnimation.ts
+import { ref } from 'vue';
+
+export function useAnimation() {
+  const isAnimating = ref(false);
+
+  const animateFade = async (options: {
+    element: HTMLElement;
+    duration?: number;
+    direction?: 'in' | 'out';
+  }) => {
+    isAnimating.value = true;
+    const { element, duration = 300, direction = 'in' } = options;
+    
+    element.style.transition = `opacity ${duration}ms ease`;
+    element.style.opacity = direction === 'in' ? '0' : '1';
+    
+    await new Promise(resolve => setTimeout(resolve, 10));
+    
+    element.style.opacity = direction === 'in' ? '1' : '0';
+    
+    await new Promise(resolve => setTimeout(resolve, duration));
+    isAnimating.value = false;
+  };
+
+  // ... 其他动画方法
+
+  return {
+    isAnimating,
+    animateFade,
+    animateSlide,
+    animateScale,
+    animateRotate,
+    animateCombine
+  };
+}
+```
+
+---
+
+## 性能优化
+
+### 硬件加速
+
+```css
+/* 使用GPU加速 */
+.animate-element {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  will-change: transform, opacity;
+}
+```
+
+### 避免重排
+
+```typescript
+// 使用transform代替width/height
+// 推荐
+element.style.transform = 'scale(1.2)';
+
+// 不推荐
+element.style.width = '120%';
+```
+
+### 节流动画
+
+```typescript
+// requestAnimationFrame节流
+function animateWithRAF(callback: () => void) {
+  let requestId: number;
+  
+  const animate = () => {
+    callback();
+    requestId = requestAnimationFrame(animate);
+  };
+  
+  requestId = requestAnimationFrame(animate);
+  
+  return () => {
+    cancelAnimationFrame(requestId);
+  };
+}
+```
+
+---
+
+## 高级动画组件
+
+### 列表过渡
+
+```vue
+<!-- ListTransition.vue -->
+<template>
+  <transition-group name="list">
+    <div
+      v-for="item in items"
+      :key="item.id"
+      class="list-item"
+    >
+      {{ item.name }}
+    </div>
+  </transition-group>
+</template>
+
+<style scoped>
+.list-enter-active,
+.list-leave-active {
+  transition: all 0.3s ease;
+}
+
+.list-enter-from {
+  opacity: 0;
+  transform: translateX(-30px);
+}
+
+.list-leave-to {
+  opacity: 0;
+  transform: translateX(30px);
+}
+
+.list-move {
+  transition: transform 0.3s ease;
+}
+</style>
+```
+
+### 交错动画
+
+```vue
+<!-- StaggerAnimation.vue -->
+<template>
+  <div class="stagger-container">
+    <transition-group name="stagger">
+      <div
+        v-for="(item, index) in items"
+        :key="item.id"
+        :style="{ '--delay': `${index * 100}ms` }"
+        class="stagger-item"
+      >
+        {{ item.name }}
+      </div>
+    </transition-group>
+  </div>
+</template>
+
+<style scoped>
+.stagger-enter-active {
+  transition: all 0.5s ease;
+  transition-delay: var(--delay);
+}
+
+.stagger-leave-active {
+  transition: all 0.3s ease;
+}
+
+.stagger-enter-from {
+  opacity: 0;
+  transform: translateY(-20px);
+}
+
+.stagger-leave-to {
+  opacity: 0;
+  transform: scale(0.8);
+}
+</style>
+```
+
+---
+
+## 使用示例
+
+### 页面级动画
+
+```typescript
+// router/index.ts
+import { createRouter, createWebHistory } from 'vue-router';
+
+const router = createRouter({
+  history: createWebHistory(),
+  routes: [
+    {
+      path: '/',
+      name: 'home',
+      component: () => import('@/views/Home.vue'),
+      meta: { transition: 'fade' }
+    },
+    {
+      path: '/architecture/:id',
+      name: 'architecture-detail',
+      component: () => import('@/views/ArchitectureDetail.vue'),
+      meta: { transition: 'slide-left' }
+    }
+  ]
+});
+
+// 动态过渡效果
+router.beforeEach((to, from) => {
+  const toDepth = to.path.split('/').length;
+  const fromDepth = from.path.split('/').length;
+  to.meta.transitionName = toDepth < fromDepth ? 'slide-right' : 'slide-left';
+});
+```
+
+### 组件级动画
+
+```vue
+<!-- Modal.vue -->
+<template>
+  <Teleport to="body">
+    <transition name="modal">
+      <div v-if="visible" class="modal-overlay" @click="close">
+        <div class="modal-content" @click.stop>
+          <slot></slot>
+        </div>
+      </div>
+    </transition>
+  </Teleport>
+</template>
+
+<script setup lang="ts">
+defineProps<{
+  visible: boolean;
+}>();
+
+const emit = defineEmits<{
+  close: [];
+}>();
+
+const close = () => {
+  emit('close');
+};
+</script>
+
+<style scoped>
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  min-width: 320px;
+  max-width: 90vw;
+}
+
+.modal-enter-active,
+.modal-leave-active {
+  transition: all 0.3s ease;
+}
+
+.modal-enter-from,
+.modal-leave-to {
+  opacity: 0;
+}
+
+.modal-enter-from .modal-content,
+.modal-leave-to .modal-content {
+  transform: scale(0.9) translateY(20px);
+}
+</style>
+```
+
+### 3D模型加载动画
+
+```vue
+<!-- ModelLoader.vue -->
+<template>
+  <div class="model-loader">
+    <transition name="loader">
+      <div v-if="isLoading" class="loading-spinner">
+        <div class="spinner"></div>
+        <p>加载中...</p>
+      </div>
+    </transition>
+    <transition name="model">
+      <div v-if="!isLoading" class="model-container">
+        <slot></slot>
+      </div>
+    </transition>
+  </div>
+</template>
+
+<script setup lang="ts">
+defineProps<{
+  isLoading: boolean;
+}>();
+</script>
+
+<style scoped>
+.model-loader {
+  position: relative;
+  width: 100%;
+  height: 400px;
+}
+
+.loading-spinner {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #3b82f6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.loader-enter-active,
+.loader-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.loader-enter-from,
+.loader-leave-to {
+  opacity: 0;
+}
+
+.model-enter-active {
+  animation: model-appear 0.5s ease-out;
+}
+
+@keyframes model-appear {
+  0% {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+</style>
+```
+
+---
+
+## 性能优化进阶
+
+### 动画性能监控
+
+```typescript
+// src/utils/animationPerf.ts
+export function measureAnimationPerformance(element: HTMLElement, animationName: string) {
+  const startTime = performance.now();
+  
+  const observer = new PerformanceObserver((entries) => {
+    entries.forEach((entry) => {
+      if (entry.entryType === 'animation') {
+        const duration = entry.duration;
+        const startTime = entry.startTime;
+        console.log(`${animationName} animation:`, {
+          duration,
+          startTime,
+          element: element.tagName
+        });
+      }
+    });
+  });
+  
+  observer.observe({ type: 'animation', buffered: true });
+  
+  return () => {
+    observer.disconnect();
+    const endTime = performance.now();
+    console.log(`${animationName} total time:`, endTime - startTime);
+  };
+}
+```
+
+### 条件动画
+
+```typescript
+// 根据设备性能调整动画
+export function getAnimationDuration(baseDuration: number): number {
+  const performance = window.performance || { hardwareConcurrency: 4 };
+  const cores = performance.hardwareConcurrency || 4;
+  
+  if (cores <= 2) {
+    return baseDuration * 0.5; // 低性能设备使用更快的动画
+  }
+  return baseDuration;
+}
+```
+
+---
+
+## 最佳实践
+
+### 1. 保持一致性
+- 同类页面使用相同的过渡效果
+- 保持动画时长一致（200-400ms）
+
+### 2. 避免过度动画
+- 只在必要时使用动画
+- 避免动画叠加过多
+
+### 3. 考虑用户体验
+- 提供动画关闭选项
+- 支持减少动画模式（prefers-reduced-motion）
+
+```css
+/* 尊重用户的动画偏好设置 */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+```

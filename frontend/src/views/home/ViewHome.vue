@@ -358,11 +358,6 @@ onUnmounted(() => {
 .title-line:nth-child(1) { font-size: 3.5rem; letter-spacing: 0.08em; }
 .title-line:nth-child(2) { font-size: 3.5rem; letter-spacing: 0.08em; }
 .title-line:nth-child(3) { font-size: 2.8rem; letter-spacing: 0.1em; margin-top: 4px; }
-@media (max-width: 768px) {
-  .title-line:nth-child(1), .title-line:nth-child(2) { font-size: 2.2rem; }
-  .title-line:nth-child(3) { font-size: 1.8rem; }
-}
-
 /* 描述 */
 .hero-desc-box { display: flex; gap: 20px; max-width: 720px; margin-bottom: 48px; }
 .desc-bar {
@@ -400,17 +395,12 @@ onUnmounted(() => {
 }
 .fc-title { font-family: var(--font-serif); font-size: 1rem; font-weight: 600; color: var(--gold); margin-bottom: 10px; letter-spacing: 0.06em; }
 .fc-desc { font-size: 0.8125rem; color: var(--text-muted); line-height: 1.7; }
-@media (max-width: 1024px) { .feature-grid { grid-template-columns: repeat(2, 1fr); } }
-@media (max-width: 520px) { .feature-grid { grid-template-columns: 1fr; } }
-
 /* ===== 底部统计 ===== */
 .stats-bar { position: relative; z-index: 2; padding: 24px 0 40px; border-top: 1px solid var(--border); }
 .stats-flex { display: flex; gap: 64px; }
 .st-item { display: flex; align-items: baseline; gap: 10px; }
 .st-num { font-family: var(--font-serif); font-size: 2rem; font-weight: 700; color: var(--gold); letter-spacing: 0.04em; }
 .st-label { font-size: 0.8125rem; color: var(--text-muted); letter-spacing: 0.08em; }
-@media (max-width: 768px) { .stats-flex { gap: 32px; flex-wrap: wrap; } .st-num { font-size: 1.5rem; } }
-
 /* ===== 活动动态 ===== */
 .activity-section { position: relative; z-index: 2; padding: 32px 0 48px; }
 .activity-header { display: flex; align-items: center; gap: 16px; margin-bottom: 20px; }

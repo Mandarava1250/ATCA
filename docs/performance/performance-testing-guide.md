@@ -1,547 +1,358 @@
-# 高并发性能测试指南
+# 华夏营造 - 高并发性能测试指南
 
-## 📋 概述
+## 概述
 
-本指南提供系统化的性能测试方法，帮助评估系统在高并发场景下的表现，确保服务质量。
-
----
-
-## 🎯 测试目标
-
-### 性能指标
-
-| 指标 | 目标值 | 说明 |
-|------|--------|------|
-| **P50响应时间** | < 50ms | 50%请求响应时间 |
-| **P90响应时间** | < 100ms | 90%请求响应时间 |
-| **P99响应时间** | < 150ms | 99%请求响应时间 |
-| **吞吐量** | > 100 req/s | 每秒处理请求数 |
-| **并发用户** | > 100 | 同时在线用户数 |
-| **错误率** | < 1% | 请求失败率 |
+本文档详细介绍华夏营造项目的性能测试方法论、测试场景和工具使用指南，帮助开发团队进行系统性的性能评估。
 
 ---
 
-## 🚀 测试工具
+## 测试架构
 
-### 1. 内置测试套件
+```
+┌──────────────────────────────────────────────────────────────────┐
+│                     性能测试架构                                │
+├──────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  ┌──────────────┐    HTTP    ┌─────────────────────────────┐    │
+│  │  测试工具    │ ─────────→ │         负载均衡器          │    │
+│  │ (k6/Artillery)│           └────────────┬────────────────┘    │
+│  └──────────────┘                        │                      │
+│                                          │                      │
+│                        ┌─────────────────┼─────────────────┐    │
+│                        │                 │                 │    │
+│                        ▼                 ▼                 ▼    │
+│                  ┌──────────┐    ┌──────────┐    ┌──────────┐   │
+│                  │  后端1   │    │  后端2   │    │  后端3   │   │
+│                  └────┬─────┘    └────┬─────┘    └────┬─────┘   │
+│                       │               │               │        │
+│                       └───────────────┼───────────────┘        │
+│                                       │                        │
+│                                       ▼                        │
+│                               ┌──────────────┐                 │
+│                               │   数据库    │                 │
+│                               └──────────────┘                 │
+│                                                                 │
+└──────────────────────────────────────────────────────────────────┘
+```
 
-**位置**: [backend/src/tests/performance/loadTest.ts](../../backend/src/tests/performance/loadTest.ts)
+---
 
-**特点**:
-- 结构化日志输出
-- HTML报告生成
-- 实时性能监控
-- 多场景测试
+## 测试工具
 
-**运行方法**:
+### 推荐工具列表
+
+| 工具 | 类型 | 用途 |
+|------|------|------|
+| **k6** | 负载测试 | 高并发压测 |
+| **Artillery** | 负载测试 | 场景化测试 |
+| **cURL** | 接口测试 | 单接口验证 |
+| **Chrome DevTools** | 前端性能 | 首屏加载分析 |
+| **Lighthouse** | 性能审计 | 综合性能评分 |
+| **New Relic** | APM | 生产环境监控 |
+
+---
+
+## 测试场景
+
+### 场景1：首页加载性能
+
+**测试目标**: 评估首页首屏加载时间
+
+**测试步骤**:
+1. 清空浏览器缓存
+2. 访问首页
+3. 记录关键指标
+
+**关键指标**:
+- FCP (First Contentful Paint)
+- LCP (Largest Contentful Paint)
+- FID (First Input Delay)
+- TTI (Time to Interactive)
+
 ```bash
-cd backend
-npm run test:performance
+# 使用 Lighthouse 测试
+lighthouse https://atca.xin --view --preset=performance
 ```
 
-### 2. 外部测试工具
+### 场景2：API 接口性能
 
-#### Apache Bench (ab)
+**测试目标**: 评估 API 接口响应时间和并发处理能力
 
-```bash
-# 安装
-sudo apt-get install apache2-utils
+**测试配置** (k6):
 
-# 测试100并发用户
-ab -n 1000 -c 100 http://localhost:5000/api/v1/architecture
+```javascript
+// tests/api-performance.js
+import http from 'k6/http';
+import { sleep, check } from 'k6';
 
-# 测试结果分析
-ab -n 1000 -c 100 -g output.tsv http://localhost:5000/api/v1/architecture
-```
-
-#### wrk
-
-```bash
-# 安装
-sudo apt-get install wrk
-
-# 测试30秒，12线程，100并发
-wrk -t12 -c100 -d30s http://localhost:5000/api/v1/architecture
-
-# 测试结果
-wrk -t12 -c100 -d30s --latency http://localhost:5000/api/v1/architecture
-```
-
----
-
-## 📊 测试场景
-
-### 场景1：建筑列表查询
-
-**测试目标**: 评估建筑列表API在高并发下的表现
-
-**测试配置**:
-```typescript
-const testConfig = {
-  url: '/api/v1/architecture',
-  method: 'GET',
-  concurrentUsers: 100,
-  duration: 30000,  // 30秒
-  rampUp: 5000,     // 5秒逐步增加
-};
-```
-
-**预期结果**:
-```json
-{
-  "p50": 45ms,
-  "p90": 80ms,
-  "p99": 150ms,
-  "throughput": 120 req/s,
-  "errorRate": 0.5%
-}
-```
-
----
-
-### 场景2：建筑详情查询
-
-**测试目标**: 评估建筑详情API在高并发下的表现
-
-**测试配置**:
-```typescript
-const testConfig = {
-  url: '/api/v1/architecture/:id',
-  method: 'GET',
-  concurrentUsers: 50,
-  duration: 30000,
-};
-```
-
-**预期结果**:
-```json
-{
-  "p50": 35ms,
-  "p90": 65ms,
-  "p99": 120ms,
-  "throughput": 80 req/s,
-  "errorRate": 0.3%
-}
-```
-
----
-
-### 场景3：用户登录
-
-**测试目标**: 评估登录API在高并发下的表现和限流效果
-
-**测试配置**:
-```typescript
-const testConfig = {
-  url: '/api/v1/auth/login',
-  method: 'POST',
-  concurrentUsers: 20,
-  duration: 60000,  // 60秒
-  body: {
-    username: 'testuser',
-    password: 'testpass',
-  },
-};
-```
-
-**预期结果**:
-```json
-{
-  "p50": 65ms,
-  "p90": 120ms,
-  "p99": 200ms,
-  "throughput": 30 req/s,
-  "errorRate": 2%  // 包含限流拦截
-}
-```
-
----
-
-### 场景4：AI聊天
-
-**测试目标**: 评估AI聊天API在高并发下的表现和降级策略
-
-**测试配置**:
-```typescript
-const testConfig = {
-  url: '/api/v1/assistant/chat',
-  method: 'POST',
-  concurrentUsers: 10,
-  duration: 60000,
-  body: {
-    message: '测试消息',
-  },
-};
-```
-
-**预期结果**:
-```json
-{
-  "p50": 180ms,
-  "p90": 350ms,
-  "p99": 500ms,
-  "throughput": 15 req/s,
-  "errorRate": 1%  // 包含超时降级
-}
-```
-
----
-
-### 场景5：混合场景测试
-
-**测试目标**: 模拟真实用户行为，测试多种API混合场景
-
-**测试配置**:
-```typescript
-const mixedScenario = {
-  scenarios: [
-    { url: '/api/v1/architecture', weight: 40, users: 40 },
-    { url: '/api/v1/architecture/:id', weight: 30, users: 30 },
-    { url: '/api/v1/auth/login', weight: 10, users: 10 },
-    { url: '/api/v1/assistant/chat', weight: 20, users: 20 },
+export const options = {
+  stages: [
+    { duration: '30s', target: 100 }, // 30秒内增加到100并发
+    { duration: '1m', target: 100 },  // 维持100并发1分钟
+    { duration: '30s', target: 200 }, // 增加到200并发
+    { duration: '1m', target: 200 },  // 维持200并发1分钟
+    { duration: '30s', target: 0 },   // 逐渐停止
   ],
-  totalUsers: 100,
-  duration: 60000,
-};
-```
-
-**预期结果**:
-```json
-{
-  "overall": {
-    "p50": 60ms,
-    "p90": 120ms,
-    "p99": 180ms,
-    "throughput": 100 req/s,
-    "errorRate": 1%
+  thresholds: {
+    http_req_duration: ['p(95)<500', 'p(99)<1000'],
+    http_req_failed: ['rate<0.01'],
   },
-  "breakdown": {
-    "architecture": { "p99": 150ms },
-    "architecture/:id": { "p99": 120ms },
-    "auth/login": { "p99": 200ms },
-    "assistant/chat": { "p99": 500ms },
-  }
+};
+
+export default function () {
+  const response = http.get('https://api.atca.xin/v1/architecture');
+  
+  check(response, {
+    'status is 200': (r) => r.status === 200,
+    'response time < 500ms': (r) => r.timings.duration < 500,
+  });
+  
+  sleep(1);
 }
 ```
 
----
+### 场景3：数据库查询性能
 
-## 🔧 测试执行步骤
+**测试目标**: 评估数据库查询响应时间
 
-### 第一步：环境准备
+**测试配置**:
 
-```bash
-# 1. 启动后端服务
-cd backend
-npm run dev
+```javascript
+// tests/database-performance.js
+import http from 'k6/http';
+import { sleep, check } from 'k6';
 
-# 2. 确认服务状态
-curl http://localhost:5000/health
-
-# 3. 检查系统资源
-curl http://localhost:5000/api/monitor/memory-stats
-```
-
----
-
-### 第二步：运行测试
-
-#### 使用内置测试套件
-
-```bash
-# 运行完整测试套件
-npm run test:performance
-
-# 运行特定场景
-npm run test:performance -- --scenario=architecture-list
-
-# 查看实时日志
-tail -f performance.log
-```
-
-#### 使用外部工具
-
-```bash
-# 使用Apache Bench
-ab -n 1000 -c 100 http://localhost:5000/api/v1/architecture
-
-# 使用wrk
-wrk -t12 -c100 -d30s http://localhost:5000/api/v1/architecture
-```
-
----
-
-### 第三步：分析结果
-
-#### 1. 查看HTML报告
-
-```bash
-# 打开性能测试报告
-open performance-report.html
-
-# 或使用浏览器查看
-firefox performance-report.html
-```
-
-#### 2. 分析性能指标
-
-```bash
-# 查看性能摘要
-grep "Performance Summary" performance.log
-
-# 查看P99指标
-grep "P99" performance.log
-
-# 查看错误率
-grep "Error Rate" performance.log
-```
-
-#### 3. 检查系统资源
-
-```bash
-# 查看内存使用
-curl http://localhost:5000/api/monitor/memory-stats
-
-# 查看缓存命中率
-curl http://localhost:5000/api/monitor/cache-stats
-
-# 查看客户端状态
-curl http://localhost:5000/api/monitor/client-states
-```
-
----
-
-## 📊 性能基准
-
-### 2核2G服务器基准
-
-| 测试场景 | P50 | P90 | P99 | 吞吐量 | 并发用户 |
-|----------|-----|-----|-----|--------|----------|
-| 建筑列表 | 45ms | 80ms | 150ms | 120 req/s | 100 |
-| 建筑详情 | 35ms | 65ms | 120ms | 80 req/s | 50 |
-| 用户登录 | 65ms | 120ms | 200ms | 30 req/s | 20 |
-| AI聊天 | 180ms | 350ms | 500ms | 15 req/s | 10 |
-| 混合场景 | 60ms | 120ms | 180ms | 100 req/s | 100 |
-
-### 4核4G服务器基准
-
-| 测试场景 | P50 | P90 | P99 | 吞吐量 | 并发用户 |
-|----------|-----|-----|-----|--------|----------|
-| 建筑列表 | 30ms | 60ms | 100ms | 200 req/s | 200 |
-| 建筑详情 | 25ms | 50ms | 90ms | 150 req/s | 100 |
-| 用户登录 | 50ms | 100ms | 150ms | 50 req/s | 40 |
-| AI聊天 | 150ms | 300ms | 450ms | 25 req/s | 20 |
-| 混合场景 | 45ms | 90ms | 140ms | 180 req/s | 200 |
-
----
-
-## 🐛 性能问题诊断
-
-### 问题1：P99响应时间过高
-
-**诊断步骤**:
-```bash
-# 1. 查看慢请求日志
-grep "responseTime>200" performance.log
-
-# 2. 分析慢请求类型
-grep "responseTime>200" performance.log | \
-  awk '{print $5}' | sort | uniq -c
-
-# 3. 检查数据库查询
-grep "slow query" database.log
-```
-
-**解决方案**: 参考 [P99诊断指南](p99-diagnosis-guide.md)
-
----
-
-### 问题2：吞吐量不足
-
-**诊断步骤**:
-```bash
-# 1. 检查并发连接数
-netstat -an | grep :5000 | wc -l
-
-# 2. 检查系统资源
-top
-iostat -x 1
-
-# 3. 检查后端进程数
-ps aux | grep node
-```
-
-**解决方案**:
-```bash
-# 1. 增加worker进程数
-pm2 scale atca-backend 4
-
-# 2. 优化数据库连接池
-# config/database.ts
-const poolConfig = {
-  max: 20,  // 增加连接池大小
-  min: 5,
-};
-```
-
----
-
-### 问题3：错误率过高
-
-**诊断步骤**:
-```bash
-# 1. 查看错误日志
-grep "ERROR" performance.log
-
-# 2. 分析错误类型
-grep "ERROR" performance.log | \
-  awk '{print $6}' | sort | uniq -c
-
-# 3. 检查限流日志
-grep "Rate limit" performance.log
-```
-
-**解决方案**:
-```bash
-# 1. 调整限流阈值
-# middleware/rateLimiter.ts
-const MAX_ATTEMPTS = 10;  // 增加尝试次数
-
-# 2. 优化错误处理
-# middleware/errorHandler.ts
-app.use(errorHandler);
-```
-
----
-
-## 🎯 性能优化建议
-
-### 1. 针对2核2G服务器
-
-**优化策略**:
-- 使用内存存储而非Redis
-- 限制最大并发用户数（100）
-- 启用查询缓存和响应压缩
-- 定期清理过期数据
-
-**配置示例**:
-```typescript
-// browseState.ts
-const CONFIG = {
-  MAX_CLIENT_STATES: 5000,
-  IDLE_TIMEOUT: 900,
+export const options = {
+  vus: 50,
+  duration: '1m',
 };
 
-// queryCache.ts
-const DEFAULT_CONFIG = {
-  maxSize: 1000,
-  ttl: 300,
+export default function () {
+  // 测试复杂查询
+  const response = http.get('https://api.atca.xin/v1/architecture/search?q=唐代');
+  
+  check(response, {
+    'status is 200': (r) => r.status === 200,
+    'query time < 300ms': (r) => r.timings.duration < 300,
+  });
+  
+  sleep(0.5);
+}
+```
+
+### 场景4：AI 助手响应性能
+
+**测试目标**: 评估 AI 助手对话响应时间
+
+**测试配置**:
+
+```javascript
+// tests/ai-assistant-performance.js
+import http from 'k6/http';
+import { sleep, check } from 'k6';
+
+export const options = {
+  stages: [
+    { duration: '10s', target: 10 },
+    { duration: '30s', target: 10 },
+  ],
 };
+
+export default function () {
+  const payload = JSON.stringify({
+    message: '斗拱的作用是什么？',
+    ai_id: 1,
+    enhancedCheck: true
+  });
+  
+  const params = {
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + __ENV.API_TOKEN,
+    },
+  };
+  
+  const response = http.post('https://api.atca.xin/v1/assistant/chat', payload, params);
+  
+  check(response, {
+    'status is 200': (r) => r.status === 200,
+    'AI response time < 3s': (r) => r.timings.duration < 3000,
+  });
+  
+  sleep(2);
+}
 ```
+
+### 场景5：3D 模型加载性能
+
+**测试目标**: 评估 3D 模型加载和渲染性能
+
+**测试步骤**:
+1. 打开 3D 编辑器页面
+2. 加载预设模型
+3. 记录加载时间和帧率
+
+**关键指标**:
+- 模型加载时间
+- 首帧渲染时间
+- 平均帧率 (FPS)
+- GPU 内存占用
 
 ---
 
-### 2. 针对4核4G服务器
+## 测试执行
 
-**优化策略**:
-- 使用Redis存储实现状态共享
-- 支持更高并发用户数（200）
-- 启用PM2集群模式
-- 实现分布式缓存
+### 1. 安装 k6
 
-**配置示例**:
 ```bash
-# PM2集群配置
-pm2 start dist/main.js -i max
+# macOS
+brew install k6
 
-# Redis配置
-REDIS_HOST=localhost
-REDIS_PORT=6379
+# Linux
+sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+sudo apt-get update && sudo apt-get install k6
+
+# Windows
+choco install k6
+```
+
+### 2. 运行测试
+
+```bash
+# 运行单个测试
+k6 run tests/api-performance.js
+
+# 运行测试并输出报告
+k6 run tests/api-performance.js --out json=results.json
+
+# 运行测试并发送到 New Relic
+k6 run tests/api-performance.js --out newrelic
+
+# 指定环境变量
+API_TOKEN=abc123 k6 run tests/ai-assistant-performance.js
+```
+
+### 3. 分布式测试
+
+```bash
+# 启动主节点
+k6 coordinator --address localhost:5678
+
+# 启动从节点
+k6 agent --coordinator http://localhost:5678
+
+# 运行分布式测试
+k6 run --coordinator http://localhost:5678 tests/api-performance.js
 ```
 
 ---
 
-## 📝 测试报告模板
+## 测试结果分析
 
-### 性能测试报告
+### 结果报告
 
-```markdown
-# 性能测试报告
+```javascript
+// k6 输出示例
+✓ status is 200
+✓ response time < 500ms
 
-## 测试环境
-- 服务器配置: 2核2G
-- 测试时间: 2026-06-19 10:00
-- 测试工具: 内置测试套件
+     data_received..................: 12 MB  120 kB/s
+     data_sent......................: 1.2 MB 12 kB/s
+     http_req_blocked...............: avg=1.23ms  min=1.01ms  med=1.15ms  max=5.32ms  p(90)=1.56ms  p(95)=2.34ms
+     http_req_connecting............: avg=0.87ms  min=0.72ms  med=0.81ms  max=4.12ms  p(90)=1.12ms  p(95)=1.87ms
+     http_req_duration..............: avg=123.45ms min=89.12ms med=115.67ms max=456.78ms p(90)=189.34ms p(95)=234.56ms
+     http_req_failed................: 0.00%  ✓ 0        ✗ 1200
+     http_req_receiving.............: avg=2.34ms  min=1.87ms  med=2.12ms  max=8.91ms  p(90)=3.45ms  p(95)=4.56ms
+     http_req_sending...............: avg=0.56ms  min=0.41ms  med=0.51ms  max=2.34ms  p(90)=0.78ms  p(95)=0.98ms
+     http_req_tls_handshaking.......: avg=0.00ms  min=0.00ms  med=0.00ms  max=0.00ms  p(90)=0.00ms  p(95)=0.00ms
+     http_req_waiting...............: avg=120.55ms min=86.78ms med=112.34ms max=452.12ms p(90)=185.67ms p(95)=230.12ms
+     http_reqs......................: 1200   12/s
+     iteration_duration.............: avg=1.12s   min=1.01s   med=1.08s   max=1.56s   p(90)=1.23s   p(95)=1.34s
+     iterations.....................: 1200   12/s
+     vus............................: 100    min=100    max=100
+     vus_max........................: 100    min=100    max=100
+```
 
-## 测试结果
+### 关键指标解读
 
-### 建筑列表查询
-- P50: 45ms ✅
-- P90: 80ms ✅
-- P99: 150ms ✅
-- 吞吐量: 120 req/s ✅
-- 错误率: 0.5% ✅
+| 指标 | 说明 | 阈值建议 |
+|------|------|----------|
+| `http_req_duration` | 请求总耗时 | P95 < 500ms |
+| `http_req_waiting` | 服务器响应时间 | P95 < 400ms |
+| `http_req_failed` | 请求失败率 | < 1% |
+| `vus` | 并发用户数 | 根据业务需求 |
+| `iterations` | 迭代次数 | 测试总次数 |
 
-### 建筑详情查询
-- P50: 35ms ✅
-- P90: 65ms ✅
-- P99: 120ms ✅
-- 吞吐量: 80 req/s ✅
-- 错误率: 0.3% ✅
+---
 
-### 用户登录
-- P50: 65ms ✅
-- P90: 120ms ✅
-- P99: 200ms ⚠️ (接近阈值)
-- 吞吐量: 30 req/s ✅
-- 错误率: 2% ⚠️ (包含限流)
+## 性能调优流程
 
-### AI聊天
-- P50: 180ms ⚠️
-- P90: 350ms ⚠️
-- P99: 500ms ⚠️
-- 吞吐量: 15 req/s ⚠️
-- 错误率: 1% ✅
+```
+性能测试 → 分析瓶颈 → 实施优化 → 验证效果 → 回归测试
+```
 
-## 总体评估
-- 性能等级: 良好
-- 建议优化: AI聊天响应时间
+### 常见瓶颈及优化方案
 
-## 优化建议
-1. 实现AI响应缓存
-2. 增加AI服务超时时间
-3. 实现降级策略
+| 瓶颈类型 | 表现 | 优化方案 |
+|----------|------|----------|
+| **数据库慢查询** | P99响应时间高 | 添加索引、优化SQL、缓存查询 |
+| **内存不足** | 服务器频繁GC | 增加内存、优化内存使用 |
+| **连接池耗尽** | 大量连接等待 | 增加连接池大小、连接复用 |
+| **前端资源过大** | 首屏加载慢 | 代码分割、资源压缩、CDN加速 |
+| **网络延迟** | 请求耗时高 | 使用CDN、就近接入、压缩传输 |
+
+---
+
+## 测试环境配置
+
+### 环境隔离
+
+```bash
+# 测试环境配置
+export NODE_ENV=test
+export DB_HOST=test-db.atca.xin
+export REDIS_URL=redis://test-redis.atca.xin:6379
+```
+
+### 数据准备
+
+```bash
+# 生成测试数据
+npm run generate-test-data -- --count 10000
+
+# 初始化测试环境
+npm run setup-test-env
 ```
 
 ---
 
-## 📞 常见问题
+## 持续性能监控
 
-### Q: 如何选择测试工具？
+### 集成到 CI/CD
 
-**A**: 
-- **内置测试套件**: 功能完整，报告详细
-- **Apache Bench**: 简单快速，适合基础测试
-- **wrk**: 高性能，适合压力测试
+```yaml
+# .github/workflows/performance-test.yml
+name: Performance Test
 
-### Q: 测试结果如何解读？
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
 
-**A**: 
-- **P50**: 关注大多数用户体验
-- **P90**: 关注较好用户体验
-- **P99**: 关注最慢用户体验（关键指标）
-- **吞吐量**: 关注系统处理能力
-- **错误率**: 关注系统稳定性
-
-### Q: 性能不达标怎么办？
-
-**A**: 
-1. 参考 [P99诊断指南](p99-diagnosis-guide.md)
-2. 参考 [实现总结](implementation-summary.md)
-3. 根据服务器配置调整优化策略
-
----
-
-**文档版本**: 1.0.0  
-**最后更新**: 2026-06-19  
-**维护者**: ATCA Development Team
+jobs:
+  performance:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Install k6
+        run: |
+          sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update && sudo apt-get install k6
+      
+      - name: Run performance tests
+        run: k6 run tests/api-performance.js
+```

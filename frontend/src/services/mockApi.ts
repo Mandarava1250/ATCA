@@ -729,6 +729,16 @@ export const mockAdminApi = {
     return { success: true, data: { deleted: ids.length } };
   },
 
+  batchUpdateUserRole: async (ids: number[], role: string) => {
+    await delay();
+    return { success: true, data: { updated: ids.length } };
+  },
+
+  batchUpdateUserStatus: async (ids: number[], is_active: boolean) => {
+    await delay();
+    return { success: true, data: { updated: ids.length } };
+  },
+
   getArchitectures: async (params?: any) => {
     await delay();
     return { success: true, data: mockArchitectures, meta: { total: mockArchitectures.length } };
@@ -922,6 +932,19 @@ export const mockAdminApi = {
   deleteReplyAdmin: async (id: number) => {
     await delay();
     return { success: true, data: null };
+  },
+
+  // 知识图谱数据导入
+  importKnowledgeGraph: async (data: { format: string; data: string; conflictStrategy: string; validateOnly: boolean; batchSize: number }) => {
+    await delay(1000);
+    return {
+      success: true,
+      data: {
+        imported: 10,
+        skipped: 2,
+        failed: 0,
+      },
+    };
   },
 };
 

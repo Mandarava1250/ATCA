@@ -572,11 +572,4 @@ onUnmounted(() => {
   color: var(--text-muted);
 }
 
-@media (max-width: 1024px) {
-  .modes-grid { grid-template-columns: repeat(3, 1fr); }
-}
-@media (max-width: 768px) {
-  .stats-bar { grid-template-columns: repeat(2, 1fr); }
-  .modes-grid { grid-template-columns: repeat(2, 1fr); }
-}
 </style>

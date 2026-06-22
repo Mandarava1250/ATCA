@@ -450,13 +450,6 @@ onMounted(async () => {
 .empty-workshop h3 { font-size: 1.125rem; margin-bottom: 8px; color: var(--text); }
 .empty-workshop p { font-size: 0.875rem; margin-bottom: 24px; }
 
-@media (max-width: 1024px) { .model-grid { grid-template-columns: repeat(3, 1fr); } }
-@media (max-width: 768px) {
-  .model-grid { grid-template-columns: repeat(2, 1fr); }
-  .workshop-header { flex-direction: column; align-items: flex-start; }
-}
-@media (max-width: 480px) { .model-grid { grid-template-columns: 1fr; } }
-
 /* 模型可见性标签 */
 .model-visibility {
   position: absolute;

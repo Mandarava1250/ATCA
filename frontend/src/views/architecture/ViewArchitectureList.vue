@@ -589,23 +589,7 @@ onUnmounted(() => {
   border-color: var(--gold);
 }
 
-/* ===== 响应式：平板 ===== */
-@media (max-width: 1024px) {
-  .arch-sidebar { width: 220px; }
-  .arch-grid, .loading-grid { grid-template-columns: repeat(2, 1fr); gap: 16px; }
-}
 
-/* ===== 响应式：手机 (恢复原有布局) ===== */
-@media (max-width: 768px) {
-  .arch-layout { flex-direction: column; gap: 0; }
-  .arch-sidebar { display: none; } /* 手机隐藏侧边栏 */
-  .arch-main { width: 100%; }
-  .mobile-header { display: block; margin-bottom: 16px; }
-  .mobile-filters { display: flex; flex-direction: column; }
-  .mobile-select { width: 100%; }
-  .arch-grid, .loading-grid { grid-template-columns: 1fr; gap: 16px; }
-  .page-content { padding-top: 88px; }
-}
 
 /* ===== 古建筑列表增强 ===== */
 .architecture-page {

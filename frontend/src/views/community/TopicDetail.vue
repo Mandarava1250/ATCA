@@ -345,11 +345,4 @@ onBeforeUnmount(() => {
 .spin-inline { animation: spin 1s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-@media (max-width: 640px) {
-  .topic-main { padding: 88px 16px 32px; }
-  .topic-article { padding: 20px; }
-  .topic-title { font-size: 1.25rem; }
-  .topic-actions-bar { flex-direction: column; }
-  .btn-reply-action, .btn-back-action { width: 100%; justify-content: center; }
-}
 </style>

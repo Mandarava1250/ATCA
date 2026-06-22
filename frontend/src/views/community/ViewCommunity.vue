@@ -564,11 +564,4 @@ onMounted(async () => {
 
 @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
 
-/* 响应式：平板2列，手机1列 */
-@media (max-width: 1024px) { .forum-boards { grid-template-columns: repeat(2, 1fr); } }
-@media (max-width: 640px) {
-  .community-main { padding: 88px 16px 32px; }
-  .community-hero-title { font-size: 1.375rem; }
-  .forum-boards { grid-template-columns: 1fr; }
-}
 </style>

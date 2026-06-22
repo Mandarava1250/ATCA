@@ -297,6 +297,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { MATERIAL_PRESETS, type ComponentDefinition, DEFAULT_COMPONENTS } from '@/components/threejs/ThreejsArchitectureComponents';
 import type { SnapPoint } from '@/components/threejs/ThreejsMortiseTenonSnapEngine';
+import { generateUUID } from '@/utils/uuid';
 
 const route = useRoute();
 const router = useRouter();
@@ -667,7 +668,7 @@ function resetForm() {
 function saveComponent() {
   const componentData = {
     ...form,
-    uuid: form.uuid || crypto.randomUUID(),
+    uuid: form.uuid || generateUUID(),
     visible: true,
     locked: false,
   };
@@ -682,7 +683,7 @@ function saveComponent() {
 function addToScene() {
   const componentData = {
     ...form,
-    uuid: form.uuid || crypto.randomUUID(),
+    uuid: form.uuid || generateUUID(),
     visible: true,
     locked: false,
   };

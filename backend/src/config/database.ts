@@ -6,6 +6,7 @@
 
 import sql from 'mssql';
 import { queryCache } from '../services/queryCache';
+import { queryStats } from '../services/queryStats';
 
 export interface DbConfig {
   server: string;
@@ -229,10 +230,14 @@ export async function query<T = any>(
     params?: any,
     useCache: boolean = true
 ): Promise<T[]> {
+  const startTime = Date.now();
+  
   // 如果启用缓存，先尝试从缓存获取
   if (useCache && !mockMode) {
     const cachedData = queryCache.get(dbName, sqlString, params);
     if (cachedData !== null) {
+      const duration = Date.now() - startTime;
+      queryStats.record(dbName, sqlString, params, duration, true, cachedData.length);
       return cachedData;
     }
   }
@@ -256,6 +261,10 @@ export async function query<T = any>(
 
   const result = await request.query(sqlString);
   const data = result.recordset as T[];
+  const duration = Date.now() - startTime;
+
+  // 记录查询统计
+  queryStats.record(dbName, sqlString, params, duration, false, data.length);
 
   // 如果启用缓存，将结果存入缓存
   if (useCache && !mockMode) {

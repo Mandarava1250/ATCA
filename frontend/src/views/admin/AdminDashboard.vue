@@ -568,9 +568,4 @@ onMounted(async () => {
 .status-badge.error { background: rgba(239, 68, 68, 0.12); color: #ef4444; }
 .status-badge.info { background: rgba(59, 130, 246, 0.12); color: #3b82f6; }
 
-@media (max-width: 1024px) {
-  .stats-grid { grid-template-columns: repeat(2, 1fr); }
-  .section-grid { grid-template-columns: 1fr; }
-  .charts-row { grid-template-columns: 1fr; }
-}
 </style>

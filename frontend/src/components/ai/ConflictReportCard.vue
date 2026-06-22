@@ -565,28 +565,4 @@ function formatTime(timestamp: number): string {
   opacity: 0;
 }
 
-/* 响应式 */
-@media (max-width: 768px) {
-  .conflict-report {
-    margin: 12px 0;
-  }
-  
-  .report-summary,
-  .report-recommendation {
-    padding: 16px;
-  }
-  
-  .summary-header {
-    flex-wrap: wrap;
-  }
-  
-  .conflict-stats {
-    flex-wrap: wrap;
-  }
-  
-  .conflict-header {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-}
 </style>

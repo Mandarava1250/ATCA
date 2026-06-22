@@ -551,9 +551,4 @@ onMounted(() => { loadData(); });
 .result-meta { font-size: 0.6875rem; color: var(--color-text-muted); margin-bottom: 8px; }
 .test-loading { text-align: center; color: var(--color-text-muted); padding: 20px; }
 
-@media (max-width: 768px) {
-  .provider-grid { grid-template-columns: repeat(2, 1fr); }
-  .form-row { flex-direction: column; }
-  .batch-bar { flex-wrap: wrap; }
-}
 </style>

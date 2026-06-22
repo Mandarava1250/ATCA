@@ -1,10 +1,12 @@
 /**
  * 华夏营造 - 知识库服务
  * 管理古建筑知识库数据
+ * 实现 IService 接口以纳入统一服务注册体系
  */
 
 import { query as dbQuery, execute } from '../config/database';
 import { createLogger } from '../utils/logger';
+import { IService, ServiceState } from '../core';
 
 const logger = createLogger('KnowledgeBase');
 
@@ -140,15 +142,70 @@ const DEFAULT_KNOWLEDGE: Omit<KnowledgeTopic, 'topic_id' | 'created_at' | 'updat
 
 /**
  * 知识库服务类
+ * 实现 IService 接口以纳入统一服务注册体系
  */
-class KnowledgeBaseService {
+class KnowledgeBaseService implements IService {
+  readonly serviceId = 'knowledge-base-service';
+  readonly serviceName = '知识库服务';
+
+  private static instance: KnowledgeBaseService | null = null;
   private initialized = false;
+  private state: ServiceState = ServiceState.UNREGISTERED;
+
+  /**
+   * 私有构造函数，防止直接实例化
+   */
+  private constructor() {
+    // 私有构造函数
+  }
+
+  /**
+   * 获取单例实例
+   */
+  static getInstance(): KnowledgeBaseService {
+    if (!KnowledgeBaseService.instance) {
+      KnowledgeBaseService.instance = new KnowledgeBaseService();
+    }
+    return KnowledgeBaseService.instance;
+  }
+
+  /**
+   * 服务工厂函数（用于服务注册中心）
+   */
+  static createInstance(): KnowledgeBaseService {
+    return KnowledgeBaseService.getInstance();
+  }
+
+  /**
+   * 获取服务状态
+   */
+  getState(): ServiceState {
+    return this.state;
+  }
+
+  /**
+   * 健康检查
+   */
+  async healthCheck(): Promise<boolean> {
+    return this.state === ServiceState.READY && this.initialized;
+  }
+
+  /**
+   * 销毁服务
+   */
+  async dispose(): Promise<void> {
+    this.initialized = false;
+    this.state = ServiceState.DISPOSED;
+    logger.info('知识库服务已销毁');
+  }
 
   /**
    * 初始化知识库表
    */
   async initialize(): Promise<void> {
     if (this.initialized) return;
+
+    this.state = ServiceState.INITIALIZING;
 
     try {
       // 创建知识库表（如果不存在）
@@ -179,11 +236,13 @@ class KnowledgeBaseService {
       }
 
       this.initialized = true;
+      this.state = ServiceState.READY;
       logger.info('知识库初始化完成');
     } catch (error: any) {
       logger.error('知识库初始化失败', error.message);
       // 非致命错误，继续运行
       this.initialized = true;
+      this.state = ServiceState.READY;
     }
   }
 
@@ -469,5 +528,6 @@ class KnowledgeBaseService {
   }
 }
 
-// 单例导出
-export const knowledgeBaseService = new KnowledgeBaseService();
+// 导出类和服务实例
+export { KnowledgeBaseService };
+export const knowledgeBaseService = KnowledgeBaseService.getInstance();

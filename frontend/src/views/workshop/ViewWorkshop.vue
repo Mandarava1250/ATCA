@@ -3497,19 +3497,6 @@ onUnmounted(() => {
 .vis-option span { font-size: 0.6875rem; color: var(--text-muted); }
 .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 16px; }
 
-/* ===== 响应式 ===== */
-@media (max-width: 1024px) {
-  .panel { width: 240px; }
-  .canvas-hints { display: none; }
-}
-@media (max-width: 768px) {
-  .workshop-layout { flex-direction: column; height: auto; }
-  .panel { width: 100%; max-height: 300px; }
-  .panel-right { border-left: none; border-top: 1px solid var(--border); }
-  .toolbar { flex-wrap: wrap; }
-  .status-bar { flex-wrap: wrap; }
-}
-
 /* ===== 按钮 ===== */
 .atca-btn-sm { padding: 3px 10px; font-size: 0.6875rem; }
 

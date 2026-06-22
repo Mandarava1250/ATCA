@@ -5,6 +5,7 @@ export default {
     fullTitle: 'HuaXia YingZao — Virtual Exhibition of Ancient Chinese Architecture',
   },
   nav: {
+    menu: 'Navigation',
     home: 'Home',
     architectureHall: 'Architecture Gallery',
     knowledgeQuiz: 'Knowledge Quiz',

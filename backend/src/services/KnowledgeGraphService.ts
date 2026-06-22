@@ -1,10 +1,12 @@
 /**
  * 华夏营造 - 知识图谱服务
  * 提供知识图谱数据导入、验证、关系管理等核心功能
+ * 实现 IService 接口以纳入统一服务注册体系
  */
 
 import { query, execute, isMockMode } from '../config/database';
 import { logger, ErrorType } from '../utils/logger';
+import { IService, ServiceState } from '../core';
 
 // ============ 类型定义 ============
 
@@ -79,7 +81,69 @@ export interface AuditLog {
 
 // ============ 服务类 ============
 
-class KnowledgeGraphService {
+class KnowledgeGraphService implements IService {
+  readonly serviceId = 'knowledge-graph-service';
+  readonly serviceName = '知识图谱服务';
+
+  private static instance: KnowledgeGraphService | null = null;
+  private state: ServiceState = ServiceState.UNREGISTERED;
+
+  /**
+   * 私有构造函数，防止直接实例化
+   */
+  private constructor() {
+    // 私有构造函数
+  }
+
+  /**
+   * 获取单例实例
+   */
+  static getInstance(): KnowledgeGraphService {
+    if (!KnowledgeGraphService.instance) {
+      KnowledgeGraphService.instance = new KnowledgeGraphService();
+    }
+    return KnowledgeGraphService.instance;
+  }
+
+  /**
+   * 服务工厂函数（用于服务注册中心）
+   */
+  static createInstance(): KnowledgeGraphService {
+    return KnowledgeGraphService.getInstance();
+  }
+
+  /**
+   * 初始化服务
+   */
+  async initialize(): Promise<void> {
+    this.state = ServiceState.INITIALIZING;
+    logger.info('知识图谱服务初始化...');
+    this.state = ServiceState.READY;
+    logger.info('知识图谱服务初始化完成');
+  }
+
+  /**
+   * 获取服务状态
+   */
+  getState(): ServiceState {
+    return this.state;
+  }
+
+  /**
+   * 健康检查
+   */
+  async healthCheck(): Promise<boolean> {
+    return this.state === ServiceState.READY;
+  }
+
+  /**
+   * 销毁服务
+   */
+  async dispose(): Promise<void> {
+    this.state = ServiceState.DISPOSED;
+    logger.info('知识图谱服务已销毁');
+  }
+
   /**
    * 生成导入ID
    */
@@ -1016,7 +1080,8 @@ class KnowledgeGraphService {
   }
 }
 
-// 创建单例服务实例
-export const knowledgeGraphService = new KnowledgeGraphService();
+// 导出类和服务实例
+export { KnowledgeGraphService };
+export const knowledgeGraphService = KnowledgeGraphService.getInstance();
 
 export default KnowledgeGraphService;

@@ -102,8 +102,8 @@
           </div>
           <div class="chart-body">
             <div class="question-bars">
-              <div v-for="(d, i) in resultData.details" :key="i" class="q-bar-row">
-                <span class="q-bar-label">Q{{ i + 1 }}</span>
+              <div v-for="(d, index) in resultData.details" :key="index" class="q-bar-row">
+                <span class="q-bar-label">Q{{ index + 1 }}</span>
                 <div class="q-bar-track">
                   <div class="q-bar-fill" :class="{ correct: d.isCorrect, wrong: !d.isCorrect }" :style="{ width: '100%' }"></div>
                 </div>
@@ -151,8 +151,8 @@
           </div>
           <div class="chart-body">
             <div class="time-bars">
-              <div v-for="(t, i) in timePerQuestion" :key="i" class="time-bar-row">
-                <span class="time-label">Q{{ i + 1 }}</span>
+              <div v-for="(t, index) in timePerQuestion" :key="index" class="time-bar-row">
+                <span class="time-label">Q{{ index + 1 }}</span>
                 <div class="time-track">
                   <div class="time-fill" :style="{ width: t.percent + '%' }"></div>
                 </div>
@@ -251,17 +251,17 @@
             <span class="rh-time">用时</span>
           </div>
           <div
-              v-for="(d, i) in resultData.details"
-              :key="i"
+              v-for="(d, index) in resultData.details"
+              :key="index"
               class="review-card"
-              :class="{ correct: d.isCorrect, wrong: !d.isCorrect, expanded: expandedRows.has(i) }"
+              :class="{ correct: d.isCorrect, wrong: !d.isCorrect, expanded: expandedRows.has(index) }"
           >
-            <div class="review-main" @click="toggleRow(i)">
-              <span class="rm-num">{{ i + 1 }}</span>
+            <div class="review-main" @click="toggleRow(index)">
+              <span class="rm-num">{{ index + 1 }}</span>
               <span class="rm-question">
                 <span class="question-preview">{{ d.questionText }}</span>
                 <span class="expand-hint">
-                  <svg v-if="!expandedRows.has(i)" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+                  <svg v-if="!expandedRows.has(index)" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
                   <svg v-else viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 15l-6-6-6 6"/></svg>
                 </span>
               </span>
@@ -270,9 +270,9 @@
               <span class="rm-status">
                 <span class="status-badge" :class="{ correct: d.isCorrect, wrong: !d.isCorrect }">{{ d.isCorrect ? '正确' : '错误' }}</span>
               </span>
-              <span class="rm-time">{{ timePerQuestion[i]?.seconds || '-' }}s</span>
+              <span class="rm-time">{{ timePerQuestion[index]?.seconds || '-' }}s</span>
             </div>
-            <div v-if="expandedRows.has(i)" class="review-detail">
+            <div v-if="expandedRows.has(index)" class="review-detail">
               <div class="detail-content">
                 <div class="detail-section">
                   <h4 class="detail-label">题目</h4>
@@ -354,6 +354,28 @@ function toggleFullscreen() {
 
 function goBack() {
   router.push('/quiz');
+}
+
+// ===== 类型定义 =====
+interface QuestionDetail {
+  isCorrect: boolean;
+  questionText: string;
+  correctAnswer: string;
+  yourAnswer: string;
+  timeSpent: number;
+  options?: Record<string, string>;
+  explanation?: string;
+}
+
+interface ResultData {
+  accuracy: number;
+  correctAnswers: number;
+  wrongAnswers: number;
+  totalQuestions: number;
+  totalPoints: number;
+  earnedPoints: number;
+  timeSpent: number;
+  details: QuestionDetail[];
 }
 
 // ===== 原始数据（一次性加载，避免computed中重复解析） =====
@@ -473,21 +495,21 @@ function loadAllData() {
 }
 
 // 结果数据（基于rawLastResult）
-const resultData = computed(() => {
+const resultData = computed<ResultData>(() => {
   const r = rawLastResult.value;
   if (r && r.details && r.details.length > 0) {
     return {
-      accuracy: r.accuracy || 0,
-      correctAnswers: r.correctAnswers || 0,
-      wrongAnswers: (r.totalQuestions || 0) - (r.correctAnswers || 0),
-      totalQuestions: r.totalQuestions || 0,
-      totalPoints: r.totalPoints || 0,
-      earnedPoints: r.earnedPoints || 0,
-      timeSpent: r.timeSpent || 0,
+      accuracy: Number(r.accuracy) || 0,
+      correctAnswers: Number(r.correctAnswers) || 0,
+      wrongAnswers: Number(r.totalQuestions || 0) - Number(r.correctAnswers || 0),
+      totalQuestions: Number(r.totalQuestions) || 0,
+      totalPoints: Number(r.totalPoints) || 0,
+      earnedPoints: Number(r.earnedPoints) || 0,
+      timeSpent: Number(r.timeSpent) || 0,
       details: r.details || [],
     };
   }
-  return { accuracy: 0, correctAnswers: 0, wrongAnswers: 0, totalQuestions: 0, timeSpent: 0, earnedPoints: 0, details: [] };
+  return { accuracy: 0, correctAnswers: 0, wrongAnswers: 0, totalQuestions: 0, totalPoints: 0, earnedPoints: 0, timeSpent: 0, details: [] };
 });
 
 // 答题历史（基于rawHistory）
@@ -554,15 +576,20 @@ function formatTime(seconds: number): string {
   return `${m}分${s}秒`;
 }
 
+interface TimeData {
+  seconds: number;
+  percent: number;
+}
+
 // 每题用时（模拟分配）
-const timePerQuestion = computed(() => {
+const timePerQuestion = computed<TimeData[]>(() => {
   const details = resultData.value.details || [];
   const total = resultData.value.timeSpent || 0;
   if (details.length === 0 || total === 0) return [];
   // 平均分配用时，加上一些随机变化
   const base = total / details.length;
   let remaining = total;
-  return details.map((_: any, i: number) => {
+  return details.map((_: QuestionDetail, i: number) => {
     const isLast = i === details.length - 1;
     const secs = isLast ? Math.round(remaining) : Math.round(base * (0.6 + Math.sin(i * 1.7) * 0.4 + 0.5));
     if (!isLast) remaining -= secs;
@@ -1394,59 +1421,6 @@ const knowledgeStats = computed(() => {
 .stat-card:nth-child(3) { animation-delay: 0.16s; }
 .stat-card:nth-child(4) { animation-delay: 0.24s; }
 .stat-card:nth-child(5) { animation-delay: 0.32s; }
-
-/* 响应式 */
-@media (max-width: 1200px) {
-  .charts-grid,
-  .charts-grid.bottom {
-    grid-template-columns: 1fr 1fr;
-  }
-  .chart-panel.wide {
-    grid-column: span 2;
-  }
-  .stats-row {
-    grid-template-columns: repeat(3, 1fr);
-  }
-}
-@media (max-width: 768px) {
-  .analytics-body {
-    padding: 16px;
-  }
-  .analytics-header {
-    padding: 10px 16px;
-  }
-  .header-title {
-    font-size: 1rem;
-  }
-  .charts-grid,
-  .charts-grid.bottom {
-    grid-template-columns: 1fr;
-  }
-  .chart-panel.wide {
-    grid-column: span 1;
-  }
-  .stats-row {
-    grid-template-columns: repeat(2, 1fr);
-  }
-  .stat-ring {
-    display: none;
-  }
-  .review-header {
-    display: none;
-  }
-  .review-main {
-    grid-template-columns: 36px 1fr 60px;
-    grid-template-rows: auto auto;
-    gap: 4px 8px;
-  }
-  .review-main .rm-answer:nth-of-type(3),
-  .review-main .rm-answer:nth-of-type(4) {
-    display: none;
-  }
-  .review-detail .detail-content {
-    padding: 12px;
-  }
-}
 
 /* ===== 答题笔记 ===== */
 .notes-panel { background: rgba(201, 169, 110, 0.04); border: 1px solid rgba(201, 169, 110, 0.08); border-radius: 16px; padding: 24px; margin-bottom: 24px; }

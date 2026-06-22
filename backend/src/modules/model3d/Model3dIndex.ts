@@ -4,7 +4,8 @@
 
 import { Router } from 'express';
 import { z } from 'zod';
-import { query, execute, isMockMode } from '../../config/database';
+import sql from 'mssql';
+import { query, execute, isMockMode, transaction } from '../../config/database';
 import { authMiddleware, AuthRequest } from '../../middleware/auth';
 import { validateBody, validateParams } from '../../middleware/validation';
 import { asyncHandler } from '../../middleware/errorHandler';
@@ -102,7 +103,7 @@ router.get('/', asyncHandler(async (_req, res) => {
   res.json({ success: true, data: models });
 }));
 
-// 保存模型
+// 保存模型（支持事务）
 router.post('/', authMiddleware, validateBody(saveModelSchema), asyncHandler(async (req: AuthRequest, res) => {
   const { modelName, modelData, isPublic } = req.body;
   let thumbnailUrl: string = req.body.thumbnailUrl || '';
@@ -121,25 +122,53 @@ router.post('/', authMiddleware, validateBody(saveModelSchema), asyncHandler(asy
     thumbnailUrl = thumbnailUrl.substring(0, 250);
   }
 
-  const result = await execute('media3d', `INSERT INTO dbo.user_models ([user_id], [model_name], [model_data], [thumbnail_url], [is_public]) VALUES (@userId, @modelName, @modelData, @thumbnailUrl, @isPublic); SELECT SCOPE_IDENTITY() AS model_id;`, { userId, modelName, modelData: modelData || null, thumbnailUrl: thumbnailUrl || null, isPublic: isPublic ? 1 : 0 });
-  const modelId = (result.recordset[0] as any).model_id as number;
+  let modelId: number;
 
-  logger.info('模型保存成功', { modelId, userId });
+  try {
+    // 使用事务确保数据一致性
+    modelId = await transaction('media3d', async (tx) => {
+      // 1. 插入用户模型记录
+      const insertResult = await tx.request()
+        .input('userId', sql.Int, userId)
+        .input('modelName', sql.NVarChar(sql.MAX), modelName)
+        .input('modelData', sql.NVarChar(sql.MAX), modelData || null)
+        .input('thumbnailUrl', sql.NVarChar(255), thumbnailUrl || null)
+        .input('isPublic', sql.Bit, isPublic ? 1 : 0)
+        .query(`INSERT INTO dbo.user_models ([user_id], [model_name], [model_data], [thumbnail_url], [is_public]) VALUES (@userId, @modelName, @modelData, @thumbnailUrl, @isPublic); SELECT SCOPE_IDENTITY() AS model_id;`);
 
-  // 如果设为公开，同步到building_shares
-  if (isPublic) {
-    try {
-      const username = req.user?.username || '用户';
-      await execute('architecture',
-        'INSERT INTO dbo.building_shares ([user_id],[username],[model_id],[title],[description],[thumbnail_url],[building_type],[is_featured],[era],[created_at]) VALUES (@uid,@uname,@mid,@title,@desc,@thumb,@btype,0,@era,GETDATE())',
-        { uid: userId, uname: username, mid: modelId, title: modelName, desc: modelName, thumb: thumbnailUrl || null, btype: '用户模型', era: '现代' }
-      );
-    } catch (shareErr: any) {
-      console.warn('[Model3d] 同步到building_shares失败:', shareErr.message);
+      return (insertResult.recordset[0] as any).model_id as number;
+    });
+
+    logger.info('模型保存成功', { modelId, userId });
+
+    // 如果设为公开，同步到building_shares（跨库操作，使用单独事务）
+    if (isPublic) {
+      try {
+        await transaction('architecture', async (tx) => {
+          const username = req.user?.username || '用户';
+          await tx.request()
+            .input('uid', sql.Int, userId)
+            .input('uname', sql.NVarChar(100), username)
+            .input('mid', sql.Int, modelId)
+            .input('title', sql.NVarChar(255), modelName)
+            .input('desc', sql.NVarChar(sql.MAX), modelName)
+            .input('thumb', sql.NVarChar(255), thumbnailUrl || null)
+            .input('btype', sql.NVarChar(50), '用户模型')
+            .input('era', sql.NVarChar(50), '现代')
+            .query('INSERT INTO dbo.building_shares ([user_id],[username],[model_id],[title],[description],[thumbnail_url],[building_type],[is_featured],[era],[created_at]) VALUES (@uid,@uname,@mid,@title,@desc,@thumb,@btype,0,@era,GETDATE())');
+        });
+        logger.info('模型同步到building_shares成功', { modelId });
+      } catch (shareErr: any) {
+        logger.warn('[Model3d] 同步到building_shares失败:', shareErr.message);
+        // 记录日志但不中断主流程
+      }
     }
-  }
 
-  res.status(201).json({ success: true, data: { modelId, modelName, userId, isPublic }, message: '模型保存成功' });
+    res.status(201).json({ success: true, data: { modelId, modelName, userId, isPublic }, message: '模型保存成功' });
+  } catch (error: any) {
+    logger.error('[Model3d] 模型保存失败:', error.message);
+    res.status(500).json({ success: false, error: { code: 'MODEL_SAVE_FAILED', message: '模型保存失败，请稍后重试' } });
+  }
 }));
 
 // 获取用户模型列表
@@ -157,16 +186,46 @@ router.get('/my-models', authMiddleware, asyncHandler(async (req: AuthRequest, r
   res.json({ success: true, data: models });
 }));
 
-// 删除模型
+// 删除模型（支持事务）
 router.delete('/:id', authMiddleware, validateParams(idParamSchema), asyncHandler(async (req: AuthRequest, res) => {
   if (isMockMode()) { res.json({ success: true, message: '模型删除成功（Mock）' }); return; }
   const id = parseInt(req.params.id);
-  await execute('media3d', 'DELETE FROM dbo.user_models WHERE [model_id] = @id AND [user_id] = @userId', { id, userId: req.user!.userId });
-  // 同步删除building_shares中的记录
+  const userId = req.user!.userId;
+
   try {
-    await execute('architecture', 'DELETE FROM dbo.building_shares WHERE [model_id] = @mid', { mid: id });
-  } catch { /* ignore */ }
-  res.json({ success: true, message: '模型删除成功' });
+    // 使用事务删除主表记录
+    const deleteResult = await transaction('media3d', async (tx) => {
+      const result = await tx.request()
+        .input('id', sql.Int, id)
+        .input('userId', sql.Int, userId)
+        .query('DELETE FROM dbo.user_models WHERE [model_id] = @id AND [user_id] = @userId; SELECT @@ROWCOUNT AS deleted');
+      return (result.recordset[0] as any).deleted as number;
+    });
+
+    if (deleteResult === 0) {
+      res.status(404).json({ success: false, error: { message: '模型不存在或无权删除' } });
+      return;
+    }
+
+    logger.info('模型删除成功', { modelId: id, userId });
+
+    // 同步删除building_shares中的记录（跨库操作，使用单独事务）
+    try {
+      await transaction('architecture', async (tx) => {
+        await tx.request()
+          .input('mid', sql.Int, id)
+          .query('DELETE FROM dbo.building_shares WHERE [model_id] = @mid');
+      });
+      logger.info('building_shares记录删除成功', { modelId: id });
+    } catch (e: any) {
+      logger.warn('[Model3d] 删除building_shares记录失败:', e.message);
+    }
+
+    res.json({ success: true, message: '模型删除成功' });
+  } catch (error: any) {
+    logger.error('[Model3d] 模型删除失败:', error.message);
+    res.status(500).json({ success: false, error: { code: 'MODEL_DELETE_FAILED', message: '模型删除失败，请稍后重试' } });
+  }
 }));
 
 // 获取单个模型详情（用于加载已保存的模型）
@@ -204,11 +263,13 @@ router.get('/:id', authMiddleware, validateParams(idParamSchema), asyncHandler(a
   res.json({ success: true, data: model });
 }));
 
-// 更新模型（重命名/切换公开状态）
+// 更新模型（重命名/切换公开状态，支持事务）
 router.put('/:id', authMiddleware, validateParams(idParamSchema), asyncHandler(async (req: AuthRequest, res) => {
   const id = parseInt(req.params.id);
   const { modelName, isPublic, thumbnailUrl, modelData } = req.body;
+  
   if (isMockMode()) { res.json({ success: true }); return; }
+  
   const fields: string[] = [];
   const params: any = { id };
   if (modelName !== undefined) { fields.push('[model_name] = @modelName'); params.modelName = modelName; }
@@ -222,45 +283,84 @@ router.put('/:id', authMiddleware, validateParams(idParamSchema), asyncHandler(a
     'SELECT [model_name],[is_public],[thumbnail_url] FROM dbo.user_models WHERE [model_id] = @id AND [user_id] = @userId',
     { id, userId: req.user!.userId }
   );
+  
+  if (!existingModel) {
+    res.status(404).json({ success: false, error: { message: '模型不存在' } });
+    return;
+  }
+  
   const oldIsPublic = (existingModel as any)?.is_public;
   const finalModelName = modelName !== undefined ? modelName : (existingModel as any)?.model_name;
   const finalThumb = thumbnailUrl !== undefined ? thumbnailUrl : (existingModel as any)?.thumbnail_url;
 
-  await execute('media3d', `UPDATE dbo.user_models SET ${fields.join(', ')}, [updated_at] = GETDATE() WHERE [model_id] = @id AND [user_id] = @userId`, { ...params, userId: req.user!.userId });
+  try {
+    // 使用事务更新主表
+    await transaction('media3d', async (tx) => {
+      const updateQuery = `UPDATE dbo.user_models SET ${fields.join(', ')}, [updated_at] = GETDATE() WHERE [model_id] = @id AND [user_id] = @userId`;
+      await tx.request()
+        .input('id', sql.Int, id)
+        .input('userId', sql.Int, req.user!.userId)
+        .query(updateQuery, params);
+    });
 
-  // 同步到building_shares表：设为公开时插入/更新，取消公开时删除
-  if (isPublic === true && !oldIsPublic) {
-    // 刚设为公开：插入building_shares
-    try {
-      await execute('architecture',
-        'INSERT INTO dbo.building_shares ([model_id],[title],[description],[thumbnail_url],[building_type],[is_featured],[era],[created_at]) VALUES (@mid,@title,@desc,@thumb,@btype,0,@era,GETDATE())',
-        { mid: id, title: finalModelName, desc: finalModelName, thumb: finalThumb || null, btype: '用户模型', era: '现代' }
-      );
-    } catch (shareErr: any) {
-      // 如果已存在则更新
-      if (shareErr.message?.includes('duplicate') || shareErr.number === 2627 || shareErr.number === 2601) {
-        await execute('architecture',
-          'UPDATE dbo.building_shares SET [title]=@title,[thumbnail_url]=@thumb,[updated_at]=GETDATE() WHERE [model_id]=@mid',
-          { mid: id, title: finalModelName, thumb: finalThumb || null }
-        ).catch(() => {});
+    logger.info('模型更新成功', { modelId: id, userId: req.user!.userId });
+
+    // 同步到building_shares表：设为公开时插入/更新，取消公开时删除
+    if (isPublic === true && !oldIsPublic) {
+      // 刚设为公开：插入building_shares
+      try {
+        await transaction('architecture', async (tx) => {
+          await tx.request()
+            .input('mid', sql.Int, id)
+            .input('title', sql.NVarChar(255), finalModelName)
+            .input('desc', sql.NVarChar(sql.MAX), finalModelName)
+            .input('thumb', sql.NVarChar(255), finalThumb || null)
+            .input('btype', sql.NVarChar(50), '用户模型')
+            .input('era', sql.NVarChar(50), '现代')
+            .query('INSERT INTO dbo.building_shares ([model_id],[title],[description],[thumbnail_url],[building_type],[is_featured],[era],[created_at]) VALUES (@mid,@title,@desc,@thumb,@btype,0,@era,GETDATE())');
+        });
+        logger.info('模型同步到building_shares成功', { modelId: id });
+      } catch (shareErr: any) {
+        // 如果已存在则更新
+        if (shareErr.message?.includes('duplicate') || shareErr.number === 2627 || shareErr.number === 2601) {
+          await transaction('architecture', async (tx) => {
+            await tx.request()
+              .input('mid', sql.Int, id)
+              .input('title', sql.NVarChar(255), finalModelName)
+              .input('thumb', sql.NVarChar(255), finalThumb || null)
+              .query('UPDATE dbo.building_shares SET [title]=@title,[thumbnail_url]=@thumb,[updated_at]=GETDATE() WHERE [model_id]=@mid');
+          }).catch(() => {});
+        }
       }
+    } else if (isPublic === false && oldIsPublic) {
+      // 取消公开：从building_shares删除
+      try {
+        await transaction('architecture', async (tx) => {
+          await tx.request()
+            .input('mid', sql.Int, id)
+            .query('DELETE FROM dbo.building_shares WHERE [model_id] = @mid');
+        });
+        logger.info('模型从building_shares删除', { modelId: id });
+      } catch (e: any) { logger.warn('[Model3d] 从building_shares删除失败:', e.message || e); }
+    } else if (isPublic === true && oldIsPublic && modelName !== undefined) {
+      // 已公开的模型改名：同步更新building_shares
+      try {
+        await transaction('architecture', async (tx) => {
+          await tx.request()
+            .input('mid', sql.Int, id)
+            .input('title', sql.NVarChar(255), finalModelName)
+            .input('desc', sql.NVarChar(sql.MAX), finalModelName)
+            .query('UPDATE dbo.building_shares SET [title]=@title,[description]=@desc,[updated_at]=GETDATE() WHERE [model_id]=@mid');
+        });
+        logger.info('building_shares更新成功', { modelId: id });
+      } catch (e: any) { logger.warn('[Model3d] building_shares更新失败:', e.message || e); }
     }
-  } else if (isPublic === false && oldIsPublic) {
-    // 取消公开：从building_shares删除
-    try {
-      await execute('architecture', 'DELETE FROM dbo.building_shares WHERE [model_id] = @mid', { mid: id });
-    } catch { /* ignore */ }
-  } else if (isPublic === true && oldIsPublic && modelName !== undefined) {
-    // 已公开的模型改名：同步更新building_shares
-    try {
-      await execute('architecture',
-        'UPDATE dbo.building_shares SET [title]=@title,[description]=@desc,[updated_at]=GETDATE() WHERE [model_id]=@mid',
-        { mid: id, title: finalModelName, desc: finalModelName }
-      );
-    } catch { /* ignore */ }
-  }
 
-  res.json({ success: true, message: '模型更新成功' });
+    res.json({ success: true, message: '模型更新成功' });
+  } catch (error: any) {
+    logger.error('[Model3d] 模型更新失败:', error.message);
+    res.status(500).json({ success: false, error: { code: 'MODEL_UPDATE_FAILED', message: '模型更新失败，请稍后重试' } });
+  }
 }));
 
 // 导出模型数据

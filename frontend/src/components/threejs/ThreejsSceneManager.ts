@@ -9,6 +9,9 @@ import { TransformControls } from 'three/examples/jsm/controls/TransformControls
 import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js';
 import { DEFAULT_COMPONENTS } from './ThreejsArchitectureComponents';
 import { MortiseTenonSnapEngine, type SnapPoint, type SnapResult, type RotationConstraint } from './ThreejsMortiseTenonSnapEngine';
+import { SelectionManager } from './ThreejsSelectionManager';
+import { MeasureTool } from './ThreejsMeasureTool';
+import { generateUUID } from '../../utils/uuid';
 
 export interface SceneComponent {
   uuid: string;
@@ -60,7 +63,8 @@ export class SceneManager {
   private transformControl!: TransformControls;
   private container: HTMLElement;
   private components: Map<string, SceneComponent> = new Map();
-  private selectedUuids: Set<string> = new Set();
+  private selectionManager: SelectionManager;
+  private measureTool: MeasureTool;
   private raycaster: THREE.Raycaster;
   private mouse: THREE.Vector2;
   private gridHelper!: THREE.GridHelper;
@@ -68,7 +72,6 @@ export class SceneManager {
   private directionalLight!: THREE.DirectionalLight;
   private ambientLight!: THREE.AmbientLight;
   private selectionBox: THREE.LineSegments | null = null;
-  private onSelectCallback: ((uuids: string[]) => void) | null = null;
   private onTransformCallback: (() => void) | null = null;
   private onLongPressPlaceCallback: ((position: THREE.Vector3) => void) | null = null;
   private longPressPlaceTimer: ReturnType<typeof setTimeout> | null = null;
@@ -185,12 +188,6 @@ export class SceneManager {
     this.ruleWarnings = [];
   }
 
-  // 测量
-  private measurePoints: THREE.Vector3[] = [];
-  private measureLines: (THREE.Line | THREE.Mesh)[] = [];
-  private measureLabels: THREE.Sprite[] = [];
-  private isMeasuring = false;
-
   // 变换轴约束
   private axisConstraint: 'X' | 'Y' | 'Z' | 'XY' | 'YZ' | 'XZ' | 'XYZ' = 'XYZ';
 
@@ -203,6 +200,8 @@ export class SceneManager {
     this.raycaster = new THREE.Raycaster();
     this.mouse = new THREE.Vector2();
     this.snapEngine = new MortiseTenonSnapEngine();
+    this.selectionManager = new SelectionManager(this.components);
+    this.measureTool = new MeasureTool(this.scene);
 
     this.init();
   }
@@ -474,9 +473,8 @@ export class SceneManager {
       (comp.mesh.material as THREE.Material).dispose();
     }
     this.components.delete(uuid);
-    this.selectedUuids.delete(uuid);
+    this.selectionManager.delete(uuid);
     this.updateGizmo();
-    this.emitSelection();
     return true;
   }
 
@@ -485,7 +483,7 @@ export class SceneManager {
     if (!comp) return null;
     const newComp: SceneComponent = {
       ...comp,
-      uuid: crypto.randomUUID(),
+      uuid: generateUUID(),
       position: { x: comp.position.x + 0.5, y: comp.position.y, z: comp.position.z + 0.5 },
       mesh: undefined,
     };
@@ -538,73 +536,26 @@ export class SceneManager {
       }
     });
     this.components.clear();
-    this.selectedUuids.clear();
+    this.selectionManager.clear();
     this.updateGizmo();
-    this.emitSelection();
   }
 
   // ============ 选择与Gizmo ============
 
   selectSingle(uuid: string | null, additive: boolean = false): void {
-    if (!additive) {
-      this.selectedUuids.forEach((uid) => {
-        const c = this.components.get(uid);
-        if (c?.mesh) {
-          (c.mesh.material as THREE.MeshStandardMaterial).emissive.setHex(0x000000);
-        }
-      });
-      this.selectedUuids.clear();
-    }
-
-    if (uuid) {
-      const comp = this.components.get(uuid);
-      if (comp && !comp.locked) {
-        if (additive && this.selectedUuids.has(uuid)) {
-          this.selectedUuids.delete(uuid);
-          if (comp.mesh) (comp.mesh.material as THREE.MeshStandardMaterial).emissive.setHex(0x000000);
-        } else {
-          this.selectedUuids.add(uuid);
-          if (comp.mesh) (comp.mesh.material as THREE.MeshStandardMaterial).emissive.setHex(0x332211);
-        }
-      }
-    }
-
+    this.selectionManager.selectSingle(uuid, additive);
     this.updateGizmo();
-    this.emitSelection();
   }
 
-  private selectByBox(_frustum: THREE.Frustum): void {
-    this.selectedUuids.forEach((uid) => {
-      const c = this.components.get(uid);
-      if (c?.mesh) (c.mesh.material as THREE.MeshStandardMaterial).emissive.setHex(0x000000);
-    });
-    this.selectedUuids.clear();
-
-    const rect = this.renderer.domElement.getBoundingClientRect();
-    const ndcMinX = ((Math.min(this.boxSelectStart.x, this.boxSelectEnd.x) - rect.left) / rect.width) * 2 - 1;
-    const ndcMaxX = ((Math.max(this.boxSelectStart.x, this.boxSelectEnd.x) - rect.left) / rect.width) * 2 - 1;
-    const ndcMinY = -((Math.max(this.boxSelectStart.y, this.boxSelectEnd.y) - rect.top) / rect.height) * 2 + 1;
-    const ndcMaxY = -((Math.min(this.boxSelectStart.y, this.boxSelectEnd.y) - rect.top) / rect.height) * 2 + 1;
-
-    const projVec = new THREE.Vector3();
-    this.components.forEach((comp) => {
-      if (!comp.mesh || comp.locked || !comp.visible) return;
-      comp.mesh.getWorldPosition(projVec);
-      projVec.project(this.camera);
-      const inBox = projVec.x >= ndcMinX && projVec.x <= ndcMaxX && projVec.y >= ndcMinY && projVec.y <= ndcMaxY;
-      if (inBox) {
-        this.selectedUuids.add(comp.uuid);
-        (comp.mesh.material as THREE.MeshStandardMaterial).emissive.setHex(0x332211);
-      }
-    });
-
+  private selectByBox(): void {
+    this.selectionManager.selectByBox(this.renderer, this.boxSelectStart, this.boxSelectEnd);
     this.updateGizmo();
-    this.emitSelection();
   }
 
   private updateGizmo(): void {
-    if (this.selectedUuids.size === 1 && this.transformMode !== 'select') {
-      const uuid = Array.from(this.selectedUuids)[0];
+    const selectedUuids = this.selectionManager.getSelectedUuids();
+    if (selectedUuids.length === 1 && this.transformMode !== 'select') {
+      const uuid = selectedUuids[0];
       const comp = this.components.get(uuid);
       if (comp?.mesh) {
         this.transformControl.attach(comp.mesh);
@@ -631,15 +582,16 @@ export class SceneManager {
   }
 
   private syncTransformToComponent(): void {
-    this.selectedUuids.forEach((uuid) => {
+    const selectedUuids = this.selectionManager.getSelectedUuids();
+    selectedUuids.forEach((uuid) => {
       const comp = this.components.get(uuid);
       if (!comp || !comp.mesh) return;
-      const p = comp.mesh.position;
-      const r = comp.mesh.rotation;
-      const s = comp.mesh.scale;
-      comp.position = { x: p.x, y: p.y, z: p.z };
-      comp.rotation = { x: r.x, y: r.y, z: r.z };
-      comp.scale = { x: s.x, y: s.y, z: s.z };
+      const position = comp.mesh.position;
+      const rotation = comp.mesh.rotation;
+      const scale = comp.mesh.scale;
+      comp.position = { x: position.x, y: position.y, z: position.z };
+      comp.rotation = { x: rotation.x, y: rotation.y, z: rotation.z };
+      comp.scale = { x: scale.x, y: scale.y, z: scale.z };
     });
     if (this.onTransformCallback) this.onTransformCallback();
   }
@@ -699,7 +651,7 @@ export class SceneManager {
         if (this.isBoxSelecting && !this.isDragging) {
           this.isLongPressDragging = true;
           this.controls.enabled = false;
-          if (!this.selectedUuids.has(uuid)) {
+          if (!this.selectionManager.isSelected(uuid)) {
             this.selectSingle(uuid, false);
           }
           this.dragPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -hitPoint.y);
@@ -733,7 +685,8 @@ export class SceneManager {
       const intersectPoint = new THREE.Vector3();
       if (this.raycaster.ray.intersectPlane(this.dragPlane, intersectPoint)) {
         const delta = new THREE.Vector3().subVectors(intersectPoint, this.dragStartPos);
-        this.selectedUuids.forEach((uuid) => {
+        const selectedUuids = this.selectionManager.getSelectedUuids();
+        selectedUuids.forEach((uuid) => {
           const comp = this.components.get(uuid);
           if (!comp || !comp.mesh || comp.locked) return;
           const newPos = {
@@ -799,8 +752,7 @@ export class SceneManager {
     if (this.isDragging) {
       this.boxSelectEnd.set(event.clientX, event.clientY);
       this.removeSelectionBox();
-      const frustum = this.calculateFrustumFromBox();
-      if (frustum) this.selectByBox(frustum);
+      this.selectByBox();
     } else {
       const rect = this.renderer.domElement.getBoundingClientRect();
       this.mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
@@ -924,72 +876,21 @@ export class SceneManager {
   // ============ 测量工具 ============
 
   startMeasure(): void {
-    this.isMeasuring = true;
-    this.measurePoints = [];
+    this.measureTool.startMeasure();
   }
   stopMeasure(): void {
-    this.isMeasuring = false;
-    this.clearMeasurements();
+    this.measureTool.stopMeasure();
   }
   isMeasureMode(): boolean {
-    return this.isMeasuring;
+    return this.measureTool.isMeasureMode();
   }
 
   addMeasurePoint(worldPoint: THREE.Vector3): number {
-    this.measurePoints.push(worldPoint.clone());
-    const dotGeo = new THREE.SphereGeometry(0.08, 8, 8);
-    const dotMat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
-    const dot = new THREE.Mesh(dotGeo, dotMat);
-    dot.position.copy(worldPoint);
-    this.scene.add(dot);
-    this.measureLines.push(dot as any);
-
-    const count = this.measurePoints.length;
-    if (count >= 2) {
-      const p1 = this.measurePoints[count - 2];
-      const p2 = this.measurePoints[count - 1];
-      const distance = p1.distanceTo(p2);
-
-      const lineGeo = new THREE.BufferGeometry().setFromPoints([p1, p2]);
-      const lineMat = new THREE.LineBasicMaterial({ color: 0xff0000, linewidth: 2 });
-      const line = new THREE.Line(lineGeo, lineMat);
-      this.scene.add(line);
-      this.measureLines.push(line as any);
-
-      const mid = new THREE.Vector3().addVectors(p1, p2).multiplyScalar(0.5);
-      mid.y += 0.3;
-      this.createMeasureLabel(`${distance.toFixed(2)}m`, mid);
-    }
-    return count >= 2 ? this.measurePoints[count - 2].distanceTo(this.measurePoints[count - 1]) : 0;
-  }
-
-  private createMeasureLabel(text: string, position: THREE.Vector3): void {
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d')!;
-    canvas.width = 128;
-    canvas.height = 64;
-    ctx.fillStyle = 'rgba(139, 37, 0, 0.9)';
-    ctx.fillRect(0, 0, 128, 64);
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 20px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText(text, 64, 40);
-
-    const texture = new THREE.CanvasTexture(canvas);
-    const spriteMat = new THREE.SpriteMaterial({ map: texture });
-    const sprite = new THREE.Sprite(spriteMat);
-    sprite.position.copy(position);
-    sprite.scale.set(1.5, 0.75, 1);
-    this.scene.add(sprite);
-    this.measureLabels.push(sprite);
+    return this.measureTool.addMeasurePoint(worldPoint);
   }
 
   clearMeasurements(): void {
-    this.measureLines.forEach((obj) => this.scene.remove(obj as THREE.Object3D));
-    this.measureLabels.forEach((obj) => this.scene.remove(obj));
-    this.measureLines = [];
-    this.measureLabels = [];
-    this.measurePoints = [];
+    this.measureTool.clearMeasurements();
   }
 
   // ============ 场景设置 ============
@@ -1105,20 +1006,20 @@ export class SceneManager {
     const comp = this.components.get(uuid);
     if (comp) {
       comp.locked = locked;
-      if (locked && this.selectedUuids.has(uuid)) {
-        this.selectedUuids.delete(uuid);
+      if (locked && this.selectionManager.isSelected(uuid)) {
+        this.selectionManager.delete(uuid);
         if (comp.mesh) (comp.mesh.material as THREE.MeshStandardMaterial).emissive.setHex(0x000000);
         this.updateGizmo();
-        this.emitSelection();
       }
     }
   }
 
   focusSelected(): void {
-    if (this.selectedUuids.size === 0) return;
+    const selectedUuids = this.selectionManager.getSelectedUuids();
+    if (selectedUuids.length === 0) return;
     const center = new THREE.Vector3();
     let count = 0;
-    this.selectedUuids.forEach((uuid) => {
+    selectedUuids.forEach((uuid) => {
       const comp = this.components.get(uuid);
       if (comp?.mesh) {
         center.add(comp.mesh.position);
@@ -1143,10 +1044,10 @@ export class SceneManager {
     return this.components.get(uuid);
   }
   getSelected(): string[] {
-    return Array.from(this.selectedUuids);
+    return this.selectionManager.getSelectedUuids();
   }
   getSelectedComponents(): SceneComponent[] {
-    return Array.from(this.selectedUuids)
+    return this.selectionManager.getSelectedUuids()
         .map((uuid) => this.components.get(uuid))
         .filter((c): c is SceneComponent => c !== undefined);
   }
@@ -1160,7 +1061,7 @@ export class SceneManager {
         fc += g.index ? g.index.count / 3 : (g.attributes.position?.count || 0) / 3;
       }
     });
-    return { componentCount: this.components.size, vertexCount: vc, faceCount: Math.floor(fc), selectedCount: this.selectedUuids.size };
+    return { componentCount: this.components.size, vertexCount: vc, faceCount: Math.floor(fc), selectedCount: this.selectionManager.getSelectedCount() };
   }
 
   // ============ 导入导出 ============
@@ -1282,7 +1183,7 @@ export class SceneManager {
         }
 
         const comp: SceneComponent = {
-          uuid: raw.uuid || raw.id || crypto.randomUUID(),
+          uuid: raw.uuid || raw.id || generateUUID(),
           definitionId: defId,
           type: defType,
           category: defCategory,
@@ -1345,7 +1246,7 @@ export class SceneManager {
         }
 
         const comp: SceneComponent = {
-          uuid: crypto.randomUUID(),
+          uuid: generateUUID(),
           definitionId: 0,
           type: 'mesh',
           category: 'import',
@@ -1379,7 +1280,7 @@ export class SceneManager {
 // ============ 回调系统 ============
 
   onSelect(callback: (uuids: string[]) => void): void {
-    this.onSelectCallback = callback;
+    this.selectionManager.setOnSelectCallback(callback);
   }
   onTransform(callback: () => void): void {
     this.onTransformCallback = callback;
@@ -1388,9 +1289,7 @@ export class SceneManager {
     this.onLongPressPlaceCallback = callback;
   }
 
-  private emitSelection(): void {
-    if (this.onSelectCallback) this.onSelectCallback(Array.from(this.selectedUuids));
-  }
+  // Selection callback is now handled by SelectionManager
 
   private undoCallback: (() => void) | null = null;
   private redoCallback: (() => void) | null = null;
@@ -1449,7 +1348,8 @@ export class SceneManager {
 
   applyGravity(): void {
     if (!this.gravityEnabled || this.buildMode !== 'real') return;
-    for (const uuid of this.selectedUuids) {
+    const selectedUuids = this.selectionManager.getSelectedUuids();
+    for (const uuid of selectedUuids) {
       this.applyGravityToComponent(uuid);
     }
   }

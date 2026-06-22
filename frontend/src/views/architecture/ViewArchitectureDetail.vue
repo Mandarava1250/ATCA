@@ -855,16 +855,6 @@ onMounted(loadDetail);
   font-style: italic;
 }
 
-/* ===== Responsive ===== */
-@media (max-width: 768px) {
-  .detail-header { grid-template-columns: 1fr; gap: 24px; }
-  .detail-tabs { gap: 0; }
-  .tab-btn { padding: 10px 14px; font-size: 0.8rem; }
-  .detail-meta-grid { grid-template-columns: 1fr; }
-  .timeline-header { flex-direction: column; align-items: flex-start; }
-  .quote-footer { flex-direction: column; align-items: flex-start; }
-}
-
 /* ===== 古建筑详情增强 ===== */
 .architecture-detail {
   background: var(--color-background);

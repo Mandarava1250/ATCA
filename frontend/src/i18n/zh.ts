@@ -5,6 +5,7 @@ export default {
     fullTitle: '华夏营造 — 中国古代建筑文化虚拟展览馆',
   },
   nav: {
+    menu: '导航菜单',
     home: '首页',
     architectureHall: '古建筑馆',
     knowledgeQuiz: '知识竞赛',

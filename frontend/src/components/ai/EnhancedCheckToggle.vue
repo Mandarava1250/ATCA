@@ -316,31 +316,4 @@ onUnmounted(() => {
   transform: translateX(-50%) translateY(-4px);
 }
 
-/* 响应式 */
-@media (max-width: 768px) {
-  .enhanced-check-toggle {
-    padding: 5px 10px;
-    font-size: 12px;
-  }
-  
-  .toggle-track {
-    width: 32px;
-    height: 18px;
-  }
-  
-  .toggle-thumb {
-    width: 14px;
-    height: 14px;
-  }
-  
-  .toggle-track.enabled .toggle-thumb {
-    transform: translateX(14px);
-  }
-  
-  .tooltip {
-    max-width: 220px;
-    font-size: 12px;
-    padding: 10px;
-  }
-}
 </style>

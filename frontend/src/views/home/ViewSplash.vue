@@ -361,13 +361,4 @@ function enterSite() {
   letter-spacing: 0.1em;
 }
 
-/* ===== 响应式 ===== */
-@media (max-width: 768px) {
-  .splash-title { font-size: 1.75rem; letter-spacing: 0.2em; }
-  .splash-subtitle { font-size: 0.8125rem; }
-  .splash-logo { width: 60px; height: 60px; }
-  .ring-1 { width: 45vh; height: 45vh; }
-  .ring-2 { width: 65vh; height: 65vh; }
-  .ring-3 { width: 85vh; height: 85vh; }
-}
 </style>

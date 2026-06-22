@@ -275,8 +275,4 @@ onMounted(async () => {
   padding: 10px 20px;
 }
 
-@media (max-width: 768px) {
-  .activity-info-grid { grid-template-columns: 1fr; }
-  .activity-title { font-size: 1.375rem; }
-}
 </style>

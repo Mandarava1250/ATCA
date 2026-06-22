@@ -3,13 +3,13 @@
     <div 
       ref="textRef"
       class="text-clamp-content"
-      :class="{ 'clamped': !isExpanded && lineCount > maxLines }"
+      :class="{ 'clamped': !isExpanded && shouldClamp }"
       :style="contentStyle"
     >
       {{ text }}
     </div>
     <div 
-      v-if="lineCount > maxLines" 
+      v-if="shouldClamp" 
       class="text-clamp-toggle"
     >
       <button 
@@ -18,7 +18,7 @@
         type="button"
       >
         <span class="toggle-icon">{{ isExpanded ? '▲' : '▼' }}</span>
-        <span class="toggle-text">{{ isExpanded ? '收起文本' : '点击展开文本' }}</span>
+        <span class="toggle-text">{{ isExpanded ? collapseText : expandText }}</span>
       </button>
     </div>
   </div>
@@ -48,9 +48,14 @@ const emit = defineEmits<{
 const isExpanded = ref(false);
 const textRef = ref<HTMLElement | null>(null);
 const lineCount = ref(0);
+const isMeasured = ref(false);
+
+const shouldClamp = computed(() => {
+  return isMeasured.value && lineCount.value > props.maxLines;
+});
 
 const contentStyle = computed(() => {
-  if (isExpanded.value || lineCount.value <= props.maxLines) {
+  if (isExpanded.value || !shouldClamp.value) {
     return {} as const;
   }
   return {
@@ -73,14 +78,25 @@ function toggleExpand() {
 
 function measureLineCount() {
   if (!textRef.value) return;
-  
+
   const element = textRef.value;
   const computedStyle = window.getComputedStyle(element);
-  const lineHeight = parseFloat(computedStyle.lineHeight);
+  const lineHeightStr = computedStyle.lineHeight;
+
+  let lineHeight: number;
+  if (lineHeightStr === 'normal') {
+    // 使用字体大小的 1.2 倍作为默认行高
+    const fontSize = parseFloat(computedStyle.fontSize);
+    lineHeight = fontSize * 1.2;
+  } else {
+    lineHeight = parseFloat(lineHeightStr);
+  }
+
   const height = element.scrollHeight;
-  
-  // 计算行数
-  lineCount.value = Math.round(height / lineHeight);
+
+  // 计算行数，向上取整
+  lineCount.value = Math.ceil(height / lineHeight);
+  isMeasured.value = true;
 }
 
 onMounted(() => {
@@ -90,6 +106,14 @@ onMounted(() => {
 });
 
 watch(() => props.text, () => {
+  isMeasured.value = false;
+  nextTick(() => {
+    measureLineCount();
+  });
+});
+
+watch(() => props.maxLines, () => {
+  isMeasured.value = false;
   nextTick(() => {
     measureLineCount();
   });
@@ -124,17 +148,18 @@ defineExpose({
   gap: 0.25rem;
   padding: 0.25rem 0.5rem;
   background: transparent;
-  border: 1px solid var(--atca-color-primary, #4a90d9);
+  border: 1px solid var(--gold, #C9A96E);
   border-radius: 4px;
-  color: var(--atca-color-primary, #4a90d9);
+  color: var(--gold, #C9A96E);
   font-size: 0.875rem;
+  font-family: 'Noto Serif SC', 'STSong', serif;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .toggle-btn:hover {
-  background: var(--atca-color-primary, #4a90d9);
-  color: white;
+  background: var(--gold, #C9A96E);
+  color: #1A1714;
 }
 
 .toggle-icon {
@@ -143,13 +168,5 @@ defineExpose({
 
 .toggle-text {
   white-space: nowrap;
-}
-
-/* 移动端适配 */
-@media (max-width: 768px) {
-  .toggle-btn {
-    padding: 0.375rem 0.75rem;
-    font-size: 0.875rem;
-  }
 }
 </style>

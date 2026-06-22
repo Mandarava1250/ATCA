@@ -1670,18 +1670,4 @@ onMounted(async () => {
 .note-manage-meta { display: flex; align-items: center; justify-content: space-between; font-size: 0.75rem; color: var(--text-dim); }
 .note-manage-link { display: flex; align-items: center; gap: 4px; color: var(--gold-dim); }
 
-/* 响应式 */
-@media (max-width: 1024px) {
-  .profile-layout { grid-template-columns: 280px 1fr; }
-  .favorites-grid { grid-template-columns: repeat(2, 1fr); }
-}
-@media (max-width: 768px) {
-  .profile-layout { grid-template-columns: 1fr; }
-  .profile-sidebar { position: static; }
-  .favorites-grid { grid-template-columns: 1fr; }
-  .points-summary { flex-direction: column; gap: 16px; }
-  .form-row { grid-template-columns: 1fr; }
-  .profile-tabs { overflow-x: auto; }
-  .tab-btn { flex-shrink: 0; flex: none; padding: 12px 20px; }
-}
 </style>

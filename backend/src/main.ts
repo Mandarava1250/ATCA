@@ -45,8 +45,7 @@ import {
   recordRequestActivity 
 } from './services/serverKeepAlive';
 
-// 模块路由
-import authRouter from './modules/auth/AuthIndex';
+// 模块路由（过程式风格）
 import architectureRouter from './modules/architecture/ArchitectureIndex';
 import quizRouter from './modules/quiz/QuizIndex';
 import assistantRouter from './modules/assistant/AssistantIndex';
@@ -59,6 +58,17 @@ import i18nRouter from './modules/i18n/I18nIndex';
 import socialRouter from './modules/social/SocialIndex';
 import knowledgeRouter from './modules/knowledgebase/KnowledgeBaseIndex';
 import knowledgeGraphRouter from './modules/knowledge-graph/KnowledgeGraphIndex';
+import performanceRouter from './modules/admin/performance/PerformanceIndex';
+
+// 控制器模式路由（新架构）
+import { RouteManager } from './routes/RouteManager';
+import { AuthController } from './controllers/AuthController';
+
+// 服务注册框架（新架构）
+import { registerCoreServices, initializeServices, disposeServices, getServiceStatusSummary } from './core';
+
+const routeManager = new RouteManager();
+routeManager.registerController(AuthController);
 
 const app = express();
 
@@ -255,9 +265,11 @@ app.get('/api/monitor/performance', performanceEndpoint);
 // 3. Swagger API文档
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
-// 4. API路由
+// 4. API路由（控制器模式）
+routeManager.install(app);
+
+// 4. API路由（过程式风格）
 const apiPrefix = '/api/v1';
-app.use(`${apiPrefix}/auth`, authRouter);
 
 // 架构浏览API - 启用条件性输出（浏览状态检测）
 app.use(`${apiPrefix}/architecture`, conditionalOutput, architectureRouter);
@@ -270,6 +282,7 @@ app.use(`${apiPrefix}/index`, indexRouter);
 app.use(`${apiPrefix}/activities`, activityRouter);
 app.use(`${apiPrefix}/admin`, adminRouter);
 app.use(`${apiPrefix}/admin/knowledge-graph`, knowledgeGraphRouter);
+app.use(`${apiPrefix}/admin/performance`, performanceRouter);
 app.use(`${apiPrefix}/i18n`, i18nRouter);
 app.use(`${apiPrefix}/social`, socialRouter);
 
@@ -311,6 +324,9 @@ async function startServer() {
   // 初始化浏览状态存储（默认内存模式，适合 2核2G 服务器）
   // 如需 Redis 存储，可传入配置: initBrowseStateStore({ type: 'redis', redis: {...} })
   initBrowseStateStore({ type: 'memory' });
+
+  // 注册核心服务
+  registerCoreServices();
   
   try {
     await preconnectAll();
@@ -318,6 +334,20 @@ async function startServer() {
     console.error('[DB] 预连接错误详情:', error.message || error);
     console.warn('[DB] 所有数据库连接失败，启用 Mock 模式');
     setMockMode(true);
+  }
+
+  // 初始化所有已注册服务
+  try {
+    await initializeServices();
+    const status = getServiceStatusSummary();
+    console.log('[ServiceRegistry] 服务状态:', {
+      state: status.state,
+      ready: status.services.filter(s => s.state === 'ready').length,
+      total: status.services.length
+    });
+  } catch (error: any) {
+    console.error('[ServiceRegistry] 服务初始化失败:', error.message);
+    // 非致命错误，继续启动
   }
 
   const server = app.listen(PORT, '0.0.0.0', () => {
@@ -354,6 +384,9 @@ async function startServer() {
     
     // 停止保活服务
     stopKeepAliveService();
+    
+    // 销毁所有服务
+    await disposeServices();
     
     server.close(async () => {
       await closeAllPools();

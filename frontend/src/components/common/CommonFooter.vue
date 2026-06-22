@@ -22,7 +22,7 @@
               <p class="footer-subtitle">中国古代建筑文化传承平台</p>
             </div>
           </div>
-          <p class="footer-desc">传承千年营造智慧， digitally 复原古建之美。以三维互动与人工智能，让每一座古建重生于数字世界。</p>
+          <p class="footer-desc">传承千年营造智慧，以数字技术复原古建之美。通过三维互动与人工智能，让每一座古建重生于数字世界。</p>
           <div class="footer-stats">
             <div><strong>6</strong><span>朝建筑</span></div>
             <div><strong>5</strong><span>竞赛模式</span></div>
@@ -181,9 +181,14 @@
   text-decoration: underline;
 }
 
-@media (max-width: 768px) {
-  .footer-grid { grid-template-columns: 1fr; gap: 32px; }
+@media screen and (max-width: 767px) {
+  .footer-grid {
+    grid-template-columns: 1fr;
+    gap: 32px;
+    padding-bottom: 24px;
+  }
   .footer-brand-col { max-width: 100%; }
-  .footer-links-col { border-top: 1px solid var(--border); padding-top: 16px; }
+  .footer-stats { justify-content: center; }
+  .footer-links-col h4 { margin-bottom: 12px; }
 }
 </style>
