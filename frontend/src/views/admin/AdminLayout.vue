@@ -14,10 +14,13 @@
       </div>
 
       <nav class="sidebar-nav">
+        <!-- 入口页 -->
         <router-link to="/admin" class="nav-item" :class="{ active: route.path === '/admin' }">
           <svg viewBox="0 0 24 24" width="18" height="18"><path d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
           <span v-if="!sidebarCollapsed">{{ $t('admin.dashboard') }}</span>
         </router-link>
+        
+        <!-- 核心业务模块 -->
         <router-link to="/admin/users" class="nav-item" :class="{ active: route.path.startsWith('/admin/users') }">
           <svg viewBox="0 0 24 24" width="18" height="18"><path d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
           <span v-if="!sidebarCollapsed">{{ $t('admin.users') }}</span>
@@ -30,14 +33,24 @@
           <svg viewBox="0 0 24 24" width="18" height="18"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
           <span v-if="!sidebarCollapsed">{{ $t('admin.questions') }}</span>
         </router-link>
-        <router-link to="/admin/ai-configs" class="nav-item" :class="{ active: route.path.startsWith('/admin/ai-configs') }">
-          <svg viewBox="0 0 24 24" width="18" height="18"><path d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
-          <span v-if="!sidebarCollapsed">{{ $t('admin.aiConfigs') }}</span>
+        
+        <!-- 数据管理模块 -->
+        <router-link to="/admin/knowledge-graph" class="nav-item" :class="{ active: route.path.startsWith('/admin/knowledge-graph') }">
+          <svg viewBox="0 0 24 24" width="18" height="18"><path d="M13.5 20.5C13.5 21.88 12.38 23 11 23s-2.5-1.12-2.5-2.5c0-.69.28-1.32.74-1.76l-3.54-3.54c-.78.72-1.79 1.19-2.9 1.19C3.58 16 1 13.42 1 10c0-1.11.47-2.12 1.29-2.9L8.76 8.74c.44.46 1.07.74 1.74.74h.5c.28 0 .5-.22.5-.5V4.5c0-.28.22-.5.5-.5h3c.28 0 .5.22.5.5v8.75c0 .67.28 1.3.74 1.76l3.54-3.54c.82.78 1.29 1.79 1.29 2.9 0 3.42-2.58 6-6 6z" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
+          <span v-if="!sidebarCollapsed">知识图谱</span>
         </router-link>
         <router-link to="/admin/models" class="nav-item" :class="{ active: route.path.startsWith('/admin/models') }">
           <svg viewBox="0 0 24 24" width="18" height="18"><path d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-2 1m2-1l-2-1m2 1v2.5M14 4l-2-1-2 1M4 7l2-1M4 7l2 1M4 7v2.5M12 21l-2-1m2 1l2-1m-2 1v-2.5M6 18l-2-1v-2.5M18 18l2-1v-2.5" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
           <span v-if="!sidebarCollapsed">3D模型</span>
         </router-link>
+        
+        <!-- AI配置模块 -->
+        <router-link to="/admin/ai-configs" class="nav-item" :class="{ active: route.path.startsWith('/admin/ai-configs') }">
+          <svg viewBox="0 0 24 24" width="18" height="18"><path d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
+          <span v-if="!sidebarCollapsed">{{ $t('admin.aiConfigs') }}</span>
+        </router-link>
+        
+        <!-- 运营管理模块 -->
         <router-link to="/admin/activities" class="nav-item" :class="{ active: route.path.startsWith('/admin/activities') }">
           <svg viewBox="0 0 24 24" width="18" height="18"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
           <span v-if="!sidebarCollapsed">活动管理</span>
@@ -46,6 +59,8 @@
           <svg viewBox="0 0 24 24" width="18" height="18"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 7a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
           <span v-if="!sidebarCollapsed">社区管理</span>
         </router-link>
+        
+        <!-- 系统运维模块 -->
         <router-link to="/admin/monitor" class="nav-item" :class="{ active: route.path.startsWith('/admin/monitor') }">
           <svg viewBox="0 0 24 24" width="18" height="18"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
           <span v-if="!sidebarCollapsed">系统监控</span>
@@ -97,8 +112,9 @@ const pageTitle = computed(() => {
     '/admin/users': '用户管理',
     '/admin/architectures': '古建筑管理',
     '/admin/questions': '题库管理',
-    '/admin/ai-configs': 'AI配置管理',
+    '/admin/knowledge-graph': '知识图谱数据导入',
     '/admin/models': '3D模型管理',
+    '/admin/ai-configs': 'AI配置管理',
     '/admin/activities': '活动管理',
     '/admin/community': '社区管理',
     '/admin/monitor': '系统监控',
@@ -245,9 +261,57 @@ watch(() => route.path, (newPath, oldPath) => {
   overflow-y: auto;
 }
 
+@media (max-width: 1024px) {
+  .admin-sidebar {
+    position: fixed;
+    z-index: 100;
+    height: 100vh;
+    left: 0;
+    top: 0;
+    transform: translateX(0);
+    box-shadow: 2px 0 20px rgba(0, 0, 0, 0.3);
+  }
+  .admin-sidebar.collapsed {
+    transform: translateX(-100%);
+    width: 240px;
+  }
+  .admin-main {
+    margin-left: 0;
+    min-height: 100vh;
+  }
+}
+
 @media (max-width: 768px) {
-  .admin-sidebar { position: fixed; z-index: 100; height: 100vh; }
-  .admin-sidebar.collapsed { transform: translateX(-100%); width: 240px; }
-  .admin-main { margin-left: 0; }
+  .admin-header {
+    padding: 12px 16px;
+  }
+  .admin-header h1 {
+    font-size: 1rem;
+  }
+  .admin-content {
+    padding: 16px;
+  }
+  .header-actions {
+    gap: 12px;
+  }
+  .admin-user {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .admin-header {
+    padding: 10px 12px;
+  }
+  .admin-header h1 {
+    font-size: 0.875rem;
+  }
+  .admin-content {
+    padding: 12px;
+  }
+  .lang-btn {
+    padding: 3px 8px;
+    font-size: 0.6875rem;
+  }
 }
 </style>

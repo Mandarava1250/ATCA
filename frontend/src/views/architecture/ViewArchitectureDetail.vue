@@ -20,7 +20,7 @@
           </div>
           <h1 class=" -xl">{{ architecture.chinese_name || architecture.name }}</h1>
           <p v-if="architecture.chinese_name" class="detail-chinese">{{ architecture.chinese_name }}</p>
-          <p class="detail-desc">{{ architecture.full_description || architecture.brief_description }}</p>
+          <TextClamp :text="architecture.full_description || architecture.brief_description" :max-lines="5" expand-text="展开详情" collapse-text="收起详情" class="detail-desc" />
           
           <!-- Extra metadata -->
           <div class="detail-meta-grid" v-if="hasExtraMetadata">
@@ -104,9 +104,9 @@
             <p>{{ $t('architecture.detail.noData') }}</p>
           </div>
           <div v-else class="timeline">
-            <div v-for="(item, idx) in architecture.historicalDevelopments" :key="item.development_id" class="timeline-item" :style="{ animationDelay: `${idx * 100}ms` }">
+            <div v-for="(item, idx) in architecture.historicalDevelopments" :key="item.development_id" class="timeline-item" :style="{ animationDelay: `${(idx as number) * 100}ms` }">
               <div class="timeline-marker">
-                <span class="timeline-num">{{ idx + 1 }}</span>
+                <span class="timeline-num">{{ (idx as number) + 1 }}</span>
               </div>
               <div class="timeline-content">
                 <div class="timeline-header">
@@ -132,7 +132,7 @@
             <p>{{ $t('architecture.detail.noData') }}</p>
           </div>
           <div class="structure-grid">
-            <div v-for="(item, idx) in architecture.technicalStructures" :key="idx" class="structure-card" :style="{ animationDelay: `${idx * 100}ms` }">
+            <div v-for="(item, idx) in architecture.technicalStructures" :key="idx" class="structure-card" :style="{ animationDelay: `${(idx as number) * 100}ms` }">
               <div class="structure-header">
                 <h3>{{ item.technique_name || '未命名技术' }}</h3>
                 <span class="tag tag-pri" v-if="item.category">{{ item.category }}</span>
@@ -149,7 +149,7 @@
             <p>{{ $t('architecture.detail.noData') }}</p>
           </div>
           <div v-else class="features-list">
-            <div v-for="(item, idx) in architecture.architecturalFeatures" :key="item.feature_id" class="feature-detail-card" :style="{ animationDelay: `${idx * 100}ms` }">
+            <div v-for="(item, idx) in architecture.architecturalFeatures" :key="item.feature_id" class="feature-detail-card" :style="{ animationDelay: `${(idx as number) * 100}ms` }">
               <h3 class="feature-title">{{ item.feature_name }}</h3>
               
               <div v-if="item.design_philosophy" class="feature-section">
@@ -182,7 +182,7 @@
             <p>{{ $t('architecture.detail.noData') }}</p>
           </div>
           <div v-else class="culture-list">
-            <div v-for="(item, idx) in architecture.culturalSignificances" :key="item.significance_id" class="culture-card" :style="{ animationDelay: `${idx * 100}ms` }">
+            <div v-for="(item, idx) in architecture.culturalSignificances" :key="item.significance_id" class="culture-card" :style="{ animationDelay: `${(idx as number) * 100}ms` }">
               <h3>{{ item.significance_aspect }}</h3>
               
               <div v-if="item.philosophical_basis" class="culture-section culture-philosophy">
@@ -215,7 +215,7 @@
             <p>{{ $t('architecture.detail.noData') }}</p>
           </div>
           <div v-else class="quotes-list">
-            <blockquote v-for="(item, idx) in architecture.expertQuotes" :key="item.quote_id" class="quote-block" :style="{ animationDelay: `${idx * 100}ms` }">
+            <blockquote v-for="(item, idx) in architecture.expertQuotes" :key="item.quote_id" class="quote-block" :style="{ animationDelay: `${(idx as number) * 100}ms` }">
               <div class="quote-icon">
                 <svg viewBox="0 0 24 24" width="24" height="24"><path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h3.983v10h-9.983z" fill="currentColor" opacity="0.2"/></svg>
               </div>
@@ -289,6 +289,7 @@ import PageBackground from '@/components/common/PageBackground.vue';
 import CommentSection from '@/components/social/CommentSection.vue';
 import ShareButton from '@/components/social/ShareButton.vue';
 import NoteEditor from '@/components/notes/NoteEditor.vue';
+import TextClamp from '@/components/common/TextClamp.vue';
 import { architectureApi } from '@/services/api';
 import { useUserStore } from '@/stores';
 import { noteManager, type Note } from '@/utils/noteManager';

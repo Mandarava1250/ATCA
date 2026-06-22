@@ -1147,17 +1147,142 @@ router.post('/models/batch-delete', adminMiddleware, asyncHandler(async (req, re
 router.post('/users/batch-delete', asyncHandler(async (req, res) => {
   const { ids } = req.body;
   if (!Array.isArray(ids) || ids.length === 0) { res.status(400).json({ success: false, error: { message: '缺少id列表' } }); return; }
-  let deleted = 0;
-  for (const id of ids) {
-    // 保护管理员账户
-    const [user] = await query('user', 'SELECT [role] FROM [atca_user] WHERE [user_id] = @id', { id });
-    if (user && (user as any).role === 'admin') continue;
-    await execute('user', 'DELETE FROM [atca_user] WHERE [user_id] = @id', { id });
-    deleted++;
+  
+  if (isMockMode()) {
+    // 在mock模式下模拟批量删除
+    const deleted = ids.length;
+    res.json({ success: true, data: { deleted, skipped: 0 } });
+    return;
   }
+  
+  let deleted = 0;
+  let skipped = 0;
+  const errors: { id: number; message: string }[] = [];
+  
+  for (const id of ids) {
+    try {
+      // 保护管理员账户
+      const [user] = await query('user', 'SELECT [role] FROM [atca_user] WHERE [user_id] = @id', { id });
+      if (user && (user as any).role === 'admin') {
+        skipped++;
+        errors.push({ id, message: '管理员账户不能删除' });
+        continue;
+      }
+      await execute('user', 'DELETE FROM [atca_user] WHERE [user_id] = @id', { id });
+      deleted++;
+    } catch (e: any) {
+      errors.push({ id, message: e.message || '删除失败' });
+    }
+  }
+  
   // 清除用户缓存
   userQueryCache.clear();
-  res.json({ success: true, data: { deleted } });
+  
+  res.json({ 
+    success: true, 
+    data: { deleted, skipped, totalRequested: ids.length },
+    errors: errors.length > 0 ? errors : undefined
+  });
+}));
+
+// 批量更新用户角色
+router.post('/users/batch-update-role', validateBody(z.object({ 
+  ids: z.array(z.number()), 
+  role: z.enum(['user', 'admin', 'moderator']) 
+})), asyncHandler(async (req, res) => {
+  const { ids, role } = req.body;
+  
+  if (!Array.isArray(ids) || ids.length === 0) { 
+    res.status(400).json({ success: false, error: { message: '缺少id列表' } }); 
+    return; 
+  }
+  
+  if (isMockMode()) {
+    // 在mock模式下模拟批量角色更新
+    const updated = ids.length;
+    res.json({ success: true, data: { updated, skipped: 0, role } });
+    return;
+  }
+  
+  let updated = 0;
+  let skipped = 0;
+  const errors: { id: number; message: string }[] = [];
+  
+  for (const id of ids) {
+    try {
+      // 检查用户是否存在
+      const [user] = await query('user', 'SELECT [user_id] FROM [atca_user] WHERE [user_id] = @id', { id });
+      if (!user) {
+        errors.push({ id, message: '用户不存在' });
+        skipped++;
+        continue;
+      }
+      await execute('user', 'UPDATE [atca_user] SET [role] = @role WHERE [user_id] = @id', { id, role });
+      updated++;
+    } catch (e: any) {
+      errors.push({ id, message: e.message || '更新失败' });
+      skipped++;
+    }
+  }
+  
+  // 清除用户缓存
+  userQueryCache.clear();
+  
+  res.json({ 
+    success: true, 
+    data: { updated, skipped, role, totalRequested: ids.length },
+    errors: errors.length > 0 ? errors : undefined
+  });
+}));
+
+// 批量更新用户状态
+router.post('/users/batch-update-status', validateBody(z.object({ 
+  ids: z.array(z.number()), 
+  is_active: z.boolean() 
+})), asyncHandler(async (req, res) => {
+  const { ids, is_active } = req.body;
+  
+  if (!Array.isArray(ids) || ids.length === 0) { 
+    res.status(400).json({ success: false, error: { message: '缺少id列表' } }); 
+    return; 
+  }
+  
+  if (isMockMode()) {
+    // 在mock模式下模拟批量状态更新
+    const updated = ids.length;
+    res.json({ success: true, data: { updated, skipped: 0, is_active } });
+    return;
+  }
+  
+  let updated = 0;
+  let skipped = 0;
+  const errors: { id: number; message: string }[] = [];
+  
+  for (const id of ids) {
+    try {
+      // 检查用户是否存在
+      const [user] = await query('user', 'SELECT [user_id] FROM [atca_user] WHERE [user_id] = @id', { id });
+      if (!user) {
+        errors.push({ id, message: '用户不存在' });
+        skipped++;
+        continue;
+      }
+      await execute('user', 'UPDATE [atca_user] SET [is_active] = @is_active WHERE [user_id] = @id', { id, is_active: is_active ? 1 : 0 });
+      updated++;
+    } catch (e: any) {
+      errors.push({ id, message: e.message || '更新失败' });
+      skipped++;
+    }
+  }
+  
+  // 清除用户缓存
+  userQueryCache.clear();
+  
+  res.json({ 
+    success: true, 
+    data: { updated, skipped, is_active, totalRequested: ids.length },
+    errors: errors.length > 0 ? errors : undefined
+  });
 }));
 
 // ============ 活动管理 ============

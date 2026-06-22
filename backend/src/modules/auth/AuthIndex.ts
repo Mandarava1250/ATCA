@@ -116,6 +116,44 @@ const mockUsers: Array<{
 }> = [];
 let mockUserIdCounter = 1;
 
+// 初始化默认管理员用户
+async function initMockAdmin() {
+  const bcrypt = await import('bcrypt');
+  const hashedPassword = await bcrypt.hash('admin123', 10);
+  mockUsers.push({
+    user_id: mockUserIdCounter++,
+    username: 'admin',
+    nickname: '管理员',
+    password: hashedPassword,
+    email: 'admin@example.com',
+    role: 'admin',
+    points: 0,
+    level: 1,
+    is_active: true,
+    avatar: null,
+    created_at: '2024-01-01T00:00:00Z',
+  });
+  // 添加测试用户
+  const userPassword = await bcrypt.hash('user123', 10);
+  mockUsers.push({
+    user_id: mockUserIdCounter++,
+    username: 'user1',
+    nickname: '普通用户',
+    password: userPassword,
+    email: 'user1@example.com',
+    role: 'user',
+    points: 0,
+    level: 1,
+    is_active: true,
+    avatar: null,
+    created_at: '2024-01-15T00:00:00Z',
+  });
+  console.log('[Auth] Mock用户初始化完成');
+}
+
+// 立即初始化
+initMockAdmin();
+
 const registerSchema = z.object({
   username: z.string().min(3).max(50),
   password: z.string().min(12).max(128),

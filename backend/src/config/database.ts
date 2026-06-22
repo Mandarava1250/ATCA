@@ -25,9 +25,14 @@ export interface DbConfig {
 }
 
 // Mock 模式标志
-let mockMode = false;
+let mockMode = process.env.MOCK_MODE === 'true';
 // 连接失败的数据库记录
 const failedDbs: Set<string> = new Set();
+
+// 如果环境变量设置了MOCK_MODE=true，直接启用Mock模式
+if (mockMode) {
+  console.warn('[DB] 环境变量 MOCK_MODE=true，已启用 Mock 模式，所有数据为模拟数据');
+}
 
 export function isMockMode(): boolean {
   return mockMode;

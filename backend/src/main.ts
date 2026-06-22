@@ -39,6 +39,11 @@ import {
   performanceEndpoint, 
   startPeriodicCheck 
 } from './middleware/performanceMonitor';
+import { 
+  startKeepAliveService, 
+  stopKeepAliveService, 
+  recordRequestActivity 
+} from './services/serverKeepAlive';
 
 // 模块路由
 import authRouter from './modules/auth/AuthIndex';
@@ -53,6 +58,7 @@ import adminRouter from './modules/admin/AdminIndex';
 import i18nRouter from './modules/i18n/I18nIndex';
 import socialRouter from './modules/social/SocialIndex';
 import knowledgeRouter from './modules/knowledgebase/KnowledgeBaseIndex';
+import knowledgeGraphRouter from './modules/knowledge-graph/KnowledgeGraphIndex';
 
 const app = express();
 
@@ -136,6 +142,41 @@ app.use(securityLogger);
 app.use(validateRequestSize);
 app.use(sqlInjectionDetection);
 app.use(pathTraversalProtection);
+
+// ============================================
+// 请求活动记录中间件（用于服务器保活）
+// ============================================
+app.use((_req, _res, next) => {
+  recordRequestActivity();
+  next();
+});
+
+// ============================================
+// 健康检查端点（不经过速率限制）
+// ============================================
+app.get('/api/health', (_req, res) => {
+  res.json({
+    success: true,
+    data: {
+      status: 'healthy',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+    },
+  });
+});
+
+app.get('/api/v1/health', (_req, res) => {
+  res.json({
+    success: true,
+    data: {
+      status: 'healthy',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+    },
+  });
+});
+
+// 速率限制（健康检查端点已豁免）
 app.use(generalRateLimiter);
 app.use(express.json({ limit: '100mb' }));
 app.use(express.urlencoded({ extended: true, limit: '100mb' }));
@@ -228,6 +269,7 @@ app.use(`${apiPrefix}/profile`, profileRouter);
 app.use(`${apiPrefix}/index`, indexRouter);
 app.use(`${apiPrefix}/activities`, activityRouter);
 app.use(`${apiPrefix}/admin`, adminRouter);
+app.use(`${apiPrefix}/admin/knowledge-graph`, knowledgeGraphRouter);
 app.use(`${apiPrefix}/i18n`, i18nRouter);
 app.use(`${apiPrefix}/social`, socialRouter);
 
@@ -290,6 +332,14 @@ async function startServer() {
     
     // 启动定期性能检查（针对2核2GiB服务器）
     startPeriodicCheck();
+    
+    // 启动服务器保活服务（防止2核2GiB服务器长时间空闲后进入休眠状态）
+    startKeepAliveService({
+      enabled: true,
+      interval: 30000, // 30秒执行一次保活操作
+      healthCheckInterval: 120000, // 2分钟执行一次健康检查
+      maxIdleTime: 1800000, // 30分钟最大空闲时间
+    });
   });
 
   process.on('uncaughtException', (err) => {
@@ -301,6 +351,10 @@ async function startServer() {
 
   const gracefulShutdown = async (signal: string) => {
     console.log(`[ATCA Server] 收到 ${signal}，开始优雅关闭...`);
+    
+    // 停止保活服务
+    stopKeepAliveService();
+    
     server.close(async () => {
       await closeAllPools();
       console.log('[ATCA Server] 已关闭');

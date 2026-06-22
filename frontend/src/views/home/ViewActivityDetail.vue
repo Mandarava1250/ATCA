@@ -52,7 +52,7 @@
         <!-- Description -->
         <div class="activity-desc-card">
           <h3>活动详情</h3>
-          <p>{{ activity.description }}</p>
+          <TextClamp :text="activity.description" :max-lines="5" expand-text="展开详情" collapse-text="收起详情" />
         </div>
 
         <!-- Actions -->
@@ -86,6 +86,7 @@ import { ref, onMounted, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import Navbar from '@/components/common/CommonNavbar.vue';
 import Footer from '@/components/common/CommonFooter.vue';
+import TextClamp from '@/components/common/TextClamp.vue';
 import { activityApi } from '@/services/api';
 import { useUserStore } from '@/stores';
 

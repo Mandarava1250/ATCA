@@ -284,13 +284,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
 import { useUserStore, useQuizStore } from '@/stores';
 import { useAnimationSettingsStore } from '@/stores/animationSettings';
 import AIChatButton from '@/components/ai/AiAIChatButton.vue';
 import AIChatModal from '@/components/ai/AiAIChatModal.vue';
 import { createLogger } from '@/utils/logger';
+import { serviceManager } from '@/services/serviceManager';
 
 const logger = createLogger('AppRouterTransition');
 const perfLogger = logger.child('Performance');
@@ -358,6 +359,11 @@ const pageConfig: Record<string, {
   '/profile': { icon: '人', name: '详情', style: 'style-profile' },
   'default': { icon: '殿', name: '营造', style: 'style-default' }
 };
+
+// 初始化服务管理器（心跳和API保活）
+onMounted(() => {
+  serviceManager.initialize();
+});
 
 // 过渡进入前的钩子
 function handleBeforeEnter(el: Element) {
@@ -598,6 +604,9 @@ const hideAI = computed(() => {
   visibility: hidden;
   transform: scale(1.05);
   pointer-events: none;
+  will-change: opacity, visibility, transform;
+  backface-visibility: hidden;
+  perspective: 1000px;
   /* 确保过渡属性始终存在 */
   transition: opacity 2.5s cubic-bezier(0.4, 0, 0.2, 1), 
               visibility 2.5s cubic-bezier(0.4, 0, 0.2, 1),
