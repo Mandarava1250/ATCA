@@ -973,4 +973,235 @@ onMounted(loadDetail);
 .note-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
 .note-tag { font-size: 0.6875rem; padding: 2px 8px; border-radius: var(--r-full); background: rgba(201, 169, 110, 0.1); color: var(--gold-dim); }
 .note-date { font-size: 0.75rem; color: var(--text-dim); }
+
+/* ===== 响应式适配 ===== */
+
+/* 平板端 */
+@media screen and (max-width: 1024px) {
+  .detail-header {
+    flex-direction: column;
+    gap: 24px;
+  }
+  .detail-image {
+    width: 100%;
+    height: 300px;
+  }
+  .detail-info {
+    width: 100%;
+  }
+  .detail-badges {
+    flex-wrap: wrap;
+  }
+  .detail-meta-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .detail-actions {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .detail-tabs {
+    flex-wrap: wrap;
+  }
+  .tab-btn {
+    padding: 8px 16px;
+    font-size: 0.8125rem;
+  }
+  .timeline-item {
+    gap: 16px;
+  }
+  .structure-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* 移动端 */
+@media screen and (max-width: 767px) {
+  .page-content {
+    padding-top: 70px !important;
+  }
+  .detail-header {
+    flex-direction: column;
+    gap: 16px;
+    padding: 16px;
+  }
+  .detail-image {
+    width: 100%;
+    height: 220px;
+    border-radius: var(--r-md);
+  }
+  .detail-info {
+    width: 100%;
+  }
+  .detail-badges {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .detail-badges .tag {
+    font-size: 0.6875rem;
+    padding: 2px 8px;
+  }
+  .detail-title-xl {
+    font-size: 1.375rem;
+    line-height: 1.4;
+  }
+  .detail-chinese {
+    font-size: 0.875rem;
+  }
+  .detail-desc {
+    font-size: 0.8125rem;
+  }
+  .detail-meta-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  .meta-item {
+    padding: 10px;
+  }
+  .meta-label {
+    font-size: 0.6875rem;
+  }
+  .meta-value {
+    font-size: 0.8125rem;
+  }
+  .detail-actions {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .btn-favorite {
+    padding: 8px 14px;
+    font-size: 0.75rem;
+  }
+  .btn-note {
+    padding: 8px 14px;
+    font-size: 0.75rem;
+  }
+  .btn-sec {
+    padding: 8px 14px;
+    font-size: 0.75rem;
+  }
+  .detail-tabs {
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 12px 0;
+  }
+  .tab-btn {
+    padding: 6px 12px;
+    font-size: 0.75rem;
+    border-radius: var(--r-sm);
+  }
+  .detail-body {
+    padding: 16px;
+  }
+  .timeline {
+    gap: 16px;
+  }
+  .timeline-item {
+    flex-direction: column;
+    gap: 12px;
+  }
+  .timeline-marker {
+    width: 28px;
+    height: 28px;
+  }
+  .timeline-num {
+    font-size: 0.75rem;
+  }
+  .timeline-header h3 {
+    font-size: 0.9375rem;
+  }
+  .timeline-period {
+    font-size: 0.6875rem;
+  }
+  .timeline-desc {
+    font-size: 0.8125rem;
+  }
+  .timeline-detail-box {
+    font-size: 0.75rem;
+    padding: 10px;
+  }
+  .structure-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  .structure-card {
+    padding: 14px;
+  }
+  .structure-header h3 {
+    font-size: 0.9375rem;
+  }
+  .structure-desc {
+    font-size: 0.8125rem;
+  }
+  .feature-detail-card {
+    padding: 14px;
+  }
+  .feature-title {
+    font-size: 0.9375rem;
+  }
+  .feature-section-label {
+    font-size: 0.6875rem;
+  }
+  .feature-section p {
+    font-size: 0.8125rem;
+  }
+  .culture-card {
+    padding: 14px;
+  }
+  .culture-card h3 {
+    font-size: 0.9375rem;
+  }
+  .culture-section-label {
+    font-size: 0.6875rem;
+  }
+  .culture-section p {
+    font-size: 0.8125rem;
+  }
+  .quote-block {
+    padding: 14px;
+  }
+  .quote-content {
+    font-size: 0.8125rem;
+  }
+  .quote-name {
+    font-size: 0.8125rem;
+  }
+  .quote-title {
+    font-size: 0.6875rem;
+  }
+  .note-card {
+    padding: 14px;
+  }
+  .note-title {
+    font-size: 0.9375rem;
+  }
+  .note-content {
+    font-size: 0.8125rem;
+  }
+  .empty-state {
+    padding: 32px 16px;
+  }
+}
+
+/* 小屏移动端 */
+@media screen and (max-width: 359px) {
+  .detail-header {
+    padding: 12px;
+  }
+  .detail-image {
+    height: 180px;
+  }
+  .detail-title-xl {
+    font-size: 1.25rem;
+  }
+  .detail-tabs {
+    gap: 2px;
+  }
+  .tab-btn {
+    padding: 5px 10px;
+    font-size: 0.6875rem;
+  }
+  .detail-body {
+    padding: 12px;
+  }
+}
 </style>

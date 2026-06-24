@@ -79,7 +79,12 @@ export abstract class BaseController {
 export function Controller(prefix: string): ClassDecorator {
   return (target: any) => {
     Reflect.defineMetadata('controller:prefix', prefix, target);
-    Reflect.defineMetadata('controller:methods', new Map<string, ControllerMethodMetadata>(), target);
+    // 检查是否已存在 methods 元数据（可能已被方法装饰器创建）
+    let methods = Reflect.getMetadata('controller:methods', target) as Map<string, ControllerMethodMetadata>;
+    if (!methods) {
+      methods = new Map<string, ControllerMethodMetadata>();
+      Reflect.defineMetadata('controller:methods', methods, target);
+    }
   };
 }
 
@@ -111,12 +116,12 @@ function createRouteDecorator(
   return (target: any, propertyKey: string | symbol) => {
     let methods = Reflect.getMetadata('controller:methods', target.constructor) as Map<string, ControllerMethodMetadata>;
     
-    // 如果元数据不存在，创建新的 Map
+    // 如果元数据不存在，创建新的 Map 并保存
     if (!methods) {
       methods = new Map<string, ControllerMethodMetadata>();
+      Reflect.defineMetadata('controller:methods', methods, target.constructor);
     }
     
     methods.set(propertyKey.toString(), { path, method, middleware });
-    Reflect.defineMetadata('controller:methods', methods, target.constructor);
   };
 }

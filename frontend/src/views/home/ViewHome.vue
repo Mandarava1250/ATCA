@@ -377,7 +377,10 @@ onUnmounted(() => {
 .feature-section { position: relative; z-index: 2; padding: 24px 0 32px; }
 .feature-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
 .feature-card {
-  display: block; padding: 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 24px;
   background: rgba(42, 37, 32, 0.35);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
@@ -386,6 +389,7 @@ onUnmounted(() => {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 4px 16px rgba(0, 0, 0, 0.2);
   transition: all 0.3s ease;
   text-decoration: none;
+  min-height: 200px;
 }
 .feature-card:hover {
   border-color: rgba(201, 169, 110, 0.22);
@@ -393,8 +397,78 @@ onUnmounted(() => {
   transform: translateY(-3px);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 8px 32px rgba(0, 0, 0, 0.3), 0 0 20px rgba(201, 169, 110, 0.06);
 }
-.fc-title { font-family: var(--font-serif); font-size: 1rem; font-weight: 600; color: var(--gold); margin-bottom: 10px; letter-spacing: 0.06em; }
-.fc-desc { font-size: 0.8125rem; color: var(--text-muted); line-height: 1.7; }
+.fc-title { font-family: var(--font-serif); font-size: 1rem; font-weight: 600; color: var(--gold); margin-bottom: 12px; letter-spacing: 0.06em; line-height: 1.4; }
+.fc-desc { font-size: 0.8125rem; color: var(--text-muted); line-height: 1.7; flex-grow: 1; }
+
+/* ===== 功能卡片响应式布局 ===== */
+@media screen and (max-width: 1024px) {
+  .feature-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+  .feature-card {
+    padding: 20px;
+    min-height: 180px;
+  }
+  .fc-title {
+    font-size: 0.9375rem;
+    margin-bottom: 10px;
+  }
+  .fc-desc {
+    font-size: 0.75rem;
+    line-height: 1.6;
+  }
+}
+
+@media screen and (max-width: 767px) {
+  .feature-section {
+    padding: 16px 0 24px;
+  }
+  .feature-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  .feature-card {
+    padding: 16px 20px;
+    min-height: auto;
+    flex-direction: row;
+    align-items: center;
+    gap: 16px;
+    border-radius: var(--r-sm);
+  }
+  .fc-title {
+    font-size: 0.9375rem;
+    margin-bottom: 0;
+    flex-shrink: 0;
+    min-width: 80px;
+    text-align: center;
+  }
+  .fc-desc {
+    font-size: 0.75rem;
+    line-height: 1.6;
+    flex-grow: 1;
+    margin-bottom: 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+}
+
+@media screen and (max-width: 359px) {
+  .feature-card {
+    padding: 14px 16px;
+    gap: 12px;
+  }
+  .fc-title {
+    font-size: 0.875rem;
+    min-width: 70px;
+  }
+  .fc-desc {
+    font-size: 0.7125rem;
+  }
+}
 /* ===== 底部统计 ===== */
 .stats-bar { position: relative; z-index: 2; padding: 24px 0 40px; border-top: 1px solid var(--border); }
 .stats-flex { display: flex; gap: 64px; }

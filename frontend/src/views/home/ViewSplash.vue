@@ -61,11 +61,6 @@
         <div class="hint-pulse"></div>
       </div>
     </div>
-
-    <!-- 底部版权 -->
-    <div class="splash-footer">
-      <p>传承千年营造智慧 · digitally 复原古建之美</p>
-    </div>
   </div>
 </template>
 

@@ -10,6 +10,7 @@ import path from 'path';
 import dotenv from 'dotenv';
 import swaggerUi from 'swagger-ui-express';
 import compression from 'compression';
+import { createServer as createHttpServer } from 'http';
 
 dotenv.config({ path: '.env.db' });
 
@@ -44,6 +45,7 @@ import {
   stopKeepAliveService, 
   recordRequestActivity 
 } from './services/serverKeepAlive';
+import { initSyncService, getSyncStats } from './services/SyncService';
 
 // 模块路由（过程式风格）
 import architectureRouter from './modules/architecture/ArchitectureIndex';
@@ -262,6 +264,14 @@ app.get('/health', (_req, res) => {
 // 3. 性能监控端点
 app.get('/api/monitor/performance', performanceEndpoint);
 
+// 4. 同步服务监控端点
+app.get('/api/monitor/sync', (_req, res) => {
+  res.json({
+    success: true,
+    data: getSyncStats(),
+  });
+});
+
 // 3. Swagger API文档
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
@@ -350,9 +360,16 @@ async function startServer() {
     // 非致命错误，继续启动
   }
 
-  const server = app.listen(PORT, '0.0.0.0', () => {
+  // 创建 HTTP Server（支持 WebSocket）
+  const httpServer = createHttpServer(app);
+
+  // 初始化 WebSocket 同步服务
+  initSyncService(httpServer);
+
+  httpServer.listen(PORT, '0.0.0.0', () => {
     console.log(`[ATCA Server] 运行于 http://0.0.0.0:${PORT}`);
     console.log(`[ATCA Server] API地址: http://0.0.0.0:${PORT}${apiPrefix}`);
+    console.log(`[ATCA Server] WebSocket: ws://0.0.0.0:${PORT}`);
     console.log(`[ATCA Server] 健康检查: http://0.0.0.0:${PORT}/health`);
     console.log(`[ATCA Server] 性能监控: http://0.0.0.0:${PORT}/api/monitor/performance`);
     console.log(`[ATCA Server] 环境: ${config.nodeEnv}`);
@@ -388,7 +405,7 @@ async function startServer() {
     // 销毁所有服务
     await disposeServices();
     
-    server.close(async () => {
+    httpServer.close(async () => {
       await closeAllPools();
       console.log('[ATCA Server] 已关闭');
       process.exit(0);

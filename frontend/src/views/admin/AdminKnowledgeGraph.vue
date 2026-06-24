@@ -3,21 +3,21 @@
     <!-- 页面头部 -->
     <div class="page-header">
       <div class="header-info">
-        <h2 class="page-title">知识图谱管理</h2>
-        <p class="page-description">管理本地模型的知识图谱数据，包括实体、关系的增删改查及数据导入导出</p>
+        <h2 class="page-title">{{ $t('admin.knowledgeGraph.title') }}</h2>
+        <p class="page-description">{{ $t('admin.knowledgeGraph.description') }}</p>
       </div>
       <div class="header-actions">
         <button class="btn btn-secondary" @click="showImportModal = true">
           <svg viewBox="0 0 24 24" width="16" height="16">
             <path d="M12 4v16m8-8H4" stroke="currentColor" fill="none" stroke-width="1.5"/>
           </svg>
-          导入数据
+          {{ $t('admin.knowledgeGraph.importData') }}
         </button>
         <button class="btn btn-primary" @click="showExportModal = true">
           <svg viewBox="0 0 24 24" width="16" height="16">
             <path d="M12 19V5m0 14l-5-5m5 5l5-5" stroke="currentColor" fill="none" stroke-width="1.5"/>
           </svg>
-          导出数据
+          {{ $t('admin.knowledgeGraph.exportData') }}
         </button>
       </div>
     </div>
@@ -44,25 +44,25 @@
       <!-- 图谱可视化区域 -->
       <div v-if="activeTab === 'visualize'" class="visualize-panel">
         <div class="visualize-header">
-          <h3>知识图谱可视化</h3>
+          <h3>{{ $t('admin.knowledgeGraph.visualize.title') }}</h3>
           <div class="visualize-tools">
-            <button class="tool-btn" title="缩放+" @click="zoomIn">
+            <button class="tool-btn" :title="$t('admin.knowledgeGraph.visualize.zoomIn')" @click="zoomIn">
               <svg viewBox="0 0 24 24" width="16" height="16">
                 <path d="M12 4v16m8-8H4" stroke="currentColor" fill="none" stroke-width="2"/>
               </svg>
             </button>
-            <button class="tool-btn" title="缩放-" @click="zoomOut">
+            <button class="tool-btn" :title="$t('admin.knowledgeGraph.visualize.zoomOut')" @click="zoomOut">
               <svg viewBox="0 0 24 24" width="16" height="16">
                 <path d="M4 12h16" stroke="currentColor" fill="none" stroke-width="2"/>
               </svg>
             </button>
-            <button class="tool-btn" title="重置" @click="resetView">
+            <button class="tool-btn" :title="$t('admin.knowledgeGraph.visualize.reset')" @click="resetView">
               <svg viewBox="0 0 24 24" width="16" height="16">
                 <path d="M3 12a9 9 0 1118 0" stroke="currentColor" fill="none" stroke-width="2"/>
                 <path d="M9 12l6-3-6-3v6z" stroke="currentColor" fill="none" stroke-width="2"/>
               </svg>
             </button>
-            <button class="tool-btn" title="全屏" @click="toggleFullscreen">
+            <button class="tool-btn" :title="$t('admin.knowledgeGraph.visualize.fullscreen')" @click="toggleFullscreen">
               <svg viewBox="0 0 24 24" width="16" height="16">
                 <path d="M7 4h10v2H7V4zm0 14h10v2H7v-2zM4 7v10h2V7H4zm14 0v10h2V7h-2z" stroke="currentColor" fill="none" stroke-width="2"/>
               </svg>
@@ -82,30 +82,30 @@
               <text x="60" y="145" text-anchor="middle" fill="#1A1714" font-size="12" font-weight="600">B</text>
               <text x="140" y="145" text-anchor="middle" fill="#1A1714" font-size="12" font-weight="600">C</text>
             </svg>
-            <p>知识图谱可视化区域</p>
-            <p class="hint">点击节点查看详情，拖拽节点调整位置</p>
+            <p>{{ $t('admin.knowledgeGraph.visualize.placeholder') }}</p>
+            <p class="hint">{{ $t('admin.knowledgeGraph.visualize.hint') }}</p>
           </div>
         </div>
         <div class="graph-legend">
           <div class="legend-item">
             <span class="legend-dot" style="background: var(--gold)"></span>
-            <span>建筑实体</span>
+            <span>{{ $t('admin.knowledgeGraph.entityTypes.architecture') }}</span>
           </div>
           <div class="legend-item">
             <span class="legend-dot" style="background: #5B8FF9"></span>
-            <span>人物实体</span>
+            <span>{{ $t('admin.knowledgeGraph.entityTypes.person') }}</span>
           </div>
           <div class="legend-item">
             <span class="legend-dot" style="background: #5AD8A6"></span>
-            <span>知识概念</span>
+            <span>{{ $t('admin.knowledgeGraph.entityTypes.concept') }}</span>
           </div>
           <div class="legend-item">
             <span class="legend-line solid"></span>
-            <span>直接关系</span>
+            <span>{{ $t('admin.knowledgeGraph.relationTypes.direct') }}</span>
           </div>
           <div class="legend-item">
             <span class="legend-line dashed"></span>
-            <span>间接关系</span>
+            <span>{{ $t('admin.knowledgeGraph.relationTypes.indirect') }}</span>
           </div>
         </div>
       </div>
@@ -113,26 +113,26 @@
       <!-- 实体管理区域 -->
       <div v-if="activeTab === 'entities'" class="entities-panel">
         <div class="panel-header">
-          <h3>实体管理</h3>
+          <h3>{{ $t('admin.knowledgeGraph.entities.title') }}</h3>
           <div class="panel-actions">
             <input 
               type="text" 
               v-model="searchQuery" 
-              placeholder="搜索实体..." 
+              :placeholder="$t('admin.knowledgeGraph.entities.searchPlaceholder')" 
               class="search-input"
             />
             <select v-model="entityTypeFilter" class="filter-select">
-              <option value="">全部类型</option>
-              <option value="architecture">建筑</option>
-              <option value="person">人物</option>
-              <option value="concept">概念</option>
-              <option value="location">地点</option>
+              <option value="">{{ $t('admin.knowledgeGraph.entities.allTypes') }}</option>
+              <option value="architecture">{{ $t('admin.knowledgeGraph.entityTypes.architecture') }}</option>
+              <option value="person">{{ $t('admin.knowledgeGraph.entityTypes.person') }}</option>
+              <option value="concept">{{ $t('admin.knowledgeGraph.entityTypes.concept') }}</option>
+              <option value="location">{{ $t('admin.knowledgeGraph.entityTypes.location') }}</option>
             </select>
             <button class="btn btn-primary" @click="showAddEntityModal = true">
               <svg viewBox="0 0 24 24" width="14" height="14">
                 <path d="M12 4v16m8-8H4" stroke="currentColor" fill="none" stroke-width="2"/>
               </svg>
-              添加实体
+              {{ $t('admin.knowledgeGraph.entities.addEntity') }}
             </button>
           </div>
         </div>
@@ -147,7 +147,7 @@
               </div>
               <div class="entity-info">
                 <h4>{{ entity.name }}</h4>
-                <span class="entity-type">{{ getEntityTypeName(entity.type) }}</span>
+                <span class="entity-type">{{ $t(`admin.knowledgeGraph.entityTypes.${entity.type}`) }}</span>
               </div>
               <div class="entity-actions">
                 <button class="action-btn" title="编辑" @click="editEntity(entity)">
@@ -165,34 +165,34 @@
             </div>
             <p class="entity-description">{{ entity.description }}</p>
             <div class="entity-meta">
-              <span>属性: {{ Object.keys(entity.attributes || {}).length }}</span>
-              <span>关系: {{ entity.relationCount || 0 }}</span>
+              <span>{{ $t('admin.knowledgeGraph.entities.attributes') }}: {{ Object.keys(entity.attributes || {}).length }}</span>
+              <span>{{ $t('admin.knowledgeGraph.entities.relations') }}: {{ entity.relationCount || 0 }}</span>
             </div>
           </div>
         </div>
         <div class="pagination">
-          <button class="page-btn" :disabled="currentPage === 1" @click="currentPage--">上一页</button>
-          <span class="page-info">第 {{ currentPage }} / {{ totalPages }} 页</span>
-          <button class="page-btn" :disabled="currentPage === totalPages" @click="currentPage++">下一页</button>
+          <button class="page-btn" :disabled="currentPage === 1" @click="currentPage--">{{ $t('admin.knowledgeGraph.pagination.prev') }}</button>
+          <span class="page-info">{{ $t('admin.knowledgeGraph.pagination.page') }} {{ currentPage }} / {{ totalPages }}</span>
+          <button class="page-btn" :disabled="currentPage === totalPages" @click="currentPage++">{{ $t('admin.knowledgeGraph.pagination.next') }}</button>
         </div>
       </div>
 
       <!-- 关系管理区域 -->
       <div v-if="activeTab === 'relations'" class="relations-panel">
         <div class="panel-header">
-          <h3>关系管理</h3>
+          <h3>{{ $t('admin.knowledgeGraph.relations.title') }}</h3>
           <div class="panel-actions">
             <input 
               type="text" 
               v-model="relationSearch" 
-              placeholder="搜索关系..." 
+              :placeholder="$t('admin.knowledgeGraph.relations.searchPlaceholder')" 
               class="search-input"
             />
             <button class="btn btn-primary" @click="showAddRelationModal = true">
               <svg viewBox="0 0 24 24" width="14" height="14">
                 <path d="M12 4v16m8-8H4" stroke="currentColor" fill="none" stroke-width="2"/>
               </svg>
-              添加关系
+              {{ $t('admin.knowledgeGraph.relations.addRelation') }}
             </button>
           </div>
         </div>
@@ -206,7 +206,7 @@
                 <svg viewBox="0 0 100 20" width="100" height="20">
                   <path d="M5 10h80M80 10L75 5M80 10L75 15" stroke="var(--gold)" fill="none" stroke-width="2"/>
                 </svg>
-                <span class="relation-type">{{ relation.type }}</span>
+                <span class="relation-type">{{ $t(`admin.knowledgeGraph.relationTypes.${relation.type}`) }}</span>
               </div>
               <div class="relation-node target">
                 <span class="node-label">{{ relation.targetName }}</span>
@@ -232,12 +232,12 @@
       <!-- 导入历史区域 -->
       <div v-if="activeTab === 'history'" class="history-panel">
         <div class="panel-header">
-          <h3>导入历史</h3>
+          <h3>{{ $t('admin.knowledgeGraph.history.title') }}</h3>
           <select v-model="historyFilter" class="filter-select">
-            <option value="">全部状态</option>
-            <option value="completed">已完成</option>
-            <option value="failed">失败</option>
-            <option value="validated">已验证</option>
+            <option value="">{{ $t('admin.knowledgeGraph.history.allStatus') }}</option>
+            <option value="completed">{{ $t('admin.knowledgeGraph.history.status.completed') }}</option>
+            <option value="failed">{{ $t('admin.knowledgeGraph.history.status.failed') }}</option>
+            <option value="validated">{{ $t('admin.knowledgeGraph.history.status.validated') }}</option>
           </select>
         </div>
         <div class="history-list">
@@ -252,35 +252,35 @@
                   <path d="M12 8v8M8 12h8" stroke="currentColor" fill="none" stroke-width="2"/>
                   <circle cx="12" cy="12" r="10" stroke="currentColor" fill="none" stroke-width="2"/>
                 </svg>
-                <span>{{ getStatusText(record.status) }}</span>
+                <span>{{ $t(`admin.knowledgeGraph.history.status.${record.status}`) }}</span>
               </div>
               <span class="history-date">{{ formatDate(record.createdAt) }}</span>
             </div>
             <div class="history-info">
-              <span class="history-format">{{ record.format.toUpperCase() }} 格式</span>
-              <span class="history-user">操作人: {{ record.createdBy }}</span>
+              <span class="history-format">{{ record.format.toUpperCase() }} {{ $t('admin.knowledgeGraph.history.format') }}</span>
+              <span class="history-user">{{ $t('admin.knowledgeGraph.history.operator') }}: {{ record.createdBy }}</span>
             </div>
             <div class="history-stats">
               <div class="stat-item">
                 <span class="stat-value">{{ record.totalRecords }}</span>
-                <span class="stat-label">总数</span>
+                <span class="stat-label">{{ $t('admin.knowledgeGraph.history.total') }}</span>
               </div>
               <div class="stat-item success">
                 <span class="stat-value">{{ record.successCount }}</span>
-                <span class="stat-label">成功</span>
+                <span class="stat-label">{{ $t('admin.knowledgeGraph.history.success') }}</span>
               </div>
               <div class="stat-item failed">
                 <span class="stat-value">{{ record.failedCount }}</span>
-                <span class="stat-label">失败</span>
+                <span class="stat-label">{{ $t('admin.knowledgeGraph.history.failed') }}</span>
               </div>
               <div class="stat-item skipped">
                 <span class="stat-value">{{ record.skippedCount }}</span>
-                <span class="stat-label">跳过</span>
+                <span class="stat-label">{{ $t('admin.knowledgeGraph.history.skipped') }}</span>
               </div>
             </div>
             <div class="history-actions">
-              <button class="btn btn-sm" @click="viewReport(record)">查看报告</button>
-              <button class="btn btn-sm btn-secondary" @click="retryImport(record)">重新导入</button>
+              <button class="btn btn-sm" @click="viewReport(record)">{{ $t('admin.knowledgeGraph.history.viewReport') }}</button>
+              <button class="btn btn-sm btn-secondary" @click="retryImport(record)">{{ $t('admin.knowledgeGraph.history.retry') }}</button>
             </div>
           </div>
         </div>
@@ -292,7 +292,7 @@
       <div v-if="showImportModal" class="modal-overlay" @click.self="showImportModal = false">
         <div class="modal-content">
           <div class="modal-header">
-            <h3>导入知识图谱数据</h3>
+            <h3>{{ $t('admin.knowledgeGraph.importModal.title') }}</h3>
             <button class="modal-close" @click="showImportModal = false">
               <svg viewBox="0 0 24 24" width="16" height="16">
                 <path d="M6 18L18 6M6 6l12 12" stroke="currentColor" fill="none" stroke-width="2"/>
@@ -301,7 +301,7 @@
           </div>
           <div class="modal-body">
             <div class="form-group">
-              <label>数据格式</label>
+              <label>{{ $t('admin.knowledgeGraph.importModal.dataFormat') }}</label>
               <select v-model="importConfig.format" class="form-select">
                 <option value="json-ld">JSON-LD</option>
                 <option value="rdf-xml">RDF/XML</option>
@@ -310,41 +310,41 @@
               </select>
             </div>
             <div class="form-group">
-              <label>冲突解决策略</label>
+              <label>{{ $t('admin.knowledgeGraph.importModal.conflictStrategy') }}</label>
               <select v-model="importConfig.conflictStrategy" class="form-select">
-                <option value="overwrite">覆盖已有数据</option>
-                <option value="skip">跳过冲突记录</option>
-                <option value="prompt">提示手动处理</option>
+                <option value="overwrite">{{ $t('admin.knowledgeGraph.importModal.strategy.overwrite') }}</option>
+                <option value="skip">{{ $t('admin.knowledgeGraph.importModal.strategy.skip') }}</option>
+                <option value="prompt">{{ $t('admin.knowledgeGraph.importModal.strategy.prompt') }}</option>
               </select>
             </div>
             <div class="form-group">
-              <label>批量大小</label>
+              <label>{{ $t('admin.knowledgeGraph.importModal.batchSize') }}</label>
               <input type="number" v-model.number="importConfig.batchSize" class="form-input" min="1" max="1000" />
             </div>
             <div class="form-group">
-              <label>仅验证（不导入）</label>
+              <label>{{ $t('admin.knowledgeGraph.importModal.validateOnly') }}</label>
               <label class="checkbox-label">
                 <input type="checkbox" v-model="importConfig.validateOnly" />
-                <span>开启验证模式</span>
+                <span>{{ $t('admin.knowledgeGraph.importModal.enableValidation') }}</span>
               </label>
             </div>
             <div class="form-group">
-              <label>数据内容</label>
+              <label>{{ $t('admin.knowledgeGraph.importModal.dataContent') }}</label>
               <textarea 
                 v-model="importConfig.data" 
                 class="form-textarea" 
                 rows="8"
-                placeholder="请输入知识图谱数据..."
+                :placeholder="$t('admin.knowledgeGraph.importModal.dataPlaceholder')"
               ></textarea>
             </div>
           </div>
           <div class="modal-footer">
-            <button class="btn btn-secondary" @click="showImportModal = false">取消</button>
+            <button class="btn btn-secondary" @click="showImportModal = false">{{ $t('common.cancel') }}</button>
             <button class="btn btn-primary" @click="executeImport" :disabled="importing">
               <svg v-if="importing" viewBox="0 0 24 24" width="16" height="16" class="spinner">
                 <circle cx="12" cy="12" r="10" stroke="currentColor" fill="none" stroke-width="2" stroke-dasharray="18 6"/>
               </svg>
-              {{ importing ? '导入中...' : '开始导入' }}
+              {{ importing ? $t('admin.knowledgeGraph.importModal.importing') : $t('admin.knowledgeGraph.importModal.startImport') }}
             </button>
           </div>
         </div>
@@ -356,7 +356,7 @@
       <div v-if="showExportModal" class="modal-overlay" @click.self="showExportModal = false">
         <div class="modal-content">
           <div class="modal-header">
-            <h3>导出知识图谱数据</h3>
+            <h3>{{ $t('admin.knowledgeGraph.exportModal.title') }}</h3>
             <button class="modal-close" @click="showExportModal = false">
               <svg viewBox="0 0 24 24" width="16" height="16">
                 <path d="M6 18L18 6M6 6l12 12" stroke="currentColor" fill="none" stroke-width="2"/>
@@ -365,7 +365,7 @@
           </div>
           <div class="modal-body">
             <div class="form-group">
-              <label>导出格式</label>
+              <label>{{ $t('admin.knowledgeGraph.exportModal.exportFormat') }}</label>
               <select v-model="exportConfig.format" class="form-select">
                 <option value="json-ld">JSON-LD</option>
                 <option value="csv">CSV</option>
@@ -373,30 +373,30 @@
               </select>
             </div>
             <div class="form-group">
-              <label>导出范围</label>
+              <label>{{ $t('admin.knowledgeGraph.exportModal.exportScope') }}</label>
               <label class="checkbox-label">
                 <input type="checkbox" v-model="exportConfig.includeEntities" />
-                <span>包含实体</span>
+                <span>{{ $t('admin.knowledgeGraph.exportModal.includeEntities') }}</span>
               </label>
               <label class="checkbox-label">
                 <input type="checkbox" v-model="exportConfig.includeRelations" />
-                <span>包含关系</span>
+                <span>{{ $t('admin.knowledgeGraph.exportModal.includeRelations') }}</span>
               </label>
             </div>
             <div class="form-group">
-              <label>实体类型筛选</label>
+              <label>{{ $t('admin.knowledgeGraph.exportModal.entityFilter') }}</label>
               <select v-model="exportConfig.entityType" class="form-select">
-                <option value="">全部类型</option>
-                <option value="architecture">建筑</option>
-                <option value="person">人物</option>
-                <option value="concept">概念</option>
-                <option value="location">地点</option>
+                <option value="">{{ $t('admin.knowledgeGraph.entities.allTypes') }}</option>
+                <option value="architecture">{{ $t('admin.knowledgeGraph.entityTypes.architecture') }}</option>
+                <option value="person">{{ $t('admin.knowledgeGraph.entityTypes.person') }}</option>
+                <option value="concept">{{ $t('admin.knowledgeGraph.entityTypes.concept') }}</option>
+                <option value="location">{{ $t('admin.knowledgeGraph.entityTypes.location') }}</option>
               </select>
             </div>
           </div>
           <div class="modal-footer">
-            <button class="btn btn-secondary" @click="showExportModal = false">取消</button>
-            <button class="btn btn-primary" @click="executeExport">导出数据</button>
+            <button class="btn btn-secondary" @click="showExportModal = false">{{ $t('common.cancel') }}</button>
+            <button class="btn btn-primary" @click="executeExport">{{ $t('admin.knowledgeGraph.exportModal.exportData') }}</button>
           </div>
         </div>
       </div>
@@ -407,7 +407,7 @@
       <div v-if="showAddEntityModal" class="modal-overlay" @click.self="showAddEntityModal = false">
         <div class="modal-content">
           <div class="modal-header">
-            <h3>{{ editingEntity ? '编辑实体' : '添加实体' }}</h3>
+            <h3>{{ editingEntity ? $t('admin.knowledgeGraph.entityModal.editTitle') : $t('admin.knowledgeGraph.entityModal.addTitle') }}</h3>
             <button class="modal-close" @click="closeEntityModal">
               <svg viewBox="0 0 24 24" width="16" height="16">
                 <path d="M6 18L18 6M6 6l12 12" stroke="currentColor" fill="none" stroke-width="2"/>
@@ -416,30 +416,30 @@
           </div>
           <div class="modal-body">
             <div class="form-group">
-              <label>实体名称 *</label>
-              <input type="text" v-model="entityForm.name" class="form-input" placeholder="请输入实体名称" />
+              <label>{{ $t('admin.knowledgeGraph.entityModal.entityName') }} *</label>
+              <input type="text" v-model="entityForm.name" class="form-input" :placeholder="$t('admin.knowledgeGraph.entityModal.namePlaceholder')" />
             </div>
             <div class="form-group">
-              <label>实体类型 *</label>
+              <label>{{ $t('admin.knowledgeGraph.entityModal.entityType') }} *</label>
               <select v-model="entityForm.type" class="form-select">
-                <option value="architecture">建筑</option>
-                <option value="person">人物</option>
-                <option value="concept">概念</option>
-                <option value="location">地点</option>
+                <option value="architecture">{{ $t('admin.knowledgeGraph.entityTypes.architecture') }}</option>
+                <option value="person">{{ $t('admin.knowledgeGraph.entityTypes.person') }}</option>
+                <option value="concept">{{ $t('admin.knowledgeGraph.entityTypes.concept') }}</option>
+                <option value="location">{{ $t('admin.knowledgeGraph.entityTypes.location') }}</option>
               </select>
             </div>
             <div class="form-group">
-              <label>描述</label>
-              <textarea v-model="entityForm.description" class="form-textarea" rows="4" placeholder="请输入实体描述"></textarea>
+              <label>{{ $t('admin.knowledgeGraph.entityModal.description') }}</label>
+              <textarea v-model="entityForm.description" class="form-textarea" rows="4" :placeholder="$t('admin.knowledgeGraph.entityModal.descPlaceholder')"></textarea>
             </div>
             <div class="form-group">
-              <label>属性（JSON格式）</label>
-              <textarea v-model="entityForm.attributes" class="form-textarea" rows="4" placeholder='{"key": "value"}'></textarea>
+              <label>{{ $t('admin.knowledgeGraph.entityModal.attributes') }}</label>
+              <textarea v-model="entityForm.attributes" class="form-textarea" rows="4" :placeholder="$t('admin.knowledgeGraph.entityModal.attrPlaceholder')"></textarea>
             </div>
           </div>
           <div class="modal-footer">
-            <button class="btn btn-secondary" @click="closeEntityModal">取消</button>
-            <button class="btn btn-primary" @click="saveEntity">保存</button>
+            <button class="btn btn-secondary" @click="closeEntityModal">{{ $t('common.cancel') }}</button>
+            <button class="btn btn-primary" @click="saveEntity">{{ $t('common.save') }}</button>
           </div>
         </div>
       </div>
@@ -450,7 +450,7 @@
       <div v-if="showAddRelationModal" class="modal-overlay" @click.self="showAddRelationModal = false">
         <div class="modal-content">
           <div class="modal-header">
-            <h3>{{ editingRelation ? '编辑关系' : '添加关系' }}</h3>
+            <h3>{{ editingRelation ? $t('admin.knowledgeGraph.relationModal.editTitle') : $t('admin.knowledgeGraph.relationModal.addTitle') }}</h3>
             <button class="modal-close" @click="closeRelationModal">
               <svg viewBox="0 0 24 24" width="16" height="16">
                 <path d="M6 18L18 6M6 6l12 12" stroke="currentColor" fill="none" stroke-width="2"/>
@@ -459,34 +459,34 @@
           </div>
           <div class="modal-body">
             <div class="form-group">
-              <label>源实体 *</label>
+              <label>{{ $t('admin.knowledgeGraph.relationModal.sourceEntity') }} *</label>
               <select v-model="relationForm.sourceId" class="form-select">
-                <option value="">请选择源实体</option>
+                <option value="">{{ $t('admin.knowledgeGraph.relationModal.selectSource') }}</option>
                 <option v-for="entity in entities" :key="entity.id" :value="entity.id">{{ entity.name }}</option>
               </select>
             </div>
             <div class="form-group">
-              <label>关系类型 *</label>
+              <label>{{ $t('admin.knowledgeGraph.relationModal.relationType') }} *</label>
               <select v-model="relationForm.type" class="form-select">
-                <option value="relatedTo">相关</option>
-                <option value="influencedBy">影响</option>
-                <option value="locatedIn">位于</option>
-                <option value="createdBy">创建</option>
-                <option value="belongsTo">属于</option>
-                <option value="contains">包含</option>
+                <option value="relatedTo">{{ $t('admin.knowledgeGraph.relationTypes.relatedTo') }}</option>
+                <option value="influencedBy">{{ $t('admin.knowledgeGraph.relationTypes.influencedBy') }}</option>
+                <option value="locatedIn">{{ $t('admin.knowledgeGraph.relationTypes.locatedIn') }}</option>
+                <option value="createdBy">{{ $t('admin.knowledgeGraph.relationTypes.createdBy') }}</option>
+                <option value="belongsTo">{{ $t('admin.knowledgeGraph.relationTypes.belongsTo') }}</option>
+                <option value="contains">{{ $t('admin.knowledgeGraph.relationTypes.contains') }}</option>
               </select>
             </div>
             <div class="form-group">
-              <label>目标实体 *</label>
+              <label>{{ $t('admin.knowledgeGraph.relationModal.targetEntity') }} *</label>
               <select v-model="relationForm.targetId" class="form-select">
-                <option value="">请选择目标实体</option>
+                <option value="">{{ $t('admin.knowledgeGraph.relationModal.selectTarget') }}</option>
                 <option v-for="entity in entities" :key="entity.id" :value="entity.id">{{ entity.name }}</option>
               </select>
             </div>
           </div>
           <div class="modal-footer">
-            <button class="btn btn-secondary" @click="closeRelationModal">取消</button>
-            <button class="btn btn-primary" @click="saveRelation">保存</button>
+            <button class="btn btn-secondary" @click="closeRelationModal">{{ $t('common.cancel') }}</button>
+            <button class="btn btn-primary" @click="saveRelation">{{ $t('common.save') }}</button>
           </div>
         </div>
       </div>
@@ -511,14 +511,17 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { api } from '@/services/apiFactory';
+
+const { t, locale } = useI18n();
 
 // 标签页配置
 const tabs = computed(() => [
-  { id: 'visualize', label: '图谱可视化', icon: '0 0 24 24', iconPath: 'M13.5 20.5C13.5 21.88 12.38 23 11 23s-2.5-1.12-2.5-2.5c0-.69.28-1.32.74-1.76l-3.54-3.54c-.78.72-1.79 1.19-2.9 1.19C3.58 16 1 13.42 1 10c0-1.11.47-2.12 1.29-2.9L8.76 8.74c.44.46 1.07.74 1.74.74h.5c.28 0 .5-.22.5-.5V4.5c0-.28.22-.5.5-.5h3c.28 0 .5.22.5.5v8.75c0 .67.28 1.3.74 1.76l3.54-3.54c.82.78 1.29 1.79 1.29 2.9 0 3.42-2.58 6-6 6z' },
-  { id: 'entities', label: '实体管理', icon: '0 0 24 24', iconPath: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z', count: entities.value.length },
-  { id: 'relations', label: '关系管理', icon: '0 0 24 24', iconPath: 'M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1', count: relations.value.length },
-  { id: 'history', label: '导入历史', icon: '0 0 24 24', iconPath: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' },
+  { id: 'visualize', label: $t('admin.knowledgeGraph.tabs.visualize'), icon: '0 0 24 24', iconPath: 'M13.5 20.5C13.5 21.88 12.38 23 11 23s-2.5-1.12-2.5-2.5c0-.69.28-1.32.74-1.76l-3.54-3.54c-.78.72-1.79 1.19-2.9 1.19C3.58 16 1 13.42 1 10c0-1.11.47-2.12 1.29-2.9L8.76 8.74c.44.46 1.07.74 1.74.74h.5c.28 0 .5-.22.5-.5V4.5c0-.28.22-.5.5-.5h3c.28 0 .5.22.5.5v8.75c0 .67.28 1.3.74 1.76l3.54-3.54c.82.78 1.29 1.79 1.29 2.9 0 3.42-2.58 6-6 6z' },
+  { id: 'entities', label: $t('admin.knowledgeGraph.tabs.entities'), icon: '0 0 24 24', iconPath: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z', count: entities.value.length },
+  { id: 'relations', label: $t('admin.knowledgeGraph.tabs.relations'), icon: '0 0 24 24', iconPath: 'M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1', count: relations.value.length },
+  { id: 'history', label: $t('admin.knowledgeGraph.tabs.history'), icon: '0 0 24 24', iconPath: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' },
 ]);
 
 const activeTab = ref('visualize');
@@ -607,45 +610,26 @@ const importHistory = ref([
 ]);
 
 // 方法
-function getEntityTypeName(type: string) {
-  const types: Record<string, string> = {
-    architecture: '建筑',
-    person: '人物',
-    concept: '概念',
-    location: '地点'
-  };
-  return types[type] || type;
-}
-
-function getStatusText(status: string) {
-  const statusMap: Record<string, string> = {
-    completed: '已完成',
-    failed: '失败',
-    validated: '已验证'
-  };
-  return statusMap[status] || status;
-}
-
 function formatDate(dateStr: string) {
   const date = new Date(dateStr);
-  return date.toLocaleString('zh-CN');
+  return date.toLocaleString(locale.value === 'zh' ? 'zh-CN' : 'en-US');
 }
 
 // 可视化操作
 function zoomIn() {
-  showToast('success', '放大视图');
+  showToast('success', $t('admin.knowledgeGraph.visualize.zoomIn'));
 }
 
 function zoomOut() {
-  showToast('success', '缩小视图');
+  showToast('success', $t('admin.knowledgeGraph.visualize.zoomOut'));
 }
 
 function resetView() {
-  showToast('success', '重置视图');
+  showToast('success', $t('admin.knowledgeGraph.visualize.resetView'));
 }
 
 function toggleFullscreen() {
-  showToast('success', '切换全屏');
+  showToast('success', $t('admin.knowledgeGraph.visualize.toggleFullscreen'));
 }
 
 // 实体操作
@@ -659,9 +643,9 @@ function editEntity(entity: any) {
 }
 
 function deleteEntity(id: number) {
-  if (confirm('确定要删除这个实体吗？')) {
+  if (confirm($t('admin.knowledgeGraph.entities.confirmDelete'))) {
     entities.value = entities.value.filter(e => e.id !== id);
-    showToast('success', '实体删除成功');
+    showToast('success', $t('admin.knowledgeGraph.entities.deleteSuccess'));
   }
 }
 
@@ -676,7 +660,7 @@ function closeEntityModal() {
 
 function saveEntity() {
   if (!entityForm.name) {
-    showToast('error', '请输入实体名称');
+    showToast('error', $t('admin.knowledgeGraph.entityModal.nameRequired'));
     return;
   }
   
@@ -691,7 +675,7 @@ function saveEntity() {
         attributes: entityForm.attributes ? JSON.parse(entityForm.attributes) : {}
       };
     }
-    showToast('success', '实体更新成功');
+    showToast('success', $t('admin.knowledgeGraph.entities.updateSuccess'));
   } else {
     const newEntity = {
       id: Date.now(),
@@ -702,7 +686,7 @@ function saveEntity() {
       relationCount: 0
     };
     entities.value.unshift(newEntity);
-    showToast('success', '实体添加成功');
+    showToast('success', $t('admin.knowledgeGraph.entities.addSuccess'));
   }
   
   closeEntityModal();
@@ -718,9 +702,9 @@ function editRelation(relation: any) {
 }
 
 function removeRelation(id: number) {
-  if (confirm('确定要取消这个链接吗？')) {
+  if (confirm($t('admin.knowledgeGraph.relations.confirmDelete'))) {
     relations.value = relations.value.filter(r => r.id !== id);
-    showToast('success', '关系已取消');
+    showToast('success', $t('admin.knowledgeGraph.relations.deleteSuccess'));
   }
 }
 
@@ -734,7 +718,7 @@ function closeRelationModal() {
 
 function saveRelation() {
   if (!relationForm.sourceId || !relationForm.targetId) {
-    showToast('error', '请选择源实体和目标实体');
+    showToast('error', $t('admin.knowledgeGraph.relationModal.entityRequired'));
     return;
   }
   
@@ -753,7 +737,7 @@ function saveRelation() {
         targetName: targetEntity?.name || ''
       };
     }
-    showToast('success', '关系更新成功');
+    showToast('success', $t('admin.knowledgeGraph.relations.updateSuccess'));
   } else {
     const newRelation = {
       id: Date.now(),
@@ -764,7 +748,7 @@ function saveRelation() {
       targetName: targetEntity?.name || ''
     };
     relations.value.unshift(newRelation);
-    showToast('success', '关系添加成功');
+    showToast('success', $t('admin.knowledgeGraph.relations.addSuccess'));
   }
   
   closeRelationModal();
@@ -773,7 +757,7 @@ function saveRelation() {
 // 导入导出操作
 async function executeImport() {
   if (!importConfig.data.trim()) {
-    showToast('error', '请输入数据内容');
+    showToast('error', $t('admin.knowledgeGraph.importModal.dataRequired'));
     return;
   }
   
@@ -789,30 +773,30 @@ async function executeImport() {
     });
     
     if (result.success) {
-      showToast('success', importConfig.validateOnly ? '数据验证通过' : '数据导入成功');
+      showToast('success', importConfig.validateOnly ? $t('admin.knowledgeGraph.importModal.validateSuccess') : $t('admin.knowledgeGraph.importModal.importSuccess'));
       showImportModal.value = false;
       importConfig.data = '';
     } else {
-      showToast('error', result.error?.message || '导入失败');
+      showToast('error', result.error?.message || $t('admin.knowledgeGraph.importModal.importFailed'));
     }
   } catch (error) {
-    showToast('error', '导入失败，请检查数据格式');
+    showToast('error', $t('admin.knowledgeGraph.importModal.formatError'));
   } finally {
     importing.value = false;
   }
 }
 
 function executeExport() {
-  showToast('success', '数据导出功能开发中');
+  showToast('success', $t('admin.knowledgeGraph.exportModal.exporting'));
   showExportModal.value = false;
 }
 
 function viewReport(record: any) {
-  showToast('success', `查看报告: ${record.importId}`);
+  showToast('success', $t('admin.knowledgeGraph.history.viewingReport') + record.importId);
 }
 
 function retryImport(record: any) {
-  showToast('success', `重新导入: ${record.importId}`);
+  showToast('success', $t('admin.knowledgeGraph.history.retrying') + record.importId);
 }
 </script>
 

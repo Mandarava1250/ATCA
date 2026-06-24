@@ -38,7 +38,7 @@
         <div class="chart-header">
           <h3>
             <svg viewBox="0 0 24 24" width="18" height="18"><path d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
-            用户总量趋势
+            {{ $t('admin.dashboard.userTrend') }}
           </h3>
           <span class="chart-total">{{ stats.totalUsers }} 人</span>
         </div>
@@ -70,9 +70,9 @@
         <div class="chart-header">
           <h3>
             <svg viewBox="0 0 24 24" width="18" height="18"><path d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
-            日活跃用户 (DAU)
+            {{ $t('admin.dashboard.dau') }}
           </h3>
-          <span class="chart-total">{{ todayActive }} 今日</span>
+          <span class="chart-total">{{ todayActive }} {{ $t('admin.dashboard.today') }}</span>
         </div>
         <div class="chart-body">
           <svg class="main-chart" viewBox="0 0 500 160" preserveAspectRatio="none">
@@ -123,7 +123,7 @@
           <div class="action-icon" style="background: rgba(201,169,110,0.12);">
             <svg viewBox="0 0 24 24" width="20" height="20"><path d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-2 1m2-1l-2-1m2 1v2.5M14 4l-2-1-2 1M4 7l2-1M4 7l2 1M4 7v2.5M12 21l-2-1m2 1l2-1m-2 1v-2.5M6 18l-2-1v-2.5M18 18l2-1v-2.5" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
           </div>
-          <span>3D模型管理</span>
+          <span>{{ $t('admin.dashboard.manageModels') }}</span>
         </router-link>
       </div>
     </div>
@@ -140,7 +140,7 @@
           <div v-for="(arch, idx) in topArchitectures" :key="arch.architecture_id" class="list-item">
             <div class="list-rank" :class="{ top3: idx < 3 }">{{ idx + 1 }}</div>
             <span class="list-name">{{ arch.chinese_name || arch.name }}</span>
-            <span class="list-meta">{{ arch.founding_dynasty }} · {{ arch.view_count }} 次浏览</span>
+            <span class="list-meta">{{ arch.founding_dynasty }} · {{ arch.view_count }} {{ $t('admin.dashboard.views') }}</span>
           </div>
         </div>
       </div>
@@ -178,7 +178,7 @@
               <div class="status-dot info"></div>
               <span class="status-label">Version</span>
             </div>
-            <span class="status-badge info">4.9.3</span>
+            <span class="status-badge info">5.0.1</span>
           </div>
         </div>
       </div>
@@ -567,5 +567,76 @@ onMounted(async () => {
 .status-badge.warning { background: rgba(245, 158, 11, 0.12); color: #f59e0b; }
 .status-badge.error { background: rgba(239, 68, 68, 0.12); color: #ef4444; }
 .status-badge.info { background: rgba(59, 130, 246, 0.12); color: #3b82f6; }
+
+/* ===== 响应式适配 ===== */
+
+/* 平板端 */
+@media screen and (max-width: 1024px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .section-grid {
+    grid-template-columns: 1fr;
+  }
+  .charts-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* 移动端 */
+@media screen and (max-width: 767px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+  .stat-card {
+    padding: 16px;
+  }
+  .stat-value {
+    font-size: 1.25rem;
+  }
+  .stat-sparkline {
+    display: none;
+  }
+  .section-card {
+    padding: 16px;
+  }
+  .section-card h3 {
+    font-size: 0.9375rem;
+    margin-bottom: 12px;
+  }
+  .action-btn {
+    padding: 10px 16px;
+    font-size: 0.8125rem;
+    gap: 8px;
+  }
+  .action-icon {
+    width: 32px;
+    height: 32px;
+  }
+  .chart-card {
+    padding: 16px;
+  }
+  .chart-header h3 {
+    font-size: 0.875rem;
+  }
+  .main-chart {
+    height: 120px;
+  }
+  .list-item {
+    padding: 8px 0;
+    gap: 8px;
+  }
+  .list-rank {
+    width: 20px;
+    height: 20px;
+    font-size: 0.6875rem;
+  }
+  .list-name {
+    font-size: 0.8125rem;
+  }
+  .list-meta {
+    font-size: 0.6875rem;
+  }
+}
 
 </style>

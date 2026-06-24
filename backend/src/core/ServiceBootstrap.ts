@@ -95,6 +95,12 @@ export async function initializeServices(): Promise<void> {
   // 初始化所有服务
   await serviceRegistry.initializeAll();
 
+  // 检查未初始化的服务（初始化完成后）
+  const uninitializedWarnings = serviceRegistry.checkInitializedStatus();
+  if (uninitializedWarnings.length > 0) {
+    logger.warn('服务注册验证警告', { warnings: uninitializedWarnings });
+  }
+
   // 检查初始化结果
   const registrations = serviceRegistry.getAllRegistrations();
   const failed = registrations.filter(r => r.state === ServiceState.ERROR);

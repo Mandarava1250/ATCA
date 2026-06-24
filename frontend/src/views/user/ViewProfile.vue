@@ -7,7 +7,7 @@
         <aside class="profile-sidebar">
           <div class="profile-card">
             <div class="avatar-wrapper">
-              <img :src="avatarFullUrl" class="profile-avatar" @click="triggerAvatarUpload" />
+              <SafeImage :src="avatarFullUrl" class="profile-avatar" @click="triggerAvatarUpload" fallback="https://api.dicebear.com/7.x/avataaars/svg?seed=user" />
               <div class="avatar-overlay" @click="triggerAvatarUpload">
                 <svg viewBox="0 0 24 24" width="20" height="20"><path d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" stroke="currentColor" fill="none" stroke-width="1.5"/><path d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
                 <span>更换头像</span>
@@ -74,7 +74,17 @@
             </h3>
             <div class="achievements-list">
               <div v-for="ach in achievements.slice(0, 3)" :key="ach.achievement_id" class="achievement-item" :title="ach.description">
-                <span class="achievement-icon">{{ ach.icon || '🏆' }}</span>
+                <span class="achievement-icon">
+                  <SafeImage 
+                    v-if="ach.icon && ach.icon.startsWith('/')" 
+                    :src="ach.icon" 
+                    :alt="ach.name" 
+                    class="achievement-icon-img" 
+                    fallback="🏆"
+                    :show-error="false"
+                  />
+                  <template v-else>{{ ach.icon || '🏆' }}</template>
+                </span>
                 <div class="achievement-info">
                   <span class="achievement-name">{{ ach.name }}</span>
                   <span class="achievement-date">{{ formatDate(ach.unlocked_at) }}</span>
@@ -394,6 +404,7 @@ import { ref, onMounted, computed, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import Navbar from '@/components/common/CommonNavbar.vue';
 import Footer from '@/components/common/CommonFooter.vue';
+import SafeImage from '@/components/common/SafeImage.vue';
 import { profileApi, authApi, activityApi, model3dApi, API_HOST } from '@/services/api';
 import { formatDate } from '@shared/utils';
 import { noteManager } from '@/utils/noteManager';
@@ -1093,6 +1104,17 @@ onMounted(async () => {
 }
 .achievement-icon {
   font-size: 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+}
+.achievement-icon-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 .achievement-info {
   display: flex;
@@ -1669,5 +1691,332 @@ onMounted(async () => {
 .note-manage-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
 .note-manage-meta { display: flex; align-items: center; justify-content: space-between; font-size: 0.75rem; color: var(--text-dim); }
 .note-manage-link { display: flex; align-items: center; gap: 4px; color: var(--gold-dim); }
+
+/* ===== 响应式适配 ===== */
+
+/* 大屏桌面 (最小1400px) */
+@media screen and (min-width: 1400px) {
+  .profile-layout {
+    grid-template-columns: 340px 1fr;
+    gap: 32px;
+  }
+  .profile-card {
+    padding: 32px 28px;
+  }
+  .profile-avatar {
+    width: 110px;
+    height: 110px;
+    border-width: 3px;
+  }
+  .profile-card h2 {
+    font-size: 1.375rem;
+  }
+}
+
+/* 桌面端 (992px - 1399px) */
+@media screen and (max-width: 1399px) {
+  .profile-layout {
+    grid-template-columns: 300px 1fr;
+    gap: 24px;
+  }
+  .profile-card {
+    padding: 26px 22px;
+  }
+  .profile-avatar {
+    width: 95px;
+    height: 95px;
+  }
+}
+
+/* 平板端 (600px - 991px) */
+@media screen and (max-width: 991px) {
+  .profile-layout {
+    grid-template-columns: 260px 1fr;
+    gap: 20px;
+  }
+  .page-content {
+    padding-top: 80px;
+    padding-bottom: 40px;
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+  .profile-card {
+    padding: 22px 18px;
+  }
+  .profile-avatar {
+    width: 85px;
+    height: 85px;
+    border-width: 2px;
+  }
+  .profile-card h2 {
+    font-size: 1.125rem;
+  }
+  .profile-username {
+    font-size: 0.8125rem;
+  }
+  .profile-stats {
+    gap: 8px;
+    margin: 16px 0;
+  }
+  .stat-box {
+    padding: 10px 4px;
+  }
+  .stat-box strong {
+    font-size: 1rem;
+  }
+  .stat-box span {
+    font-size: 0.625rem;
+  }
+  .favorites-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .models-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .quiz-history-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* 移动端 (最大599px) */
+@media screen and (max-width: 599px) {
+  .profile-layout {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  .page-content {
+    padding-top: 70px;
+    padding-bottom: 32px;
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+  .profile-sidebar {
+    position: relative;
+    min-height: auto;
+  }
+  .profile-card {
+    padding: 20px 16px;
+    text-align: center;
+  }
+  .avatar-wrapper {
+    margin-bottom: 14px;
+  }
+  .profile-avatar {
+    width: 80px;
+    height: 80px;
+    border-width: 2px;
+  }
+  .profile-card h2 {
+    font-size: 1.125rem;
+    margin-bottom: 4px;
+  }
+  .profile-username {
+    font-size: 0.75rem;
+    margin-bottom: 8px;
+  }
+  .profile-role {
+    padding: 2px 8px;
+    font-size: 0.625rem;
+    margin-bottom: 10px;
+  }
+  .profile-bio {
+    font-size: 0.75rem;
+    margin-bottom: 14px;
+  }
+  .level-section {
+    padding: 10px;
+    margin-bottom: 14px;
+  }
+  .level-badge {
+    font-size: 0.75rem;
+  }
+  .level-points {
+    font-size: 0.625rem;
+  }
+  .level-next {
+    font-size: 0.625rem;
+  }
+  .profile-stats {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+    margin: 14px 0;
+    padding: 4px 0;
+  }
+  .stat-box {
+    padding: 10px 4px;
+    min-height: 56px;
+  }
+  .stat-box strong {
+    font-size: 0.9375rem;
+  }
+  .stat-box span {
+    font-size: 0.625rem;
+  }
+  .profile-meta {
+    font-size: 0.7rem;
+    padding-top: 10px;
+  }
+  .profile-main {
+    min-height: 400px;
+  }
+  .tab-panel {
+    padding: 16px;
+    min-height: 400px;
+  }
+  .profile-tabs {
+    padding: 4px 8px;
+    gap: 4px;
+  }
+  .profile-tabs button {
+    padding: 8px 12px;
+    font-size: 0.75rem;
+  }
+  .favorites-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .fav-card {
+    border-radius: var(--r-md);
+  }
+  .fav-image-wrapper {
+    aspect-ratio: 4/3;
+  }
+  .fav-info {
+    padding: 10px;
+  }
+  .fav-name {
+    font-size: 0.8125rem;
+  }
+  .fav-location {
+    font-size: 0.7rem;
+  }
+  .models-list {
+    gap: 10px;
+  }
+  .model-card {
+    padding: 12px;
+    gap: 12px;
+  }
+  .model-thumb {
+    width: 48px;
+    height: 48px;
+  }
+  .model-info h4 {
+    font-size: 0.875rem;
+  }
+  .model-info p {
+    font-size: 0.7rem;
+  }
+  .quiz-history-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .quiz-card {
+    padding: 14px;
+  }
+  .quiz-card h4 {
+    font-size: 0.875rem;
+  }
+  .quiz-meta {
+    font-size: 0.7rem;
+  }
+  .achievements-card {
+    padding: 16px;
+  }
+  .achievements-card h3 {
+    font-size: 0.8125rem;
+    margin-bottom: 12px;
+  }
+  .achievement-item {
+    padding: 10px;
+    gap: 10px;
+    min-height: 48px;
+  }
+  .achievement-icon-wrapper {
+    width: 36px;
+    height: 36px;
+  }
+  .achievement-icon-emoji {
+    font-size: 1.25rem;
+  }
+  .achievement-name {
+    font-size: 0.75rem;
+  }
+  .achievement-date {
+    font-size: 0.625rem;
+  }
+  /* 表单适配 */
+  .form-row {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+  .form-group {
+    margin-bottom: 14px;
+  }
+  .form-group label {
+    font-size: 0.75rem;
+  }
+  .radio-group {
+    gap: 8px;
+  }
+  .radio-option {
+    padding: 10px 12px;
+    gap: 8px;
+  }
+  .location-selector {
+    flex-direction: column;
+    gap: 10px;
+  }
+  .visibility-option {
+    padding: 14px 16px;
+  }
+  .option-content {
+    gap: 12px;
+  }
+  .option-icon {
+    width: 40px;
+    height: 40px;
+  }
+  .option-title {
+    font-size: 0.875rem;
+  }
+  .option-desc {
+    font-size: 0.7rem;
+  }
+  .toggle-option {
+    padding: 12px 14px;
+  }
+  .toggle-label {
+    font-size: 0.8125rem;
+  }
+  .toggle-hint {
+    font-size: 0.7rem;
+  }
+}
+
+/* 超小屏 (最大360px) */
+@media screen and (max-width: 360px) {
+  .profile-avatar {
+    width: 70px;
+    height: 70px;
+  }
+  .profile-card h2 {
+    font-size: 1rem;
+  }
+  .profile-stats {
+    gap: 4px;
+  }
+  .stat-box {
+    padding: 8px 2px;
+    min-height: 48px;
+  }
+  .stat-box strong {
+    font-size: 0.875rem;
+  }
+  .profile-tabs button {
+    padding: 6px 8px;
+    font-size: 0.7rem;
+  }
+}
 
 </style>

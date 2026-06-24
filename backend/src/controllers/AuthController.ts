@@ -100,45 +100,54 @@ const avatarUpload = multer({
   },
 });
 
-const mockUsers: Array<{
+let mockUsers: Array<{
   user_id: number; username: string; nickname: string | null;
   password: string; email: string; role: string; points: number;
   level: number; is_active: boolean; avatar: string | null; created_at: string;
 }> = [];
 let mockUserIdCounter = 1;
+let mockInitPromise: Promise<void> | null = null;
 
-async function initMockAdmin() {
-  const hashedPassword = await bcrypt.hash('admin123', 10);
-  mockUsers.push({
-    user_id: mockUserIdCounter++,
-    username: 'admin',
-    nickname: '管理员',
-    password: hashedPassword,
-    email: 'admin@example.com',
-    role: 'admin',
-    points: 0,
-    level: 1,
-    is_active: true,
-    avatar: null,
-    created_at: '2024-01-01T00:00:00Z',
-  });
-  const userPassword = await bcrypt.hash('user123', 10);
-  mockUsers.push({
-    user_id: mockUserIdCounter++,
-    username: 'user1',
-    nickname: '普通用户',
-    password: userPassword,
-    email: 'user1@example.com',
-    role: 'user',
-    points: 0,
-    level: 1,
-    is_active: true,
-    avatar: null,
-    created_at: '2024-01-15T00:00:00Z',
-  });
-  console.log('[AuthController] Mock用户初始化完成');
+async function initMockAdmin(): Promise<void> {
+  if (mockInitPromise) return mockInitPromise;
+  
+  mockInitPromise = (async () => {
+    console.log('[AuthController] 开始初始化Mock用户...');
+    const hashedPassword = await bcrypt.hash('admin123', 10);
+    mockUsers.push({
+      user_id: mockUserIdCounter++,
+      username: 'admin',
+      nickname: '管理员',
+      password: hashedPassword,
+      email: 'admin@example.com',
+      role: 'admin',
+      points: 0,
+      level: 1,
+      is_active: true,
+      avatar: null,
+      created_at: '2024-01-01T00:00:00Z',
+    });
+    const userPassword = await bcrypt.hash('user123', 10);
+    mockUsers.push({
+      user_id: mockUserIdCounter++,
+      username: 'user1',
+      nickname: '普通用户',
+      password: userPassword,
+      email: 'user1@example.com',
+      role: 'user',
+      points: 0,
+      level: 1,
+      is_active: true,
+      avatar: null,
+      created_at: '2024-01-15T00:00:00Z',
+    });
+    console.log('[AuthController] Mock用户初始化完成, 用户数:', mockUsers.length);
+  })();
+  
+  return mockInitPromise;
 }
 
+// 立即开始初始化
 initMockAdmin();
 
 const registerSchema = z.object({
@@ -572,6 +581,9 @@ export class AuthController {
 
   private async handleMockLogin(req: Request, res: Response, username: string, password: string) {
     logger.info('Mock模式登录流程开始', { username });
+    
+    // 确保Mock用户初始化完成
+    await initMockAdmin();
 
     const user = mockUsers.find((u) => u.username === username);
     if (!user) {

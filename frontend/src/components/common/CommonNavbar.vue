@@ -9,7 +9,7 @@
         to="/home" 
         class="navbar-brand"
         @click.stop
-        aria-label="首页"
+        :aria-label="$t('nav.home')"
       >
         <svg class="brand-icon" viewBox="0 0 40 40" fill="none">
           <path d="M20 4L4 16H10V32H16V22H24V32H30V16H36L20 4Z" fill="currentColor" opacity="0.9"/>
@@ -26,12 +26,12 @@
         <template v-for="item in navItems" :key="item.to">
           <router-link
             :to="item.to"
-            class="nav-link"
+            class="nav-link text-truncate"
             :class="{ active: route.path.startsWith(item.to) }"
             @click.stop
             :aria-current="route.path.startsWith(item.to) ? 'page' : undefined"
           >
-            <span>{{ item.label }}</span>
+            <span class="text-truncate">{{ item.label }}</span>
           </router-link>
         </template>
       </div>
@@ -56,10 +56,23 @@
             to="/profile" 
             class="nav-user"
             @click.stop
-            aria-label="用户中心"
+            :aria-label="$t('nav.userCenter')"
           >
             <img :src="avatarUrl" class="nav-avatar" alt="avatar" @error="handleAvatarError" />
-            <span class="nav-username">{{ nickname }}</span>
+            <span class="nav-username text-truncate">{{ nickname }}</span>
+          </router-link>
+          <router-link
+            v-if="isAdmin"
+            to="/admin"
+            class="nav-admin"
+            @click.stop
+            :aria-label="$t('nav.adminPanel')"
+            :title="$t('nav.adminPanel')"
+          >
+            <svg viewBox="0 0 24 24" width="18" height="18">
+              <path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11zM9 11H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2z" fill="currentColor"/>
+            </svg>
+            <span>{{ $t('nav.admin') }}</span>
           </router-link>
           <button 
             class="nav-logout" 
@@ -91,7 +104,7 @@
         class="mobile-menu-toggle"
         @click.stop="toggleMobileMenu"
         :aria-expanded="isMobileMenuOpen"
-        :aria-label="isMobileMenuOpen ? '关闭菜单' : '打开菜单'"
+        :aria-label="isMobileMenuOpen ? $t('nav.closeMenu') : $t('nav.openMenu')"
       >
         <span class="hamburger" :class="{ active: isMobileMenuOpen }">
           <span class="hamburger-line"></span>
@@ -114,8 +127,8 @@
       :responsive="true"
       :responsive-breakpoint="768"
       :nav-items="mobileNavItems"
-      open-label="打开导航菜单"
-      close-label="关闭导航菜单"
+      :open-label="$t('nav.openMenu')"
+      :close-label="$t('nav.closeMenu')"
       @open="handleMobileMenuOpen"
       @close="handleMobileMenuClose"
       @nav-item-click="handleMobileNavItemClick"
@@ -139,10 +152,22 @@
               to="/profile" 
               class="mobile-user-link"
               @click.stop="closeMobileMenu"
-              aria-label="用户中心"
+              :aria-label="$t('nav.userCenter')"
             >
               <img :src="avatarUrl" class="mobile-avatar" alt="avatar" @error="handleAvatarError" />
               <span class="mobile-username">{{ nickname }}</span>
+            </router-link>
+            <router-link
+              v-if="isAdmin"
+              to="/admin"
+              class="mobile-admin-link"
+              @click.stop="closeMobileMenu"
+              :aria-label="$t('nav.adminPanel')"
+            >
+              <svg viewBox="0 0 24 24" width="18" height="18">
+                <path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11zM9 11H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2z" fill="currentColor"/>
+              </svg>
+              <span>{{ $t('nav.adminPanel') }}</span>
             </router-link>
             <button 
               class="mobile-logout-btn"
@@ -198,18 +223,18 @@ let lastScrollY = 0;
 // ================ 导航项配置 ================
 
 const navItems = [
-  { to: '/architecture', label: '古建筑馆' },
-  { to: '/quiz', label: '知识竞赛' },
-  { to: '/workshop', label: '3D工坊' },
-  { to: '/community', label: '社区讨论' },
+  { to: '/architecture', label: computed(() => t('nav.architectureHall')) },
+  { to: '/quiz', label: computed(() => t('nav.knowledgeQuiz')) },
+  { to: '/workshop', label: computed(() => t('nav.workshop3D')) },
+  { to: '/community', label: computed(() => t('nav.community')) },
 ];
 
 const mobileNavItems = computed<NavItem[]>(() => [
-  { key: 'home', label: '首页', href: '/home', icon: 'M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z' },
-  { key: 'architecture', label: '古建筑馆', href: '/architecture', icon: 'M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z', active: route.path.startsWith('/architecture') },
-  { key: 'quiz', label: '知识竞赛', href: '/quiz', icon: 'M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z', active: route.path.startsWith('/quiz') },
-  { key: 'workshop', label: '3D工坊', href: '/workshop', icon: 'M4 2h16a2 2 0 012 2v16a2 2 0 01-2 2H4a2 2 0 01-2-2V4a2 2 0 012-2zm6 2l1.5 3L13 4h3l-2 3.5L17 10h-3l-1.5-3L11 10H8l2-3.5L6 4h3z', active: route.path.startsWith('/workshop') },
-  { key: 'community', label: '社区讨论', href: '/community', icon: 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z', active: route.path.startsWith('/community') },
+  { key: 'home', label: t('nav.home'), href: '/home', icon: 'M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z' },
+  { key: 'architecture', label: t('nav.architectureHall'), href: '/architecture', icon: 'M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z', active: route.path.startsWith('/architecture') },
+  { key: 'quiz', label: t('nav.knowledgeQuiz'), href: '/quiz', icon: 'M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z', active: route.path.startsWith('/quiz') },
+  { key: 'workshop', label: t('nav.workshop3D'), href: '/workshop', icon: 'M4 2h16a2 2 0 012 2v16a2 2 0 01-2 2H4a2 2 0 01-2-2V4a2 2 0 012-2zm6 2l1.5 3L13 4h3l-2 3.5L17 10h-3l-1.5-3L11 10H8l2-3.5L6 4h3z', active: route.path.startsWith('/workshop') },
+  { key: 'community', label: t('nav.community'), href: '/community', icon: 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z', active: route.path.startsWith('/community') },
 ]);
 
 // ================ 国际化文本 ================
@@ -255,6 +280,11 @@ const switchLangText = computed(() => {
 
 const isLoggedIn = computed(() => {
   try { return userStore?.isLoggedIn ?? false; } 
+  catch { return false; }
+});
+
+const isAdmin = computed(() => {
+  try { return userStore?.isAdmin ?? false; }
   catch { return false; }
 });
 
@@ -548,6 +578,33 @@ watch(() => route.path, () => {
   white-space: nowrap;
 }
 
+.nav-admin {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 12px;
+  color: var(--gold);
+  background: rgba(201, 169, 110, 0.12);
+  border: 1px solid rgba(201, 169, 110, 0.25);
+  border-radius: var(--r-sm);
+  font-family: 'Noto Serif SC','STSong',serif;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-decoration: none;
+  transition: all var(--t);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 2px 8px rgba(201, 169, 110, 0.15);
+}
+.nav-admin:hover {
+  background: rgba(201, 169, 110, 0.18);
+  border-color: rgba(201, 169, 110, 0.35);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 3px 12px rgba(201, 169, 110, 0.22);
+}
+
 .nav-logout {
   padding: 8px;
   color: var(--text-muted);
@@ -722,6 +779,28 @@ watch(() => route.path, () => {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.mobile-admin-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px;
+  color: var(--gold);
+  background: rgba(201, 169, 110, 0.12);
+  border: 1px solid rgba(201, 169, 110, 0.25);
+  border-radius: var(--r-sm);
+  font-size: 0.875rem;
+  font-family: var(--font-serif);
+  letter-spacing: 0.04em;
+  text-decoration: none;
+  transition: all var(--t);
+}
+
+.mobile-admin-link:hover {
+  background: rgba(201, 169, 110, 0.18);
+  border-color: rgba(201, 169, 110, 0.35);
 }
 
 .mobile-logout-btn {

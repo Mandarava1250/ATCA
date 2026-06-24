@@ -948,6 +948,313 @@ export const mockAdminApi = {
   },
 };
 
+// 成就API Mock
+export const mockAchievementApi = {
+  getAchievements: async () => {
+    await delay();
+    return {
+      success: true,
+      data: [
+        {
+          achievement_id: 1,
+          name: '初出茅庐',
+          description: '完成首次知识竞赛',
+          icon: '🌱',
+          condition_type: 'quiz_first',
+          condition_value: 1,
+          points: 50,
+          is_active: true,
+          created_at: '2024-01-01T00:00:00Z',
+          updated_at: '2024-01-01T00:00:00Z',
+        },
+        {
+          achievement_id: 2,
+          name: '知识渊博',
+          description: '累计答题100次',
+          icon: '📚',
+          condition_type: 'quiz_count',
+          condition_value: 100,
+          points: 200,
+          is_active: true,
+          created_at: '2024-01-01T00:00:00Z',
+          updated_at: '2024-01-01T00:00:00Z',
+        },
+        {
+          achievement_id: 3,
+          name: '建筑达人',
+          description: '累计获得1000积分',
+          icon: '🏆',
+          condition_type: 'points_total',
+          condition_value: 1000,
+          points: 500,
+          is_active: true,
+          created_at: '2024-01-01T00:00:00Z',
+          updated_at: '2024-01-01T00:00:00Z',
+        },
+        {
+          achievement_id: 4,
+          name: '建筑收藏家',
+          description: '收藏10个古建筑',
+          icon: '❤️',
+          condition_type: 'favorites_count',
+          condition_value: 10,
+          points: 150,
+          is_active: true,
+          created_at: '2024-01-01T00:00:00Z',
+          updated_at: '2024-01-01T00:00:00Z',
+        },
+        {
+          achievement_id: 5,
+          name: '3D创造者',
+          description: '上传第一个3D模型',
+          icon: '🧩',
+          condition_type: 'model_upload',
+          condition_value: 1,
+          points: 300,
+          is_active: true,
+          created_at: '2024-01-01T00:00:00Z',
+          updated_at: '2024-01-01T00:00:00Z',
+        },
+        {
+          achievement_id: 6,
+          name: '社区活跃者',
+          description: '发布10篇社区帖子',
+          icon: '💬',
+          condition_type: 'community_post',
+          condition_value: 10,
+          points: 100,
+          is_active: true,
+          created_at: '2024-01-01T00:00:00Z',
+          updated_at: '2024-01-01T00:00:00Z',
+        },
+        {
+          achievement_id: 7,
+          name: '签到达人',
+          description: '连续签到30天',
+          icon: '📅',
+          condition_type: 'check_in',
+          condition_value: 30,
+          points: 250,
+          is_active: true,
+          created_at: '2024-01-01T00:00:00Z',
+          updated_at: '2024-01-01T00:00:00Z',
+        },
+        {
+          achievement_id: 8,
+          name: '建筑探险家',
+          description: '浏览50个古建筑',
+          icon: '🔍',
+          condition_type: 'architecture_view',
+          condition_value: 50,
+          points: 180,
+          is_active: false,
+          created_at: '2024-01-01T00:00:00Z',
+          updated_at: '2024-01-01T00:00:00Z',
+        },
+      ],
+    };
+  },
+
+  getAchievementById: async (id: number) => {
+    await delay();
+    const achievements = [
+      {
+        achievement_id: 1,
+        name: '初出茅庐',
+        description: '完成首次知识竞赛',
+        icon: '🌱',
+        condition_type: 'quiz_first',
+        condition_value: 1,
+        points: 50,
+        is_active: true,
+        created_at: '2024-01-01T00:00:00Z',
+        updated_at: '2024-01-01T00:00:00Z',
+      },
+      {
+        achievement_id: 2,
+        name: '知识渊博',
+        description: '累计答题100次',
+        icon: '📚',
+        condition_type: 'quiz_count',
+        condition_value: 100,
+        points: 200,
+        is_active: true,
+        created_at: '2024-01-01T00:00:00Z',
+        updated_at: '2024-01-01T00:00:00Z',
+      },
+    ];
+    const achievement = achievements.find(a => a.achievement_id === id);
+    if (achievement) {
+      return { success: true, data: achievement };
+    }
+    return { success: false, error: { message: '成就不存在' }, data: null };
+  },
+
+  createAchievement: async (data: any) => {
+    await delay();
+    return {
+      success: true,
+      data: {
+        achievement_id: Date.now(),
+        ...data,
+        is_active: data.is_active ?? true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+    };
+  },
+
+  updateAchievement: async (id: number, data: any) => {
+    await delay();
+    return {
+      success: true,
+      data: {
+        achievement_id: id,
+        name: data.name || '未命名成就',
+        description: data.description || '',
+        icon: data.icon || '🏆',
+        condition_type: data.condition_type || 'quiz_first',
+        condition_value: data.condition_value || 1,
+        points: data.points || 100,
+        is_active: data.is_active ?? true,
+        updated_at: new Date().toISOString(),
+      },
+    };
+  },
+
+  deleteAchievement: async (id: number) => {
+    await delay();
+    return { success: true, message: '成就删除成功' };
+  },
+
+  getUserAchievements: async () => {
+    await delay();
+    return {
+      success: true,
+      data: [
+        {
+          user_achievement_id: 1,
+          user_id: 1,
+          achievement_id: 1,
+          achievement: {
+            achievement_id: 1,
+            name: '初出茅庐',
+            description: '完成首次知识竞赛',
+            icon: '🌱',
+            condition_type: 'quiz_first',
+            condition_value: 1,
+            points: 50,
+            is_active: true,
+            created_at: '2024-01-01T00:00:00Z',
+            updated_at: '2024-01-01T00:00:00Z',
+          },
+          unlocked_at: '2024-01-10T10:30:00Z',
+        },
+        {
+          user_achievement_id: 2,
+          user_id: 1,
+          achievement_id: 3,
+          achievement: {
+            achievement_id: 3,
+            name: '建筑达人',
+            description: '累计获得1000积分',
+            icon: '🏆',
+            condition_type: 'points_total',
+            condition_value: 1000,
+            points: 500,
+            is_active: true,
+            created_at: '2024-01-01T00:00:00Z',
+            updated_at: '2024-01-01T00:00:00Z',
+          },
+          unlocked_at: '2024-01-15T15:20:00Z',
+        },
+        {
+          user_achievement_id: 3,
+          user_id: 1,
+          achievement_id: 4,
+          achievement: {
+            achievement_id: 4,
+            name: '建筑收藏家',
+            description: '收藏10个古建筑',
+            icon: '❤️',
+            condition_type: 'favorites_count',
+            condition_value: 10,
+            points: 150,
+            is_active: true,
+            created_at: '2024-01-01T00:00:00Z',
+            updated_at: '2024-01-01T00:00:00Z',
+          },
+          unlocked_at: '2024-01-18T09:15:00Z',
+        },
+      ],
+    };
+  },
+
+  getUserAchievementProgress: async () => {
+    await delay();
+    return {
+      success: true,
+      data: [
+        { achievement_id: 2, progress: 45, total: 100, achieved: false },
+        { achievement_id: 5, progress: 0, total: 1, achieved: false },
+        { achievement_id: 6, progress: 3, total: 10, achieved: false },
+        { achievement_id: 7, progress: 15, total: 30, achieved: false },
+      ],
+    };
+  },
+
+  getAchievementStats: async () => {
+    await delay();
+    return {
+      success: true,
+      data: {
+        total_count: 8,
+        active_count: 7,
+        unlocked_count: 3,
+        locked_count: 5,
+      },
+    };
+  },
+
+  unlockAchievement: async (achievementId: number) => {
+    await delay();
+    return {
+      success: true,
+      data: {
+        user_achievement_id: Date.now(),
+        user_id: 1,
+        achievement_id: achievementId,
+        achievement: {
+          achievement_id: achievementId,
+          name: '已解锁成就',
+          description: '成就描述',
+          icon: '🏆',
+          condition_type: 'quiz_first',
+          condition_value: 1,
+          points: 100,
+          is_active: true,
+          created_at: '2024-01-01T00:00:00Z',
+          updated_at: '2024-01-01T00:00:00Z',
+        },
+        unlocked_at: new Date().toISOString(),
+      },
+    };
+  },
+
+  importAchievements: async (data: any[]) => {
+    await delay();
+    return {
+      success: true,
+      data: data.map((item, index) => ({
+        achievement_id: Date.now() + index,
+        ...item,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })),
+    };
+  },
+};
+
 // 活动API Mock
 export const mockActivityApi = {
   getActivities: async () => {
@@ -1322,6 +1629,7 @@ export const mockApi = {
   social: mockSocialApi,
   admin: mockAdminApi,
   activity: mockActivityApi,
+  achievement: mockAchievementApi,
   knowledge: mockKnowledgeApi,
   i18n: mockI18nApi,
   model3d: mockModel3dApi,

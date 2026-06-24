@@ -512,11 +512,8 @@ export class ServiceRegistry {
       }
     }
 
-    // 检查是否有未初始化的服务
+    // 检查是否有初始化失败的服务
     for (const registration of this.registrations.values()) {
-      if (registration.state === ServiceState.REGISTERED) {
-        warnings.push(`服务 ${registration.id} 已注册但未初始化`);
-      }
       if (registration.state === ServiceState.ERROR) {
         warnings.push(`服务 ${registration.id} 初始化失败: ${registration.error?.message}`);
       }
@@ -527,6 +524,20 @@ export class ServiceRegistry {
       errors,
       warnings
     };
+  }
+
+  /**
+   * 检查服务初始化状态（初始化完成后调用）
+   * @returns 未初始化服务列表
+   */
+  checkInitializedStatus(): string[] {
+    const warnings: string[] = [];
+    for (const registration of this.registrations.values()) {
+      if (registration.state === ServiceState.REGISTERED) {
+        warnings.push(`服务 ${registration.id} 已注册但未初始化`);
+      }
+    }
+    return warnings;
   }
 }
 
