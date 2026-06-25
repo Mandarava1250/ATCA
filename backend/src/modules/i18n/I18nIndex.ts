@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { query, execute, isMockMode } from '../../config/database';
 import { authMiddleware, optionalAuthMiddleware } from '../../middleware/auth';
+import { requirePermission } from '../../middleware/accessControl';
 import { asyncHandler } from '../../middleware/errorHandler';
 import axios from 'axios';
 import crypto from 'crypto';
@@ -26,6 +27,7 @@ router.get('/languages', asyncHandler(async (req, res) => {
       data: [
         { language_code: 'zh-CN', language_name: 'Chinese (Simplified)', native_name: '简体中文', is_active: true, is_default: true, sort_order: 1 },
         { language_code: 'en', language_name: 'English', native_name: 'English', is_active: true, is_default: false, sort_order: 2 },
+        { language_code: 'ja', language_name: 'Japanese', native_name: '日本語', is_active: true, is_default: false, sort_order: 3 },
       ]
     });
     return;
@@ -35,7 +37,6 @@ router.get('/languages', asyncHandler(async (req, res) => {
     const result = await query('architecture', 'EXEC sp_get_languages @active_only = @active', { active: activeOnly ? 1 : 0 });
     res.json({ success: true, data: result || [] });
   } catch {
-    // 表可能不存在，返回默认
     res.json({
       success: true,
       data: [
@@ -56,7 +57,6 @@ router.get('/translate/:entityType/:entityId', asyncHandler(async (req, res) => 
   const lang = (req.query.lang as string) || 'en';
 
   if (isMockMode()) {
-    // 返回mock翻译数据
     const mockTranslations: Record<string, string> = {
       name: `${entityType}_${entityId} (EN)`,
       description: `This is the English description for ${entityType} #${entityId}.`,
@@ -137,8 +137,8 @@ router.post('/translate/batch', asyncHandler(async (req, res) => {
 // ========================
 
 // 保存/更新翻译
-router.post('/translate', authMiddleware, asyncHandler(async (req, res) => {
-  const { entity_type, entity_id, field_name, language_code, translated_text, is_machine_translated = true } = req.body;
+router.post('/translate', authMiddleware, requirePermission('translation', 'create'), asyncHandler(async (req, res) => {
+  const { entity_type, entity_id, field_name, language_code, source_text, translated_text, is_machine_translated = true, review_status = 'pending', quality_score } = req.body;
 
   if (!entity_type || !entity_id || !field_name || !language_code || !translated_text) {
     res.status(400).json({ success: false, error: { message: '缺少必要参数' } });
@@ -146,21 +146,24 @@ router.post('/translate', authMiddleware, asyncHandler(async (req, res) => {
   }
 
   if (isMockMode()) {
-    res.json({ success: true, data: { saved: true } });
+    res.json({ success: true, data: { saved: true, translation_id: 1 } });
     return;
   }
 
   try {
     await execute(
       'architecture',
-      'EXEC sp_upsert_translation @entity_type = @type, @entity_id = @id, @field_name = @field, @language_code = @lang, @translated_text = @text, @is_machine_translated = @machine',
+      'EXEC sp_upsert_translation @entity_type = @type, @entity_id = @id, @field_name = @field, @language_code = @lang, @source_text = @source, @translated_text = @text, @is_machine_translated = @machine, @review_status = @status, @quality_score = @score',
       {
         type: entity_type,
         id: parseInt(entity_id),
         field: field_name,
         lang: language_code,
+        source: source_text || '',
         text: translated_text,
         machine: is_machine_translated ? 1 : 0,
+        status: review_status,
+        score: quality_score || null,
       }
     );
     res.json({ success: true, data: { saved: true } });
@@ -169,55 +172,75 @@ router.post('/translate', authMiddleware, asyncHandler(async (req, res) => {
   }
 }));
 
+// 删除翻译
+router.delete('/translate/:id', authMiddleware, requirePermission('translation', 'delete'), asyncHandler(async (req, res) => {
+  const translationId = parseInt(req.params.id);
+
+  if (isMockMode()) {
+    res.json({ success: true, data: { deleted_count: 1 } });
+    return;
+  }
+
+  try {
+    const result = await query('architecture', 'EXEC sp_delete_translation @translation_id = @tid', { tid: translationId });
+    const deletedCount = Array.isArray(result) && result.length > 0 ? (result[0] as any).deleted_count : 0;
+    res.json({ success: true, data: { deleted_count: deletedCount } });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: { message: '删除翻译失败', details: err.message } });
+  }
+}));
+
+// 批量删除翻译
+router.post('/translate/batch-delete', authMiddleware, requirePermission('translation', 'delete'), asyncHandler(async (req, res) => {
+  const { translation_ids } = req.body;
+
+  if (!Array.isArray(translation_ids) || translation_ids.length === 0) {
+    res.status(400).json({ success: false, error: { message: '缺少必要参数 translation_ids' } });
+    return;
+  }
+
+  if (isMockMode()) {
+    res.json({ success: true, data: { deleted_count: translation_ids.length } });
+    return;
+  }
+
+  try {
+    const idsJson = JSON.stringify(translation_ids);
+    const result = await query('architecture', 'EXEC sp_batch_delete_translations @translation_ids = @ids', { ids: idsJson });
+    const deletedCount = Array.isArray(result) && result.length > 0 ? (result[0] as any).deleted_count : 0;
+    res.json({ success: true, data: { deleted_count: deletedCount } });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: { message: '批量删除失败', details: err.message } });
+  }
+}));
+
 // 自动翻译接口（调用AI翻译）
-router.post('/translate/auto', authMiddleware, asyncHandler(async (req, res) => {
-  const { entity_type, entity_id, field_name, source_text, target_lang = 'en' } = req.body;
+router.post('/translate/auto', authMiddleware, requirePermission('translation', 'create'), asyncHandler(async (req, res) => {
+  const { source_text, target_lang = 'en' } = req.body;
 
   if (!source_text) {
     res.status(400).json({ success: false, error: { message: '缺少源文本' } });
     return;
   }
 
-  // 这里可以集成第三方翻译API（如Azure Translator, Google Translate等）
-  // 当前返回模拟翻译结果
-  const mockTranslations: Record<string, Record<string, string>> = {
-    en: {
-      '宫殿': 'Palace',
-      '寺庙': 'Temple',
-      '塔': 'Pagoda',
-      '园林': 'Garden',
-      '民居': 'Folk House',
-      '城墙': 'City Wall',
-      '桥梁': 'Bridge',
-      '牌坊': 'Memorial Archway',
-      '石窟': 'Grotto',
-      '陵墓': 'Mausoleum',
-      '祭祀建筑': 'Ritual Building',
-      '抬梁式': 'Post-and-Beam (Tailiang) Style',
-      '穿斗式': 'Column-and-Tie (Chuandou) Style',
-      '斗拱': 'Dougong (Bracket Set)',
-      '庑殿顶': 'Wudian (Hip) Roof',
-      '歇山顶': 'Xieshan (Hip-and-Gable) Roof',
-      '悬山顶': 'Xuanshan (Overhanging Gable) Roof',
-      '硬山顶': 'Yingshan (Hard Gable) Roof',
-      '攒尖顶': 'Zanjian (Pyramidal) Roof',
-      '榫卯': 'Mortise and Tenon',
-      '材分制': 'Cai-Fen Modular System',
-      '斗口制': 'Doukou Modular System',
-    }
-  };
+  const translated_text = await callBaiduTranslate(source_text, 'zh', target_lang);
 
-  // 尝试查找已有翻译
-  let translated = mockTranslations[target_lang]?.[source_text];
-  if (!translated) {
-    // 如果找不到精确匹配，返回一个通用的机器翻译标记
-    translated = `[${target_lang.toUpperCase()}] ${source_text}`;
+  if (!isMockMode()) {
+    try {
+      await execute(
+        'architecture',
+        'EXEC sp_upsert_translation_memory @source_text = @text, @source_language = @from, @target_language = @to, @translated_text = @result, @quality_score = @score',
+        { text: source_text, from: 'zh', to: target_lang, result: translated_text, score: 80 }
+      );
+    } catch {
+      // 忽略保存失败
+    }
   }
 
   res.json({
     success: true,
     data: {
-      translated_text: translated,
+      translated_text,
       source_text,
       target_lang,
       is_machine_translated: true,
@@ -230,7 +253,7 @@ router.post('/translate/auto', authMiddleware, asyncHandler(async (req, res) => 
 // ========================
 
 // 获取翻译统计
-router.get('/stats', authMiddleware, asyncHandler(async (req, res) => {
+router.get('/stats', authMiddleware, requirePermission('translation', 'read'), asyncHandler(async (req, res) => {
   if (isMockMode()) {
     res.json({
       success: true,
@@ -257,15 +280,15 @@ router.get('/stats', authMiddleware, asyncHandler(async (req, res) => {
   }
 }));
 
-// 获取翻译列表（带筛选和分页）
-router.get('/translations', authMiddleware, asyncHandler(async (req, res) => {
-  const { entity_type, language, status, page = 1, limit = 20 } = req.query;
+// 获取翻译列表（带筛选、搜索和分页）
+router.get('/translations', authMiddleware, requirePermission('translation', 'read'), asyncHandler(async (req, res) => {
+  const { search, entity_type, language, status, page = 1, limit = 20 } = req.query;
 
   if (isMockMode()) {
     const mockList = [
-      { translation_id: 1, entity_type: 'architecture', entity_id: 1, field_name: 'name', language_code: 'en', translated_text: 'Forbidden City', source_text: '故宫', review_status: 'approved', is_machine_translated: false, quality_score: 95, created_at: new Date().toISOString() },
-      { translation_id: 2, entity_type: 'architecture', entity_id: 2, field_name: 'description', language_code: 'en', translated_text: 'The Great Wall of China', source_text: '长城', review_status: 'pending', is_machine_translated: true, quality_score: 0, created_at: new Date().toISOString() },
-      { translation_id: 3, entity_type: 'quiz', entity_id: 10, field_name: 'question', language_code: 'ja', translated_text: '故宫の建築年代は？', source_text: '故宫的建筑年代是？', review_status: 'pending', is_machine_translated: true, quality_score: 0, created_at: new Date().toISOString() },
+      { translation_id: 1, entity_type: 'architecture', entity_id: 1, field_name: 'name', language_code: 'en', source_text: '故宫', translated_text: 'Forbidden City', review_status: 'approved', is_machine_translated: false, quality_score: 95, created_at: new Date().toISOString() },
+      { translation_id: 2, entity_type: 'architecture', entity_id: 2, field_name: 'description', language_code: 'en', source_text: '长城', translated_text: 'The Great Wall of China', review_status: 'pending', is_machine_translated: true, quality_score: 0, created_at: new Date().toISOString() },
+      { translation_id: 3, entity_type: 'quiz', entity_id: 10, field_name: 'question', language_code: 'ja', source_text: '故宫的建筑年代是？', translated_text: '故宫の建築年代は？', review_status: 'pending', is_machine_translated: true, quality_score: 0, created_at: new Date().toISOString() },
     ];
     res.json({ success: true, data: { list: mockList, total: 3, totalPages: 1 } });
     return;
@@ -274,8 +297,8 @@ router.get('/translations', authMiddleware, asyncHandler(async (req, res) => {
   try {
     const result = await query(
       'architecture',
-      'EXEC sp_get_pending_reviews @entity_type = @type, @language_code = @lang, @page = @p, @limit = @l',
-      { type: entity_type || null, lang: language || null, p: parseInt(page as string), l: parseInt(limit as string) }
+      'EXEC sp_search_translations @search_text = @search, @entity_type = @type, @language_code = @lang, @review_status = @status, @page = @p, @limit = @l',
+      { search: search || null, type: entity_type || null, lang: language || null, status: status || null, p: parseInt(page as string), l: parseInt(limit as string) }
     );
     const list = Array.isArray(result) ? result : [];
     const total = list.length > 0 ? (list[0] as any).total || list.length : 0;
@@ -286,7 +309,7 @@ router.get('/translations', authMiddleware, asyncHandler(async (req, res) => {
 }));
 
 // 翻译审核
-router.post('/review', authMiddleware, asyncHandler(async (req, res) => {
+router.post('/review', authMiddleware, requirePermission('translation', 'update'), asyncHandler(async (req, res) => {
   const { translation_id, review_status, review_notes, quality_score } = req.body;
   const reviewer_id = (req as any).user?.userId || 1;
 
@@ -313,7 +336,7 @@ router.post('/review', authMiddleware, asyncHandler(async (req, res) => {
 }));
 
 // 获取翻译历史版本
-router.get('/translations/:id/versions', authMiddleware, asyncHandler(async (req, res) => {
+router.get('/translations/:id/versions', authMiddleware, requirePermission('translation', 'read'), asyncHandler(async (req, res) => {
   const translationId = parseInt(req.params.id);
 
   if (isMockMode()) {
@@ -336,7 +359,7 @@ router.get('/translations/:id/versions', authMiddleware, asyncHandler(async (req
 }));
 
 // 翻译记忆查询
-router.post('/memory/lookup', authMiddleware, asyncHandler(async (req, res) => {
+router.post('/memory/lookup', authMiddleware, requirePermission('translation', 'read'), asyncHandler(async (req, res) => {
   const { source_text, target_language } = req.body;
 
   if (!source_text || !target_language) {
@@ -367,7 +390,7 @@ router.post('/memory/lookup', authMiddleware, asyncHandler(async (req, res) => {
 }));
 
 // 翻译记忆列表
-router.get('/memory', authMiddleware, asyncHandler(async (req, res) => {
+router.get('/memory', authMiddleware, requirePermission('translation', 'read'), asyncHandler(async (req, res) => {
   const { search, page = 1, limit = 50 } = req.query;
 
   if (isMockMode()) {
@@ -400,7 +423,7 @@ router.get('/memory', authMiddleware, asyncHandler(async (req, res) => {
 }));
 
 // 批量翻译
-router.post('/batch-translate', authMiddleware, asyncHandler(async (req, res) => {
+router.post('/batch-translate', authMiddleware, requirePermission('translation', 'create'), asyncHandler(async (req, res) => {
   const { entityType, targetLang, fields } = req.body;
 
   if (!entityType || !targetLang || !fields?.length) {
@@ -408,7 +431,6 @@ router.post('/batch-translate', authMiddleware, asyncHandler(async (req, res) =>
     return;
   }
 
-  // 返回任务信息（实际翻译由后台任务执行）
   res.json({
     success: true,
     data: {
@@ -416,7 +438,7 @@ router.post('/batch-translate', authMiddleware, asyncHandler(async (req, res) =>
       entity_type: entityType,
       target_lang: targetLang,
       fields,
-      total: 100, // 模拟总数
+      total: 100,
       status: 'pending',
     }
   });
@@ -425,7 +447,6 @@ router.post('/batch-translate', authMiddleware, asyncHandler(async (req, res) =>
 // 百度翻译API调用
 async function callBaiduTranslate(text: string, from: string, to: string): Promise<string> {
   if (!BAIDU_APP_ID || !BAIDU_SECRET_KEY) {
-    // 未配置API密钥，返回模拟翻译
     return `[${to.toUpperCase()}] ${text}`;
   }
 
@@ -456,41 +477,5 @@ async function callBaiduTranslate(text: string, from: string, to: string): Promi
     return `[${to.toUpperCase()}] ${text}`;
   }
 }
-
-// 自动翻译（使用百度API）
-router.post('/translate/auto', authMiddleware, asyncHandler(async (req, res) => {
-  const { source_text, target_lang = 'en' } = req.body;
-
-  if (!source_text) {
-    res.status(400).json({ success: false, error: { message: '缺少源文本' } });
-    return;
-  }
-
-  // 调用百度翻译API
-  const translated_text = await callBaiduTranslate(source_text, 'zh', target_lang);
-
-  // 保存到翻译记忆
-  if (!isMockMode()) {
-    try {
-      await execute(
-        'architecture',
-        'EXEC sp_upsert_translation_memory @source_text = @text, @source_language = @from, @target_language = @to, @translated_text = @result, @quality_score = @score',
-        { text: source_text, from: 'zh', to: target_lang, result: translated_text, score: 80 }
-      );
-    } catch {
-      // 忽略保存失败
-    }
-  }
-
-  res.json({
-    success: true,
-    data: {
-      translated_text,
-      source_text,
-      target_lang,
-      is_machine_translated: true,
-    }
-  });
-}));
 
 export default router;

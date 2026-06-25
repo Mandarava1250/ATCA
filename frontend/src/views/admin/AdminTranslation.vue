@@ -1,6 +1,5 @@
 <template>
   <div class="admin-translation">
-    <!-- 统计概览 -->
     <div class="stats-grid">
       <div class="stat-card">
         <div class="stat-icon">
@@ -8,7 +7,7 @@
         </div>
         <div class="stat-info">
           <span class="stat-value">{{ stats.total_translations || 0 }}</span>
-          <span class="stat-label">总翻译数</span>
+          <span class="stat-label">{{ t('admin.translation.total') }}</span>
         </div>
       </div>
       <div class="stat-card pending">
@@ -17,7 +16,7 @@
         </div>
         <div class="stat-info">
           <span class="stat-value">{{ stats.pending_reviews || 0 }}</span>
-          <span class="stat-label">待审核</span>
+          <span class="stat-label">{{ t('admin.translation.pending') }}</span>
         </div>
       </div>
       <div class="stat-card approved">
@@ -26,7 +25,7 @@
         </div>
         <div class="stat-info">
           <span class="stat-value">{{ stats.approved_translations || 0 }}</span>
-          <span class="stat-label">已通过</span>
+          <span class="stat-label">{{ t('admin.translation.approved') }}</span>
         </div>
       </div>
       <div class="stat-card memory">
@@ -35,70 +34,85 @@
         </div>
         <div class="stat-info">
           <span class="stat-value">{{ stats.memory_entries || 0 }}</span>
-          <span class="stat-label">翻译记忆</span>
+          <span class="stat-label">{{ t('admin.translation.memory') }}</span>
         </div>
       </div>
     </div>
 
-    <!-- 工具栏 -->
     <div class="toolbar">
       <div class="toolbar-left">
+        <input 
+          v-model="searchText" 
+          type="text" 
+          class="search-input" 
+          :placeholder="t('admin.translation.searchPlaceholder')"
+          @keyup.enter="loadTranslations"
+        />
         <select v-model="filter.entityType" class="filter-select" @change="loadTranslations">
-          <option value="">全部模块</option>
-          <option value="architecture">古建筑馆</option>
-          <option value="quiz">知识竞赛</option>
-          <option value="model3d">3D工坊</option>
-          <option value="community">社区讨论</option>
-          <option value="user">个人详情</option>
+          <option value="">{{ t('admin.translation.allModules') }}</option>
+          <option value="architecture">{{ t('admin.translation.architecture') }}</option>
+          <option value="quiz">{{ t('admin.translation.quiz') }}</option>
+          <option value="model3d">{{ t('admin.translation.model3d') }}</option>
+          <option value="community">{{ t('admin.translation.community') }}</option>
+          <option value="user">{{ t('admin.translation.user') }}</option>
         </select>
         <select v-model="filter.language" class="filter-select" @change="loadTranslations">
-          <option value="">全部语言</option>
-          <option value="en">English</option>
-          <option value="ja">日本語</option>
+          <option value="">{{ t('admin.translation.allLanguages') }}</option>
+          <option value="en">{{ t('admin.translation.english') }}</option>
+          <option value="ja">{{ t('admin.translation.japanese') }}</option>
         </select>
         <select v-model="filter.status" class="filter-select" @change="loadTranslations">
-          <option value="">全部状态</option>
-          <option value="pending">待审核</option>
-          <option value="approved">已通过</option>
-          <option value="rejected">已拒绝</option>
+          <option value="">{{ t('admin.translation.allStatus') }}</option>
+          <option value="pending">{{ t('admin.translation.statusPending') }}</option>
+          <option value="approved">{{ t('admin.translation.statusApproved') }}</option>
+          <option value="rejected">{{ t('admin.translation.statusRejected') }}</option>
         </select>
       </div>
       <div class="toolbar-right">
-        <button class="atca-btn atca-btn-primary" @click="showBatchTranslate = true">
-          <svg viewBox="0 0 24 24" width="16" height="16"><path d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 4h6M6.412 9a18.022 18.022 0 01-3.828-4m3.828 4c.404 2.004 2.004 3.828 4 4m-4-4c-.404-2.004-2.004-3.828-4-4m4 4h6" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
-          批量翻译
+        <button v-if="canAdd" class="atca-btn atca-btn-secondary" @click="showAddModal = true">
+          <svg viewBox="0 0 24 24" width="16" height="16"><path d="M12 4v16m8-8H4" stroke="currentColor" fill="none" stroke-width="2"/></svg>
+          {{ t('admin.translation.add') }}
         </button>
-        <button class="atca-btn atca-btn-secondary" @click="showMemoryManager = true">
+        <button v-if="canAdd" class="atca-btn atca-btn-secondary" @click="showBatchTranslate = true">
+          <svg viewBox="0 0 24 24" width="16" height="16"><path d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 4h6" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
+          {{ t('admin.translation.batchTranslate') }}
+        </button>
+        <button v-if="canEdit" class="atca-btn atca-btn-secondary" @click="showMemoryManager = true">
           <svg viewBox="0 0 24 24" width="16" height="16"><path d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
-          翻译记忆
+          {{ t('admin.translation.memoryManager') }}
         </button>
       </div>
     </div>
 
-    <!-- 翻译列表 -->
     <div class="translation-list">
       <div class="list-header">
-        <span class="col-entity">模块/实体</span>
-        <span class="col-field">字段</span>
-        <span class="col-source">原文</span>
-        <span class="col-target">翻译</span>
-        <span class="col-lang">语言</span>
-        <span class="col-status">状态</span>
-        <span class="col-actions">操作</span>
+        <label v-if="canDelete || canApprove" class="checkbox-all">
+          <input type="checkbox" v-model="selectAll" @change="toggleSelectAll" />
+        </label>
+        <span class="col-entity">{{ t('admin.translation.module') }}</span>
+        <span class="col-field">{{ t('admin.translation.field') }}</span>
+        <span class="col-source">{{ t('admin.translation.source') }}</span>
+        <span class="col-target">{{ t('admin.translation.target') }}</span>
+        <span class="col-lang">{{ t('admin.translation.language') }}</span>
+        <span class="col-status">{{ t('admin.translation.status') }}</span>
+        <span class="col-actions">{{ t('admin.translation.actions') }}</span>
       </div>
       
       <div v-if="loading" class="loading-state">
         <svg viewBox="0 0 24 24" width="32" height="32" class="spinner"><path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
-        <p>加载中...</p>
+        <p>{{ t('admin.translation.loading') }}</p>
       </div>
       
       <div v-else-if="translations.length === 0" class="empty-state">
         <svg viewBox="0 0 24 24" width="48" height="48"><path d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 4h6M6.412 9a18.022 18.022 0 01-3.828-4m3.828 4c.404 2.004 2.004 3.828 4 4m-4-4c-.404-2.004-2.004-3.828-4-4m4 4h6" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
-        <p>暂无翻译数据</p>
+        <p>{{ t('admin.translation.empty') }}</p>
       </div>
       
       <div v-else class="list-body">
         <div v-for="item in translations" :key="item.translation_id" class="translation-row" :class="item.review_status">
+          <label v-if="canDelete || canApprove" class="checkbox-item">
+            <input type="checkbox" :value="item.translation_id" v-model="selectedIds" />
+          </label>
           <span class="col-entity">
             <span class="entity-type">{{ getEntityTypeLabel(item.entity_type) }}</span>
             <span class="entity-id">#{{ item.entity_id }}</span>
@@ -115,27 +129,96 @@
             </span>
           </span>
           <span class="col-actions">
-            <button class="btn-icon" @click="editTranslation(item)" title="编辑">
+            <button v-if="canEdit" class="btn-icon" @click="editTranslation(item)" :title="t('admin.translation.edit')">
               <svg viewBox="0 0 24 24" width="16" height="16"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
             </button>
-            <button class="btn-icon" @click="showHistory(item)" title="历史版本">
+            <button v-if="canEdit" class="btn-icon" @click="showHistory(item)" :title="t('admin.translation.history')">
               <svg viewBox="0 0 24 24" width="16" height="16"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
             </button>
-            <button v-if="item.review_status === 'pending'" class="btn-icon approve" @click="approveTranslation(item)" title="通过">
+            <button v-if="canApprove && item.review_status === 'pending'" class="btn-icon approve" @click="approveTranslation(item)" :title="t('admin.translation.approve')">
               <svg viewBox="0 0 24 24" width="16" height="16"><path d="M5 13l4 4L19 7" stroke="currentColor" fill="none" stroke-width="2"/></svg>
             </button>
-            <button v-if="item.review_status === 'pending'" class="btn-icon reject" @click="rejectTranslation(item)" title="拒绝">
+            <button v-if="canApprove && item.review_status === 'pending'" class="btn-icon reject" @click="rejectTranslation(item)" :title="t('admin.translation.reject')">
               <svg viewBox="0 0 24 24" width="16" height="16"><path d="M6 18L18 6M6 6l12 12" stroke="currentColor" fill="none" stroke-width="2"/></svg>
+            </button>
+            <button v-if="canDelete" class="btn-icon delete" @click="confirmDelete(item)" :title="t('admin.translation.delete')">
+              <svg viewBox="0 0 24 24" width="16" height="16"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
             </button>
           </span>
         </div>
       </div>
       
-      <!-- 分页 -->
+      <div v-if="selectedIds.length > 0" class="batch-actions">
+        <span>{{ t('admin.translation.selected', { count: selectedIds.length }) }}</span>
+        <button v-if="canDelete" class="atca-btn atca-btn-danger" @click="batchDelete">
+          {{ t('admin.translation.batchDelete') }}
+        </button>
+        <button v-if="canApprove && hasPending" class="atca-btn atca-btn-primary" @click="batchApprove">
+          {{ t('admin.translation.batchApprove') }}
+        </button>
+      </div>
+      
       <div v-if="totalPages > 1" class="pagination">
-        <button class="page-btn" :disabled="page === 1" @click="page--">上一页</button>
+        <button class="page-btn" :disabled="page === 1" @click="page--">{{ t('admin.translation.prev') }}</button>
         <span class="page-info">{{ page }} / {{ totalPages }}</span>
-        <button class="page-btn" :disabled="page === totalPages" @click="page++">下一页</button>
+        <button class="page-btn" :disabled="page === totalPages" @click="page++">{{ t('admin.translation.next') }}</button>
+      </div>
+    </div>
+
+    <!-- 添加翻译弹窗 -->
+    <div v-if="showAddModal" class="modal-overlay" @click.self="showAddModal = false">
+      <div class="modal-content editor-modal">
+        <div class="modal-header">
+          <h3>{{ t('admin.translation.addTranslation') }}</h3>
+          <button class="close-btn" @click="showAddModal = false">
+            <svg viewBox="0 0 24 24" width="20" height="20"><path d="M6 18L18 6M6 6l12 12" stroke="currentColor" fill="none" stroke-width="2"/></svg>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label>{{ t('admin.translation.module') }}</label>
+            <select v-model="addForm.entity_type" class="atca-input">
+              <option value="architecture">{{ t('admin.translation.architecture') }}</option>
+              <option value="quiz">{{ t('admin.translation.quiz') }}</option>
+              <option value="model3d">{{ t('admin.translation.model3d') }}</option>
+              <option value="community">{{ t('admin.translation.community') }}</option>
+              <option value="user">{{ t('admin.translation.user') }}</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>{{ t('admin.translation.entityId') }}</label>
+            <input v-model.number="addForm.entity_id" type="number" class="atca-input" :placeholder="t('admin.translation.entityIdPlaceholder')" />
+          </div>
+          <div class="form-group">
+            <label>{{ t('admin.translation.field') }}</label>
+            <input v-model="addForm.field_name" type="text" class="atca-input" :placeholder="t('admin.translation.fieldPlaceholder')" />
+          </div>
+          <div class="form-group">
+            <label>{{ t('admin.translation.language') }}</label>
+            <select v-model="addForm.language_code" class="atca-input">
+              <option value="en">{{ t('admin.translation.english') }}</option>
+              <option value="ja">{{ t('admin.translation.japanese') }}</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>{{ t('admin.translation.source') }}</label>
+            <textarea v-model="addForm.source_text" class="atca-input" rows="3" :placeholder="t('admin.translation.sourcePlaceholder')"></textarea>
+          </div>
+          <div class="form-group">
+            <label>{{ t('admin.translation.target') }}</label>
+            <textarea v-model="addForm.translated_text" class="atca-input" rows="3" :placeholder="t('admin.translation.targetPlaceholder')"></textarea>
+            <button class="tool-btn" @click="autoTranslateAdd" :disabled="autoTranslating">
+              <svg viewBox="0 0 24 24" width="16" height="16"><path d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 4h6" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
+              {{ autoTranslating ? t('admin.translation.translating') : t('admin.translation.aiTranslate') }}
+            </button>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="atca-btn atca-btn-secondary" @click="showAddModal = false">{{ t('admin.translation.cancel') }}</button>
+          <button class="atca-btn atca-btn-primary" @click="addTranslation" :disabled="adding">
+            {{ adding ? t('admin.translation.saving') : t('admin.translation.save') }}
+          </button>
+        </div>
       </div>
     </div>
 
@@ -143,7 +226,7 @@
     <div v-if="showEditor" class="modal-overlay" @click.self="showEditor = false">
       <div class="modal-content editor-modal">
         <div class="modal-header">
-          <h3>编辑翻译</h3>
+          <h3>{{ t('admin.translation.editTranslation') }}</h3>
           <button class="close-btn" @click="showEditor = false">
             <svg viewBox="0 0 24 24" width="20" height="20"><path d="M6 18L18 6M6 6l12 12" stroke="currentColor" fill="none" stroke-width="2"/></svg>
           </button>
@@ -151,37 +234,37 @@
         <div class="modal-body">
           <div class="editor-layout">
             <div class="source-panel">
-              <label>原文</label>
+              <label>{{ t('admin.translation.source') }}</label>
               <div class="source-text">{{ editingItem?.source_text }}</div>
               <div class="source-meta">
-                <span>模块: {{ getEntityTypeLabel(editingItem?.entity_type) }}</span>
-                <span>字段: {{ editingItem?.field_name }}</span>
+                <span>{{ t('admin.translation.module') }}: {{ getEntityTypeLabel(editingItem?.entity_type) }}</span>
+                <span>{{ t('admin.translation.field') }}: {{ editingItem?.field_name }}</span>
               </div>
             </div>
             <div class="target-panel">
-              <label>翻译 ({{ editingItem?.language_code }})</label>
-              <textarea v-model="editForm.translated_text" class="atca-input" rows="6" placeholder="输入翻译内容"></textarea>
+              <label>{{ t('admin.translation.target') }} ({{ editingItem?.language_code }})</label>
+              <textarea v-model="editForm.translated_text" class="atca-input" rows="6" :placeholder="t('admin.translation.targetPlaceholder')"></textarea>
               <div class="editor-tools">
                 <button class="tool-btn" @click="autoTranslate" :disabled="autoTranslating">
                   <svg viewBox="0 0 24 24" width="16" height="16"><path d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 4h6" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
-                  {{ autoTranslating ? '翻译中...' : 'AI翻译' }}
+                  {{ autoTranslating ? t('admin.translation.translating') : t('admin.translation.aiTranslate') }}
                 </button>
                 <button class="tool-btn" @click="lookupMemory">
                   <svg viewBox="0 0 24 24" width="16" height="16"><path d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
-                  翻译记忆
+                  {{ t('admin.translation.memory') }}
                 </button>
               </div>
             </div>
           </div>
           <div class="quality-section">
-            <label>质量评分</label>
-            <input v-model="editForm.quality_score" type="number" min="0" max="100" class="atca-input" placeholder="0-100" />
+            <label>{{ t('admin.translation.quality') }}</label>
+            <input v-model.number="editForm.quality_score" type="number" min="0" max="100" class="atca-input" :placeholder="t('admin.translation.qualityPlaceholder')" />
           </div>
         </div>
         <div class="modal-footer">
-          <button class="atca-btn atca-btn-secondary" @click="showEditor = false">取消</button>
+          <button class="atca-btn atca-btn-secondary" @click="showEditor = false">{{ t('admin.translation.cancel') }}</button>
           <button class="atca-btn atca-btn-primary" @click="saveTranslation" :disabled="saving">
-            {{ saving ? '保存中...' : '保存' }}
+            {{ saving ? t('admin.translation.saving') : t('admin.translation.save') }}
           </button>
         </div>
       </div>
@@ -191,14 +274,14 @@
     <div v-if="showHistoryModal" class="modal-overlay" @click.self="showHistoryModal = false">
       <div class="modal-content history-modal">
         <div class="modal-header">
-          <h3>翻译历史</h3>
+          <h3>{{ t('admin.translation.history') }}</h3>
           <button class="close-btn" @click="showHistoryModal = false">
             <svg viewBox="0 0 24 24" width="20" height="20"><path d="M6 18L18 6M6 6l12 12" stroke="currentColor" fill="none" stroke-width="2"/></svg>
           </button>
         </div>
         <div class="modal-body">
-          <div v-if="historyLoading" class="loading-state">加载中...</div>
-          <div v-else-if="historyList.length === 0" class="empty-state">暂无历史版本</div>
+          <div v-if="historyLoading" class="loading-state">{{ t('admin.translation.loading') }}</div>
+          <div v-else-if="historyList.length === 0" class="empty-state">{{ t('admin.translation.noHistory') }}</div>
           <div v-else class="history-list">
             <div v-for="ver in historyList" :key="ver.version_id" class="history-item">
               <div class="history-header">
@@ -207,9 +290,9 @@
               </div>
               <div class="history-content">{{ ver.translated_text }}</div>
               <div class="history-meta">
-                <span v-if="ver.edit_reason">原因: {{ ver.edit_reason }}</span>
+                <span v-if="ver.edit_reason">{{ t('admin.translation.reason') }}: {{ ver.edit_reason }}</span>
               </div>
-              <button class="btn-text" @click="restoreVersion(ver)">恢复此版本</button>
+              <button class="btn-text" @click="restoreVersion(ver)">{{ t('admin.translation.restore') }}</button>
             </div>
           </div>
         </div>
@@ -220,7 +303,7 @@
     <div v-if="showBatchTranslate" class="modal-overlay" @click.self="showBatchTranslate = false">
       <div class="modal-content batch-modal">
         <div class="modal-header">
-          <h3>批量翻译</h3>
+          <h3>{{ t('admin.translation.batchTranslate') }}</h3>
           <button class="close-btn" @click="showBatchTranslate = false">
             <svg viewBox="0 0 24 24" width="20" height="20"><path d="M6 18L18 6M6 6l12 12" stroke="currentColor" fill="none" stroke-width="2"/></svg>
           </button>
@@ -228,35 +311,35 @@
         <div class="modal-body">
           <div class="batch-config">
             <div class="form-group">
-              <label>目标模块</label>
+              <label>{{ t('admin.translation.module') }}</label>
               <select v-model="batchConfig.entityType" class="atca-input">
-                <option value="architecture">古建筑馆</option>
-                <option value="quiz">知识竞赛</option>
-                <option value="model3d">3D工坊</option>
-                <option value="community">社区讨论</option>
+                <option value="architecture">{{ t('admin.translation.architecture') }}</option>
+                <option value="quiz">{{ t('admin.translation.quiz') }}</option>
+                <option value="model3d">{{ t('admin.translation.model3d') }}</option>
+                <option value="community">{{ t('admin.translation.community') }}</option>
               </select>
             </div>
             <div class="form-group">
-              <label>目标语言</label>
+              <label>{{ t('admin.translation.language') }}</label>
               <select v-model="batchConfig.targetLang" class="atca-input">
-                <option value="en">English</option>
-                <option value="ja">日本語</option>
+                <option value="en">{{ t('admin.translation.english') }}</option>
+                <option value="ja">{{ t('admin.translation.japanese') }}</option>
               </select>
             </div>
             <div class="form-group">
-              <label>翻译字段</label>
+              <label>{{ t('admin.translation.fields') }}</label>
               <div class="checkbox-group">
                 <label class="checkbox-item">
                   <input type="checkbox" v-model="batchConfig.fields" value="name" />
-                  名称
+                  {{ t('admin.translation.fieldName') }}
                 </label>
                 <label class="checkbox-item">
                   <input type="checkbox" v-model="batchConfig.fields" value="description" />
-                  描述
+                  {{ t('admin.translation.fieldDesc') }}
                 </label>
                 <label class="checkbox-item">
                   <input type="checkbox" v-model="batchConfig.fields" value="brief" />
-                  简介
+                  {{ t('admin.translation.fieldBrief') }}
                 </label>
               </div>
             </div>
@@ -269,9 +352,9 @@
           </div>
         </div>
         <div class="modal-footer">
-          <button class="atca-btn atca-btn-secondary" @click="showBatchTranslate = false">取消</button>
+          <button class="atca-btn atca-btn-secondary" @click="showBatchTranslate = false">{{ t('admin.translation.cancel') }}</button>
           <button class="atca-btn atca-btn-primary" @click="startBatchTranslate" :disabled="batchRunning">
-            {{ batchRunning ? '翻译中...' : '开始翻译' }}
+            {{ batchRunning ? t('admin.translation.translating') : t('admin.translation.start') }}
           </button>
         </div>
       </div>
@@ -281,18 +364,18 @@
     <div v-if="showMemoryManager" class="modal-overlay" @click.self="showMemoryManager = false">
       <div class="modal-content memory-modal">
         <div class="modal-header">
-          <h3>翻译记忆库</h3>
+          <h3>{{ t('admin.translation.memoryManager') }}</h3>
           <button class="close-btn" @click="showMemoryManager = false">
             <svg viewBox="0 0 24 24" width="20" height="20"><path d="M6 18L18 6M6 6l12 12" stroke="currentColor" fill="none" stroke-width="2"/></svg>
           </button>
         </div>
         <div class="modal-body">
           <div class="memory-search">
-            <input v-model="memorySearch" class="atca-input" placeholder="搜索原文或翻译..." @keyup.enter="searchMemory" />
-            <button class="atca-btn atca-btn-secondary" @click="searchMemory">搜索</button>
+            <input v-model="memorySearch" class="atca-input" :placeholder="t('admin.translation.searchMemory')" @keyup.enter="searchMemory" />
+            <button class="atca-btn atca-btn-secondary" @click="searchMemory">{{ t('admin.translation.search') }}</button>
           </div>
-          <div v-if="memoryLoading" class="loading-state">加载中...</div>
-          <div v-else-if="memoryList.length === 0" class="empty-state">暂无翻译记忆</div>
+          <div v-if="memoryLoading" class="loading-state">{{ t('admin.translation.loading') }}</div>
+          <div v-else-if="memoryList.length === 0" class="empty-state">{{ t('admin.translation.noMemory') }}</div>
           <div v-else class="memory-list">
             <div v-for="mem in memoryList" :key="mem.memory_id" class="memory-item">
               <div class="memory-source">{{ mem.source_text }}</div>
@@ -300,10 +383,26 @@
               <div class="memory-target">{{ mem.translated_text }}</div>
               <div class="memory-meta">
                 <span>{{ mem.source_language }} → {{ mem.target_language }}</span>
-                <span>使用 {{ mem.usage_count }} 次</span>
+                <span>{{ t('admin.translation.used') }} {{ mem.usage_count }} {{ t('admin.translation.times') }}</span>
               </div>
             </div>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 删除确认弹窗 -->
+    <div v-if="showDeleteConfirm" class="modal-overlay" @click.self="showDeleteConfirm = false">
+      <div class="modal-content confirm-modal">
+        <div class="modal-header">
+          <h3>{{ t('admin.translation.deleteConfirm') }}</h3>
+        </div>
+        <div class="modal-body">
+          <p>{{ t('admin.translation.deleteWarning') }}</p>
+        </div>
+        <div class="modal-footer">
+          <button class="atca-btn atca-btn-secondary" @click="showDeleteConfirm = false">{{ t('admin.translation.cancel') }}</button>
+          <button class="atca-btn atca-btn-danger" @click="doDelete">{{ t('admin.translation.delete') }}</button>
         </div>
       </div>
     </div>
@@ -311,12 +410,19 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue';
-import axios from 'axios';
+import { ref, computed, onMounted, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
+import { useUserStore } from '@/stores';
+import { i18nApi } from '@/services/api';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3100/api/v1';
+const { t } = useI18n();
+const userStore = useUserStore();
 
-// 统计数据
+const canEdit = computed(() => userStore.isAdmin || userStore.isModerator);
+const canDelete = computed(() => userStore.isAdmin || userStore.isModerator);
+const canApprove = computed(() => userStore.isAdmin || userStore.isModerator);
+const canAdd = computed(() => userStore.isAdmin || userStore.isModerator);
+
 const stats = ref({
   total_translations: 0,
   pending_reviews: 0,
@@ -329,18 +435,31 @@ const stats = ref({
   languages: 0,
 });
 
-// 翻译列表
 const translations = ref<any[]>([]);
 const loading = ref(false);
 const page = ref(1);
 const totalPages = ref(1);
+const searchText = ref('');
 const filter = ref({
   entityType: '',
   language: '',
   status: '',
 });
 
-// 编辑弹窗
+const selectedIds = ref<number[]>([]);
+const selectAll = ref(false);
+
+const showAddModal = ref(false);
+const addForm = ref({
+  entity_type: 'architecture',
+  entity_id: 0,
+  field_name: '',
+  language_code: 'en',
+  source_text: '',
+  translated_text: '',
+});
+const adding = ref(false);
+
 const showEditor = ref(false);
 const editingItem = ref<any>(null);
 const editForm = ref({
@@ -350,12 +469,10 @@ const editForm = ref({
 const saving = ref(false);
 const autoTranslating = ref(false);
 
-// 历史版本
 const showHistoryModal = ref(false);
 const historyList = ref<any[]>([]);
 const historyLoading = ref(false);
 
-// 批量翻译
 const showBatchTranslate = ref(false);
 const batchConfig = ref({
   entityType: 'architecture',
@@ -367,39 +484,47 @@ const batchProgress = ref(0);
 const batchProcessed = ref(0);
 const batchTotal = ref(0);
 
-// 翻译记忆
 const showMemoryManager = ref(false);
 const memorySearch = ref('');
 const memoryList = ref<any[]>([]);
 const memoryLoading = ref(false);
 
-// 加载统计
+const showDeleteConfirm = ref(false);
+const deletingItem = ref<any>(null);
+
+const hasPending = computed(() => 
+  translations.value.some(t => t.review_status === 'pending' && selectedIds.value.includes(t.translation_id))
+);
+
 async function loadStats() {
   try {
-    const res = await axios.get(`${API_BASE}/i18n/stats`);
-    if (res.data.success) {
-      stats.value = res.data.data;
+    const res = await i18nApi.getTranslationStats();
+    if (res.success) {
+      stats.value = res.data;
     }
   } catch (err) {
     console.error('加载统计失败:', err);
   }
 }
 
-// 加载翻译列表
 async function loadTranslations() {
   loading.value = true;
   try {
-    const params = new URLSearchParams();
-    if (filter.value.entityType) params.append('entity_type', filter.value.entityType);
-    if (filter.value.language) params.append('language', filter.value.language);
-    if (filter.value.status) params.append('status', filter.value.status);
-    params.append('page', String(page.value));
-    params.append('limit', '20');
+    const params: Record<string, any> = {
+      page: page.value,
+      limit: 20,
+    };
+    if (searchText.value) params.search = searchText.value;
+    if (filter.value.entityType) params.entity_type = filter.value.entityType;
+    if (filter.value.language) params.language = filter.value.language;
+    if (filter.value.status) params.status = filter.value.status;
 
-    const res = await axios.get(`${API_BASE}/i18n/translations?${params}`);
-    if (res.data.success) {
-      translations.value = res.data.data.list || [];
-      totalPages.value = res.data.data.totalPages || 1;
+    const res = await i18nApi.getTranslationList(params);
+    if (res.success) {
+      translations.value = res.data.list || [];
+      totalPages.value = res.data.totalPages || 1;
+      selectedIds.value = [];
+      selectAll.value = false;
     }
   } catch (err) {
     console.error('加载翻译列表失败:', err);
@@ -408,7 +533,58 @@ async function loadTranslations() {
   }
 }
 
-// 编辑翻译
+function toggleSelectAll() {
+  if (selectAll.value) {
+    selectedIds.value = translations.value.map(t => t.translation_id);
+  } else {
+    selectedIds.value = [];
+  }
+}
+
+function addTranslation() {
+  if (!addForm.value.source_text || !addForm.value.translated_text) return;
+  adding.value = true;
+  i18nApi.saveTranslation({
+    ...addForm.value,
+    is_machine_translated: false,
+    review_status: 'pending',
+  }).then(res => {
+    if (res.success) {
+      showAddModal.value = false;
+      addForm.value = {
+        entity_type: 'architecture',
+        entity_id: 0,
+        field_name: '',
+        language_code: 'en',
+        source_text: '',
+        translated_text: '',
+      };
+      loadTranslations();
+      loadStats();
+    }
+  }).finally(() => {
+    adding.value = false;
+  });
+}
+
+async function autoTranslateAdd() {
+  if (!addForm.value.source_text) return;
+  autoTranslating.value = true;
+  try {
+    const res = await i18nApi.autoTranslate({
+      source_text: addForm.value.source_text,
+      target_lang: addForm.value.language_code,
+    });
+    if (res.success) {
+      addForm.value.translated_text = res.data.translated_text;
+    }
+  } catch (err) {
+    console.error('自动翻译失败:', err);
+  } finally {
+    autoTranslating.value = false;
+  }
+}
+
 function editTranslation(item: any) {
   editingItem.value = item;
   editForm.value = {
@@ -418,117 +594,143 @@ function editTranslation(item: any) {
   showEditor.value = true;
 }
 
-// 自动翻译
 async function autoTranslate() {
   if (!editingItem.value?.source_text) return;
   autoTranslating.value = true;
   try {
-    const res = await axios.post(`${API_BASE}/i18n/translate/auto`, {
+    const res = await i18nApi.autoTranslate({
       source_text: editingItem.value.source_text,
       target_lang: editingItem.value.language_code,
     });
-    if (res.data.success) {
-      editForm.value.translated_text = res.data.data.translated_text;
+    if (res.success) {
+      editForm.value.translated_text = res.data.translated_text;
     }
   } catch (err) {
     console.error('自动翻译失败:', err);
-    alert('翻译失败，请手动输入');
   } finally {
     autoTranslating.value = false;
   }
 }
 
-// 查询翻译记忆
 async function lookupMemory() {
   if (!editingItem.value?.source_text) return;
   try {
-    const res = await axios.post(`${API_BASE}/i18n/memory/lookup`, {
+    const res = await i18nApi.lookupMemory({
       source_text: editingItem.value.source_text,
       target_language: editingItem.value.language_code,
     });
-    if (res.data.success && res.data.data.length > 0) {
-      editForm.value.translated_text = res.data.data[0].translated_text;
-      alert('已从翻译记忆中找到匹配');
-    } else {
-      alert('翻译记忆中无匹配项');
+    if (res.success && res.data.length > 0) {
+      editForm.value.translated_text = res.data[0].translated_text;
     }
   } catch (err) {
     console.error('查询翻译记忆失败:', err);
   }
 }
 
-// 保存翻译
-async function saveTranslation() {
+function saveTranslation() {
   if (!editingItem.value) return;
   saving.value = true;
-  try {
-    const res = await axios.post(`${API_BASE}/i18n/translate`, {
-      entity_type: editingItem.value.entity_type,
-      entity_id: editingItem.value.entity_id,
-      field_name: editingItem.value.field_name,
-      language_code: editingItem.value.language_code,
-      translated_text: editForm.value.translated_text,
-      is_machine_translated: false,
-      quality_score: editForm.value.quality_score,
-    });
-    if (res.data.success) {
-      alert('保存成功');
+  i18nApi.saveTranslation({
+    entity_type: editingItem.value.entity_type,
+    entity_id: editingItem.value.entity_id,
+    field_name: editingItem.value.field_name,
+    language_code: editingItem.value.language_code,
+    source_text: editingItem.value.source_text,
+    translated_text: editForm.value.translated_text,
+    is_machine_translated: false,
+    quality_score: editForm.value.quality_score,
+    review_status: editingItem.value.review_status,
+  }).then(res => {
+    if (res.success) {
       showEditor.value = false;
       loadTranslations();
       loadStats();
     }
-  } catch (err) {
-    console.error('保存失败:', err);
-    alert('保存失败');
-  } finally {
+  }).finally(() => {
     saving.value = false;
-  }
+  });
 }
 
-// 审核通过
-async function approveTranslation(item: any) {
-  try {
-    const res = await axios.post(`${API_BASE}/i18n/review`, {
-      translation_id: item.translation_id,
+function approveTranslation(item: any) {
+  i18nApi.reviewTranslation({
+    translation_id: item.translation_id,
+    review_status: 'approved',
+    quality_score: 90,
+  }).then(res => {
+    if (res.success) {
+      loadTranslations();
+      loadStats();
+    }
+  });
+}
+
+function rejectTranslation(item: any) {
+  i18nApi.reviewTranslation({
+    translation_id: item.translation_id,
+    review_status: 'rejected',
+    review_notes: '翻译质量不符合标准',
+  }).then(res => {
+    if (res.success) {
+      loadTranslations();
+      loadStats();
+    }
+  });
+}
+
+function confirmDelete(item: any) {
+  deletingItem.value = item;
+  showDeleteConfirm.value = true;
+}
+
+function doDelete() {
+  if (!deletingItem.value) return;
+  i18nApi.deleteTranslation(deletingItem.value.translation_id).then(res => {
+    if (res.success) {
+      showDeleteConfirm.value = false;
+      loadTranslations();
+      loadStats();
+    }
+  });
+}
+
+function batchDelete() {
+  if (selectedIds.value.length === 0) return;
+  i18nApi.batchDeleteTranslations(selectedIds.value).then(res => {
+    if (res.success) {
+      selectedIds.value = [];
+      selectAll.value = false;
+      loadTranslations();
+      loadStats();
+    }
+  });
+}
+
+function batchApprove() {
+  const pendingIds = translations.value
+    .filter(t => t.review_status === 'pending' && selectedIds.value.includes(t.translation_id))
+    .map(t => t.translation_id);
+  
+  pendingIds.forEach(id => {
+    i18nApi.reviewTranslation({
+      translation_id: id,
       review_status: 'approved',
       quality_score: 90,
     });
-    if (res.data.success) {
-      alert('已通过');
-      loadTranslations();
-      loadStats();
-    }
-  } catch (err) {
-    console.error('审核失败:', err);
-  }
+  });
+  
+  selectedIds.value = [];
+  selectAll.value = false;
+  loadTranslations();
+  loadStats();
 }
 
-// 审核拒绝
-async function rejectTranslation(item: any) {
-  try {
-    const res = await axios.post(`${API_BASE}/i18n/review`, {
-      translation_id: item.translation_id,
-      review_status: 'rejected',
-      review_notes: '翻译质量不符合标准',
-    });
-    if (res.data.success) {
-      alert('已拒绝');
-      loadTranslations();
-      loadStats();
-    }
-  } catch (err) {
-    console.error('审核失败:', err);
-  }
-}
-
-// 显示历史版本
 async function showHistory(item: any) {
   showHistoryModal.value = true;
   historyLoading.value = true;
   try {
-    const res = await axios.get(`${API_BASE}/i18n/translations/${item.translation_id}/versions`);
-    if (res.data.success) {
-      historyList.value = res.data.data || [];
+    const res = await i18nApi.getTranslationVersions(item.translation_id);
+    if (res.success) {
+      historyList.value = res.data || [];
     }
   } catch (err) {
     console.error('加载历史失败:', err);
@@ -537,63 +739,54 @@ async function showHistory(item: any) {
   }
 }
 
-// 恢复版本
-async function restoreVersion(ver: any) {
+function restoreVersion(ver: any) {
   if (!editingItem.value) return;
-  try {
-    const res = await axios.post(`${API_BASE}/i18n/translate`, {
-      entity_type: editingItem.value.entity_type,
-      entity_id: editingItem.value.entity_id,
-      field_name: editingItem.value.field_name,
-      language_code: editingItem.value.language_code,
-      translated_text: ver.translated_text,
-      edit_reason: `恢复到版本 v${ver.version_number}`,
-    });
-    if (res.data.success) {
-      alert('已恢复');
+  i18nApi.saveTranslation({
+    entity_type: editingItem.value.entity_type,
+    entity_id: editingItem.value.entity_id,
+    field_name: editingItem.value.field_name,
+    language_code: editingItem.value.language_code,
+    source_text: editingItem.value.source_text,
+    translated_text: ver.translated_text,
+    is_machine_translated: false,
+  }).then(res => {
+    if (res.success) {
       showHistoryModal.value = false;
       loadTranslations();
     }
-  } catch (err) {
-    console.error('恢复失败:', err);
-  }
+  });
 }
 
-// 批量翻译
 async function startBatchTranslate() {
   batchRunning.value = true;
   batchProgress.value = 0;
   batchProcessed.value = 0;
   try {
-    const res = await axios.post(`${API_BASE}/i18n/batch-translate`, batchConfig.value);
-    if (res.data.success) {
-      batchTotal.value = res.data.data.total || 0;
-      // 模拟进度更新
+    const res = await i18nApi.batchTranslate(batchConfig.value);
+    if (res.success) {
+      batchTotal.value = res.data.total || 0;
       while (batchProcessed.value < batchTotal.value) {
         await new Promise(r => setTimeout(r, 500));
         batchProcessed.value += 5;
         batchProgress.value = (batchProcessed.value / batchTotal.value) * 100;
       }
-      alert('批量翻译完成');
       showBatchTranslate.value = false;
       loadTranslations();
       loadStats();
     }
   } catch (err) {
     console.error('批量翻译失败:', err);
-    alert('批量翻译失败');
   } finally {
     batchRunning.value = false;
   }
 }
 
-// 搜索翻译记忆
 async function searchMemory() {
   memoryLoading.value = true;
   try {
-    const res = await axios.get(`${API_BASE}/i18n/memory?search=${memorySearch.value}`);
-    if (res.data.success) {
-      memoryList.value = res.data.data || [];
+    const res = await i18nApi.getMemoryList({ search: memorySearch.value });
+    if (res.success) {
+      memoryList.value = res.data || [];
     }
   } catch (err) {
     console.error('搜索失败:', err);
@@ -602,23 +795,22 @@ async function searchMemory() {
   }
 }
 
-// 辅助函数
 function getEntityTypeLabel(type: string): string {
   const labels: Record<string, string> = {
-    architecture: '古建筑',
-    quiz: '知识竞赛',
-    model3d: '3D模型',
-    community: '社区',
-    user: '用户',
+    architecture: t('admin.translation.architecture'),
+    quiz: t('admin.translation.quiz'),
+    model3d: t('admin.translation.model3d'),
+    community: t('admin.translation.community'),
+    user: t('admin.translation.user'),
   };
   return labels[type] || type;
 }
 
 function getStatusLabel(status: string): string {
   const labels: Record<string, string> = {
-    pending: '待审核',
-    approved: '已通过',
-    rejected: '已拒绝',
+    pending: t('admin.translation.statusPending'),
+    approved: t('admin.translation.statusApproved'),
+    rejected: t('admin.translation.statusRejected'),
   };
   return labels[status] || status;
 }
@@ -633,7 +825,6 @@ function formatDate(date: string): string {
   return new Date(date).toLocaleDateString('zh-CN');
 }
 
-// 监听分页变化
 watch(page, () => {
   loadTranslations();
 });
@@ -649,7 +840,6 @@ onMounted(() => {
   padding: 24px;
 }
 
-/* 统计卡片 */
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -698,7 +888,6 @@ onMounted(() => {
   color: var(--text-muted);
 }
 
-/* 工具栏 */
 .toolbar {
   display: flex;
   justify-content: space-between;
@@ -710,6 +899,17 @@ onMounted(() => {
 .toolbar-left {
   display: flex;
   gap: 12px;
+  align-items: center;
+}
+
+.search-input {
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  background: var(--bg-card);
+  color: var(--text);
+  font-size: 0.875rem;
+  min-width: 200px;
 }
 
 .filter-select {
@@ -726,7 +926,6 @@ onMounted(() => {
   gap: 12px;
 }
 
-/* 翻译列表 */
 .translation-list {
   background: var(--bg-card);
   border: 1px solid var(--border);
@@ -736,13 +935,21 @@ onMounted(() => {
 
 .list-header {
   display: grid;
-  grid-template-columns: 120px 80px 150px 150px 60px 80px 100px;
+  grid-template-columns: 40px 100px 80px 150px 150px 60px 80px 120px;
   padding: 12px 16px;
   background: var(--bg-hover);
   font-size: 0.75rem;
   font-weight: 600;
   color: var(--text-muted);
   border-bottom: 1px solid var(--border);
+  align-items: center;
+}
+
+.checkbox-all,
+.checkbox-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .list-body {
@@ -752,7 +959,7 @@ onMounted(() => {
 
 .translation-row {
   display: grid;
-  grid-template-columns: 120px 80px 150px 150px 60px 80px 100px;
+  grid-template-columns: 40px 100px 80px 150px 150px 60px 80px 120px;
   padding: 12px 16px;
   border-bottom: 1px solid var(--border);
   align-items: center;
@@ -825,12 +1032,12 @@ onMounted(() => {
 
 .col-actions {
   display: flex;
-  gap: 8px;
+  gap: 6px;
 }
 
 .btn-icon {
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -849,8 +1056,17 @@ onMounted(() => {
 
 .btn-icon.approve:hover { background: #22c55e; }
 .btn-icon.reject:hover { background: #ef4444; }
+.btn-icon.delete:hover { background: #ef4444; }
 
-/* 分页 */
+.batch-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 16px;
+  background: var(--bg-hover);
+  border-top: 1px solid var(--border);
+}
+
 .pagination {
   display: flex;
   justify-content: center;
@@ -879,10 +1095,12 @@ onMounted(() => {
   color: var(--text-muted);
 }
 
-/* 弹窗 */
 .modal-overlay {
   position: fixed;
-  inset: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
   background: rgba(0, 0, 0, 0.5);
   display: flex;
   align-items: center;
@@ -898,10 +1116,11 @@ onMounted(() => {
   overflow: auto;
 }
 
-.editor-modal { width: 600px; }
+.editor-modal { width: 650px; }
 .history-modal { width: 500px; }
 .batch-modal { width: 400px; }
 .memory-modal { width: 600px; }
+.confirm-modal { width: 350px; }
 
 .modal-header {
   display: flex;
@@ -941,7 +1160,18 @@ onMounted(() => {
   border-top: 1px solid var(--border);
 }
 
-/* 编辑器 */
+.form-group {
+  margin-bottom: 16px;
+}
+
+.form-group label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
 .editor-layout {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1004,7 +1234,6 @@ onMounted(() => {
   margin-top: 16px;
 }
 
-/* 历史列表 */
 .history-list {
   display: flex;
   flex-direction: column;
@@ -1043,7 +1272,16 @@ onMounted(() => {
   color: var(--text-muted);
 }
 
-/* 批量翻译 */
+.btn-text {
+  padding: 6px 12px;
+  font-size: 0.75rem;
+  color: var(--gold);
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
 .batch-config {
   display: flex;
   flex-direction: column;
@@ -1087,7 +1325,6 @@ onMounted(() => {
   margin-top: 8px;
 }
 
-/* 翻译记忆 */
 .memory-search {
   display: flex;
   gap: 12px;
@@ -1128,7 +1365,6 @@ onMounted(() => {
   color: var(--text-muted);
 }
 
-/* 状态 */
 .loading-state,
 .empty-state {
   display: flex;
@@ -1148,20 +1384,23 @@ onMounted(() => {
   to { transform: rotate(360deg); }
 }
 
-/* 响应式 */
 @media (max-width: 1199px) {
   .stats-grid {
     grid-template-columns: repeat(2, 1fr);
   }
 }
 
-@media (max-width: 599px) {
+@media (max-width: 768px) {
   .stats-grid {
     grid-template-columns: 1fr;
   }
   
   .toolbar {
     flex-direction: column;
+  }
+  
+  .toolbar-left {
+    flex-wrap: wrap;
   }
   
   .list-header,

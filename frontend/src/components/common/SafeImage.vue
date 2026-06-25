@@ -33,7 +33,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 
 const props = withDefaults(defineProps<{
   src: string;
@@ -44,23 +44,58 @@ const props = withDefaults(defineProps<{
   retryDelay?: number;
   showError?: boolean;
   errorText?: string;
+  timeout?: number; // 加载超时时间（毫秒）
 }>(), {
   alt: 'Image',
   maxRetries: 3,
   retryDelay: 1000,
   showError: true,
-  errorText: '图片加载失败'
+  errorText: '图片加载失败',
+  timeout: 2000 // 默认2秒超时
 });
 
 const emit = defineEmits<{
   (e: 'error', error: Error): void;
   (e: 'load'): void;
+  (e: 'timeout'): void;
 }>();
 
 const retryCount = ref(0);
 const isLoading = ref(true);
 const hasFailed = ref(false);
 const error = ref<Error | null>(null);
+const timeoutTimer = ref<number | null>(null);
+const loadStartTime = ref<number>(0);
+
+/**
+ * 清除超时定时器
+ */
+const clearTimeoutTimer = () => {
+  if (timeoutTimer.value) {
+    window.clearTimeout(timeoutTimer.value);
+    timeoutTimer.value = null;
+  }
+};
+
+/**
+ * 设置加载超时定时器
+ */
+const setLoadTimeout = () => {
+  clearTimeoutTimer();
+  loadStartTime.value = Date.now();
+  
+  timeoutTimer.value = window.setTimeout(() => {
+    if (isLoading.value && !hasFailed.value) {
+      console.warn(`[SafeImage] Image load timeout after ${props.timeout}ms: ${props.src}`);
+      error.value = new Error(`Image load timeout: ${props.src}`);
+      hasFailed.value = true;
+      isLoading.value = false;
+      clearTimeoutTimer();
+      emit('timeout');
+      emit('error', error.value!);
+    }
+  }, props.timeout);
+};
 
 /**
  * 当前显示的图片地址
@@ -93,6 +128,7 @@ const fallbackStyle = computed(() => {
  * 图片加载失败处理
  */
 const onError = (e: Event) => {
+  clearTimeoutTimer();
   const target = e.target as HTMLImageElement;
   error.value = new Error(`Image load failed: ${props.src}`);
   
@@ -101,6 +137,8 @@ const onError = (e: Event) => {
     isLoading.value = true;
     
     setTimeout(() => {
+      // 重新设置超时定时器
+      setLoadTimeout();
       target.src = props.src;
     }, props.retryDelay * retryCount.value);
   } else {
@@ -114,10 +152,36 @@ const onError = (e: Event) => {
  * 图片加载成功处理
  */
 const onLoad = () => {
+  clearTimeoutTimer();
+  const loadTime = Date.now() - loadStartTime.value;
+  console.log(`[SafeImage] Image loaded in ${loadTime}ms: ${props.src}`);
   isLoading.value = false;
   hasFailed.value = false;
   emit('load');
 };
+
+// 监听src变化，重置状态并设置超时
+watch(() => props.src, (newSrc) => {
+  if (newSrc && newSrc !== 'null' && newSrc !== 'undefined') {
+    isLoading.value = true;
+    hasFailed.value = false;
+    retryCount.value = 0;
+    error.value = null;
+    setLoadTimeout();
+  }
+});
+
+// 组件挂载时设置超时
+onMounted(() => {
+  if (props.src && props.src !== 'null' && props.src !== 'undefined') {
+    setLoadTimeout();
+  }
+});
+
+// 组件卸载时清除定时器
+onUnmounted(() => {
+  clearTimeoutTimer();
+});
 </script>
 
 <style scoped>

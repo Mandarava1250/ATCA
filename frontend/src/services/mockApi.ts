@@ -1466,6 +1466,114 @@ export const mockI18nApi = {
       },
     };
   },
+
+  deleteTranslation: async (id: number) => {
+    await delay();
+    return { success: true, data: { deleted_count: 1 } };
+  },
+
+  batchDeleteTranslations: async (ids: number[]) => {
+    await delay();
+    return { success: true, data: { deleted_count: ids.length } };
+  },
+
+  getTranslationList: async (params?: { search?: string; entity_type?: string; language?: string; status?: string; page?: number; limit?: number }) => {
+    await delay();
+    return {
+      success: true,
+      data: {
+        list: [
+          {
+            translation_id: 1,
+            entity_type: 'architecture',
+            entity_id: 1,
+            field_name: 'name',
+            language_code: 'en',
+            source_text: '太和殿',
+            translated_text: 'Hall of Supreme Harmony',
+            review_status: 'approved',
+            is_machine_translated: false,
+            quality_score: 95,
+            created_at: '2024-01-01T00:00:00Z',
+            updated_at: '2024-01-01T00:00:00Z',
+          },
+          {
+            translation_id: 2,
+            entity_type: 'architecture',
+            entity_id: 1,
+            field_name: 'description',
+            language_code: 'en',
+            source_text: '故宫核心建筑，中国现存最大的木结构大殿',
+            translated_text: 'The core building of the Forbidden City, the largest wooden hall in China',
+            review_status: 'pending',
+            is_machine_translated: true,
+            quality_score: 0,
+            created_at: '2024-01-02T00:00:00Z',
+            updated_at: '2024-01-02T00:00:00Z',
+          },
+        ],
+        total: 2,
+        totalPages: 1,
+      },
+    };
+  },
+
+  getTranslationStats: async () => {
+    await delay();
+    return {
+      success: true,
+      data: {
+        total_translations: 150,
+        pending_reviews: 25,
+        approved_translations: 100,
+        rejected_translations: 5,
+        machine_translations: 80,
+        human_translations: 70,
+        memory_entries: 200,
+        entity_types: 5,
+        languages: 2,
+      },
+    };
+  },
+
+  reviewTranslation: async (data: { translation_id: number; review_status: string; review_notes?: string; quality_score?: number }) => {
+    await delay();
+    return { success: true, data: { review_id: Date.now() } };
+  },
+
+  getTranslationVersions: async (id: number) => {
+    await delay();
+    return {
+      success: true,
+      data: [
+        {
+          version_id: 1,
+          translation_id: id,
+          translated_text: 'Original text',
+          change_reason: 'Initial translation',
+          created_at: '2024-01-01T00:00:00Z',
+        },
+      ],
+    };
+  },
+
+  lookupMemory: async (data: { source_text: string; target_language: string }) => {
+    await delay();
+    return { success: true, data: [] };
+  },
+
+  getMemoryList: async (params?: { search?: string; page?: number; limit?: number }) => {
+    await delay();
+    return {
+      success: true,
+      data: [],
+    };
+  },
+
+  batchTranslate: async (data: { entityType: string; targetLang: string; fields: string[] }) => {
+    await delay();
+    return { success: true, data: [] };
+  },
 };
 
 // 3D模型API Mock

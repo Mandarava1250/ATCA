@@ -33,6 +33,10 @@ const rolePermissions: Record<Role, Permission[]> = {
     { resource: 'architecture', action: '*' },
     { resource: 'quiz', action: '*' },
     { resource: 'social', action: 'delete' },
+    { resource: 'translation', action: 'read' },
+    { resource: 'translation', action: 'create' },
+    { resource: 'translation', action: 'update' },
+    { resource: 'translation', action: 'delete' },
   ],
   user: [
     { resource: 'user', action: 'read' },
@@ -44,6 +48,7 @@ const rolePermissions: Record<Role, Permission[]> = {
     { resource: 'social', action: 'update' },
     { resource: 'model3d', action: '*' },
     { resource: 'profile', action: '*' },
+    { resource: 'translation', action: 'read' },
   ],
   guest: [
     { resource: 'architecture', action: 'read' },

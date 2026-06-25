@@ -4,7 +4,7 @@
  */
 
 import Redis from 'ioredis';
-import { config } from '../config';
+import { config } from './app';
 
 // Redis客户端实例
 let redisClient: Redis | null = null;
@@ -163,8 +163,12 @@ export const SyncCacheService = {
   async acquireSyncLock(userId: number, entityType: string, entityId: number): Promise<boolean> {
     const redis = getRedis();
     const key = `${SYNC_CACHE_PREFIX}${LOCK_KEY_PREFIX}${userId}:${entityType}:${entityId}`;
-    const result = await redis.set(key, '1', 'NX', 'EX', LOCK_TTL);
-    return result === 'OK';
+    const result = await redis.setnx(key, '1');
+    if (result === 1) {
+      await redis.expire(key, LOCK_TTL);
+      return true;
+    }
+    return false;
   },
 
   /**

@@ -14,6 +14,8 @@ export interface Note {
 }
 
 const STORAGE_KEY = 'atca_notes';
+const MAX_NOTES = 100;
+const MAX_STORAGE_SIZE = 5 * 1024 * 1024; // 5MB
 
 function loadNotes(): Note[] {
   try {
@@ -23,8 +25,46 @@ function loadNotes(): Note[] {
   }
 }
 
-function saveNotes(notes: Note[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(notes));
+function saveNotes(notes: Note[]): { success: boolean; trimmed: boolean } {
+  // 限制笔记数量
+  let trimmedNotes = notes.slice(0, MAX_NOTES);
+  let data: string;
+  let trimmed = false;
+
+  try {
+    data = JSON.stringify(trimmedNotes);
+  } catch {
+    // 如果序列化失败，尝试减少内容
+    const simplifiedNotes = trimmedNotes.map(n => ({
+      ...n,
+      content: n.content.substring(0, 1000)
+    }));
+    data = JSON.stringify(simplifiedNotes);
+    trimmed = true;
+  }
+
+  // 检查存储容量
+  if (data.length > MAX_STORAGE_SIZE) {
+    if (trimmedNotes.length <= 10) {
+      // 已经是最少了，无法再删减
+      console.error('笔记存储已满且无法进一步精简');
+      return { success: false, trimmed: true };
+    }
+    // 尝试保留一半
+    const halfSize = Math.floor(trimmedNotes.length / 2);
+    return saveNotes(trimmedNotes.slice(0, halfSize));
+  }
+
+  try {
+    localStorage.setItem(STORAGE_KEY, data);
+    return { success: true, trimmed };
+  } catch (e) {
+    // localStorage 写满，尝试清理
+    if (trimmedNotes.length > 10) {
+      return saveNotes(trimmedNotes.slice(0, Math.floor(trimmedNotes.length / 2)));
+    }
+    return { success: false, trimmed: true };
+  }
 }
 
 export const noteManager = {

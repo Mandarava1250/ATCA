@@ -112,6 +112,11 @@ export class ConflictDetector {
     const entryWords = this.tokenize(entry.content);
     const keywordSet = new Set(entry.keywords.map(k => k.toLowerCase()));
 
+    // 处理空输入情况
+    if (keywordSet.size === 0 && textWords.length === 0 && entryWords.length === 0) {
+      return 0;
+    }
+
     const textSet = new Set(textWords.map(w => w.toLowerCase()));
     let keywordMatches = 0;
     for (const keyword of keywordSet) {
@@ -119,7 +124,8 @@ export class ConflictDetector {
         keywordMatches++;
       }
     }
-    const keywordScore = keywordMatches / keywordSet.size;
+    // 防止除零
+    const keywordScore = keywordSet.size > 0 ? keywordMatches / keywordSet.size : 0;
 
     let intersection = 0;
     for (const word of textWords) {
@@ -127,7 +133,9 @@ export class ConflictDetector {
         intersection++;
       }
     }
-    const jaccardScore = intersection / (textWords.length + entryWords.length - intersection);
+    const union = textWords.length + entryWords.length - intersection;
+    // 防止除零：如果 union 为 0，但 intersection > 0，返回 1；如果 union 为 0 且 intersection 为 0，返回 0
+    const jaccardScore = union > 0 ? intersection / union : (intersection > 0 ? 1 : 0);
 
     return keywordScore * 0.7 + jaccardScore * 0.3;
   }

@@ -518,10 +518,10 @@ const { t, locale } = useI18n();
 
 // 标签页配置
 const tabs = computed(() => [
-  { id: 'visualize', label: $t('admin.knowledgeGraph.tabs.visualize'), icon: '0 0 24 24', iconPath: 'M13.5 20.5C13.5 21.88 12.38 23 11 23s-2.5-1.12-2.5-2.5c0-.69.28-1.32.74-1.76l-3.54-3.54c-.78.72-1.79 1.19-2.9 1.19C3.58 16 1 13.42 1 10c0-1.11.47-2.12 1.29-2.9L8.76 8.74c.44.46 1.07.74 1.74.74h.5c.28 0 .5-.22.5-.5V4.5c0-.28.22-.5.5-.5h3c.28 0 .5.22.5.5v8.75c0 .67.28 1.3.74 1.76l3.54-3.54c.82.78 1.29 1.79 1.29 2.9 0 3.42-2.58 6-6 6z' },
-  { id: 'entities', label: $t('admin.knowledgeGraph.tabs.entities'), icon: '0 0 24 24', iconPath: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z', count: entities.value.length },
-  { id: 'relations', label: $t('admin.knowledgeGraph.tabs.relations'), icon: '0 0 24 24', iconPath: 'M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1', count: relations.value.length },
-  { id: 'history', label: $t('admin.knowledgeGraph.tabs.history'), icon: '0 0 24 24', iconPath: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' },
+  { id: 'visualize', label: t('admin.knowledgeGraph.tabs.visualize'), icon: '0 0 24 24', iconPath: 'M13.5 20.5C13.5 21.88 12.38 23 11 23s-2.5-1.12-2.5-2.5c0-.69.28-1.32.74-1.76l-3.54-3.54c-.78.72-1.79 1.19-2.9 1.19C3.58 16 1 13.42 1 10c0-1.11.47-2.12 1.29-2.9L8.76 8.74c.44.46 1.07.74 1.74.74h.5c.28 0 .5-.22.5-.5V4.5c0-.28.22-.5.5-.5h3c.28 0 .5.22.5.5v8.75c0 .67.28 1.3.74 1.76l3.54-3.54c.82.78 1.29 1.79 1.29 2.9 0 3.42-2.58 6-6 6z' },
+  { id: 'entities', label: t('admin.knowledgeGraph.tabs.entities'), icon: '0 0 24 24', iconPath: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z', count: entities.value.length },
+  { id: 'relations', label: t('admin.knowledgeGraph.tabs.relations'), icon: '0 0 24 24', iconPath: 'M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1', count: relations.value.length },
+  { id: 'history', label: t('admin.knowledgeGraph.tabs.history'), icon: '0 0 24 24', iconPath: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' },
 ]);
 
 const activeTab = ref('visualize');
@@ -617,19 +617,19 @@ function formatDate(dateStr: string) {
 
 // 可视化操作
 function zoomIn() {
-  showToast('success', $t('admin.knowledgeGraph.visualize.zoomIn'));
+  showToast('success', t('admin.knowledgeGraph.visualize.zoomIn'));
 }
 
 function zoomOut() {
-  showToast('success', $t('admin.knowledgeGraph.visualize.zoomOut'));
+  showToast('success', t('admin.knowledgeGraph.visualize.zoomOut'));
 }
 
 function resetView() {
-  showToast('success', $t('admin.knowledgeGraph.visualize.resetView'));
+  showToast('success', t('admin.knowledgeGraph.visualize.resetView'));
 }
 
 function toggleFullscreen() {
-  showToast('success', $t('admin.knowledgeGraph.visualize.toggleFullscreen'));
+  showToast('success', t('admin.knowledgeGraph.visualize.toggleFullscreen'));
 }
 
 // 实体操作
@@ -643,9 +643,9 @@ function editEntity(entity: any) {
 }
 
 function deleteEntity(id: number) {
-  if (confirm($t('admin.knowledgeGraph.entities.confirmDelete'))) {
+  if (confirm(t('admin.knowledgeGraph.entities.confirmDelete'))) {
     entities.value = entities.value.filter(e => e.id !== id);
-    showToast('success', $t('admin.knowledgeGraph.entities.deleteSuccess'));
+    showToast('success', t('admin.knowledgeGraph.entities.deleteSuccess'));
   }
 }
 
@@ -660,7 +660,7 @@ function closeEntityModal() {
 
 function saveEntity() {
   if (!entityForm.name) {
-    showToast('error', $t('admin.knowledgeGraph.entityModal.nameRequired'));
+    showToast('error', t('admin.knowledgeGraph.entityModal.nameRequired'));
     return;
   }
   
@@ -675,7 +675,7 @@ function saveEntity() {
         attributes: entityForm.attributes ? JSON.parse(entityForm.attributes) : {}
       };
     }
-    showToast('success', $t('admin.knowledgeGraph.entities.updateSuccess'));
+    showToast('success', t('admin.knowledgeGraph.entities.updateSuccess'));
   } else {
     const newEntity = {
       id: Date.now(),
@@ -686,7 +686,7 @@ function saveEntity() {
       relationCount: 0
     };
     entities.value.unshift(newEntity);
-    showToast('success', $t('admin.knowledgeGraph.entities.addSuccess'));
+    showToast('success', t('admin.knowledgeGraph.entities.addSuccess'));
   }
   
   closeEntityModal();
@@ -702,9 +702,9 @@ function editRelation(relation: any) {
 }
 
 function removeRelation(id: number) {
-  if (confirm($t('admin.knowledgeGraph.relations.confirmDelete'))) {
+  if (confirm(t('admin.knowledgeGraph.relations.confirmDelete'))) {
     relations.value = relations.value.filter(r => r.id !== id);
-    showToast('success', $t('admin.knowledgeGraph.relations.deleteSuccess'));
+    showToast('success', t('admin.knowledgeGraph.relations.deleteSuccess'));
   }
 }
 
@@ -718,7 +718,7 @@ function closeRelationModal() {
 
 function saveRelation() {
   if (!relationForm.sourceId || !relationForm.targetId) {
-    showToast('error', $t('admin.knowledgeGraph.relationModal.entityRequired'));
+    showToast('error', t('admin.knowledgeGraph.relationModal.entityRequired'));
     return;
   }
   
@@ -737,7 +737,7 @@ function saveRelation() {
         targetName: targetEntity?.name || ''
       };
     }
-    showToast('success', $t('admin.knowledgeGraph.relations.updateSuccess'));
+    showToast('success', t('admin.knowledgeGraph.relations.updateSuccess'));
   } else {
     const newRelation = {
       id: Date.now(),
@@ -748,7 +748,7 @@ function saveRelation() {
       targetName: targetEntity?.name || ''
     };
     relations.value.unshift(newRelation);
-    showToast('success', $t('admin.knowledgeGraph.relations.addSuccess'));
+    showToast('success', t('admin.knowledgeGraph.relations.addSuccess'));
   }
   
   closeRelationModal();
@@ -757,7 +757,7 @@ function saveRelation() {
 // 导入导出操作
 async function executeImport() {
   if (!importConfig.data.trim()) {
-    showToast('error', $t('admin.knowledgeGraph.importModal.dataRequired'));
+    showToast('error', t('admin.knowledgeGraph.importModal.dataRequired'));
     return;
   }
   
@@ -773,30 +773,30 @@ async function executeImport() {
     });
     
     if (result.success) {
-      showToast('success', importConfig.validateOnly ? $t('admin.knowledgeGraph.importModal.validateSuccess') : $t('admin.knowledgeGraph.importModal.importSuccess'));
+      showToast('success', importConfig.validateOnly ? t('admin.knowledgeGraph.importModal.validateSuccess') : t('admin.knowledgeGraph.importModal.importSuccess'));
       showImportModal.value = false;
       importConfig.data = '';
     } else {
-      showToast('error', result.error?.message || $t('admin.knowledgeGraph.importModal.importFailed'));
+      showToast('error', result.error?.message || t('admin.knowledgeGraph.importModal.importFailed'));
     }
   } catch (error) {
-    showToast('error', $t('admin.knowledgeGraph.importModal.formatError'));
+    showToast('error', t('admin.knowledgeGraph.importModal.formatError'));
   } finally {
     importing.value = false;
   }
 }
 
 function executeExport() {
-  showToast('success', $t('admin.knowledgeGraph.exportModal.exporting'));
+  showToast('success', t('admin.knowledgeGraph.exportModal.exporting'));
   showExportModal.value = false;
 }
 
 function viewReport(record: any) {
-  showToast('success', $t('admin.knowledgeGraph.history.viewingReport') + record.importId);
+  showToast('success', t('admin.knowledgeGraph.history.viewingReport') + record.importId);
 }
 
 function retryImport(record: any) {
-  showToast('success', $t('admin.knowledgeGraph.history.retrying') + record.importId);
+  showToast('success', t('admin.knowledgeGraph.history.retrying') + record.importId);
 }
 </script>
 

@@ -33,6 +33,9 @@ apiClient.interceptors.request.use(
     (error) => Promise.reject(error)
 );
 
+// 防止重复跳转登录页的标志
+let isRedirecting = false;
+
 // 响应拦截器
 apiClient.interceptors.response.use(
     (response) => response.data,
@@ -53,9 +56,19 @@ apiClient.interceptors.response.use(
             originalRequest.headers.Authorization = `Bearer ${accessToken}`;
             return apiClient(originalRequest);
           } catch {
-            const userStore = useUserStore();
-            userStore.logout();
-            window.location.href = '/login';
+            // 防止重复调用 logout 和跳转
+            if (!isRedirecting) {
+              isRedirecting = true;
+              const userStore = useUserStore();
+              userStore.logout();
+              // 使用 setTimeout 确保其他 pending 请求有机会完成
+              setTimeout(() => {
+                if (!window.location.href.includes('/login')) {
+                  window.location.href = '/login';
+                }
+                isRedirecting = false;
+              }, 100);
+            }
           }
         }
       }
@@ -326,6 +339,24 @@ export const i18nApi = {
       http.post<{ success: boolean; data: any }>('/i18n/translate', data),
   autoTranslate: (data: { entity_type?: string; entity_id?: number; field_name?: string; source_text: string; target_lang?: string }) =>
       http.post<{ success: boolean; data: { translated_text: string; is_machine_translated: boolean } }>('/i18n/translate/auto', data),
+  deleteTranslation: (id: number) =>
+      http.delete<{ success: boolean; data: { deleted_count: number } }>(`/i18n/translate/${id}`),
+  batchDeleteTranslations: (ids: number[]) =>
+      http.post<{ success: boolean; data: { deleted_count: number } }>('/i18n/translate/batch-delete', { translation_ids: ids }),
+  getTranslationList: (params?: { search?: string; entity_type?: string; language?: string; status?: string; page?: number; limit?: number }) =>
+      http.get<{ success: boolean; data: { list: any[]; total: number; totalPages: number } }>('/i18n/translations', params),
+  getTranslationStats: () =>
+      http.get<{ success: boolean; data: any }>('/i18n/stats'),
+  reviewTranslation: (data: { translation_id: number; review_status: string; review_notes?: string; quality_score?: number }) =>
+      http.post<{ success: boolean; data: { review_id: number } }>('/i18n/review', data),
+  getTranslationVersions: (id: number) =>
+      http.get<{ success: boolean; data: any[] }>(`/i18n/translations/${id}/versions`),
+  lookupMemory: (data: { source_text: string; target_language: string }) =>
+      http.post<{ success: boolean; data: any[] }>('/i18n/memory/lookup', data),
+  getMemoryList: (params?: { search?: string; page?: number; limit?: number }) =>
+      http.get<{ success: boolean; data: any[] }>('/i18n/memory', params),
+  batchTranslate: (data: { entityType: string; targetLang: string; fields: string[] }) =>
+      http.post<{ success: boolean; data: any }>('/i18n/batch-translate', data),
 };
 
 // 认证API补充

@@ -68,7 +68,7 @@
         </router-link>
         <router-link to="/admin/translation" class="nav-item" :class="{ active: route.path.startsWith('/admin/translation') }">
           <svg viewBox="0 0 24 24" width="18" height="18"><path d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 4h6M6.412 9a18.022 18.022 0 01-3.828-4m3.828 4c.404 2.004 2.004 3.828 4 4m-4-4c-.404-2.004-2.004-3.828-4-4m4 4h6" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
-          <span v-if="!sidebarCollapsed">{{ $t('admin.translation') }}</span>
+          <span v-if="!sidebarCollapsed">{{ $t('admin.translation.title') }}</span>
         </router-link>
         
         <!-- 系统运维模块 -->
@@ -115,7 +115,7 @@ import { useUserStore } from '@/stores';
 const route = useRoute();
 const router = useRouter();
 const userStore = useUserStore();
-const { locale } = useI18n();
+const { locale, t } = useI18n();
 
 const sidebarCollapsed = ref(false);
 const mobileMenuOpen = ref(false);
@@ -123,20 +123,20 @@ const currentLocale = computed(() => locale.value);
 
 const pageTitle = computed(() => {
     const titles: Record<string, string> = {
-      '/admin': $t('admin.dashboard'),
-      '/admin/users': $t('admin.users'),
-      '/admin/architectures': $t('admin.architectures'),
-      '/admin/questions': $t('admin.questions'),
-      '/admin/knowledge-graph': $t('admin.knowledgeGraph.title'),
-      '/admin/models': $t('admin.models'),
-      '/admin/ai-configs': $t('admin.aiConfigs'),
-      '/admin/activities': $t('admin.activities'),
-      '/admin/achievements': $t('admin.achievements'),
-      '/admin/community': $t('admin.community'),
-      '/admin/translation': $t('admin.translation'),
-      '/admin/monitor': $t('admin.monitor'),
+      '/admin': t('admin.dashboard'),
+      '/admin/users': t('admin.users'),
+      '/admin/architectures': t('admin.architectures'),
+      '/admin/questions': t('admin.questions'),
+      '/admin/knowledge-graph': t('admin.knowledgeGraph.title'),
+      '/admin/models': t('admin.models'),
+      '/admin/ai-configs': t('admin.aiConfigs'),
+      '/admin/activities': t('admin.activities'),
+      '/admin/achievements': t('admin.achievements'),
+      '/admin/community': t('admin.community'),
+      '/admin/translation': t('admin.translation.title'),
+      '/admin/monitor': t('admin.monitor'),
     };
-    return titles[route.path] || $t('admin.dashboard');
+    return titles[route.path] || t('admin.dashboard');
   });
 
 function toggleMobileMenu() {
@@ -197,6 +197,8 @@ watch(() => route.path, (newPath, oldPath) => {
   font-size: 1rem;
   font-weight: 600;
 }
+/* IE11 fallback for gap */
+.brand-link > * + * { margin-left: 10px; }
 .brand-icon { font-size: 1.25rem; }
 .toggle-btn {
   width: 28px;
@@ -226,6 +228,8 @@ watch(() => route.path, (newPath, oldPath) => {
   transition: all var(--transition-fast);
   margin-bottom: 2px;
 }
+/* IE11 fallback for gap */
+.nav-item > * + * { margin-left: 12px; }
 .nav-item:hover { background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.9); }
 .nav-item.active { background: rgba(139, 37, 0, 0.8); color: #fff; }
 
@@ -239,6 +243,8 @@ watch(() => route.path, (newPath, oldPath) => {
   text-decoration: none;
   transition: color var(--transition-fast);
 }
+/* IE11 fallback for gap */
+.back-link > * + * { margin-left: 8px; }
 .back-link:hover { color: #fff; }
 
 /* Main */
@@ -261,6 +267,8 @@ watch(() => route.path, (newPath, oldPath) => {
   align-items: center;
   gap: 16px;
 }
+/* IE11 fallback for gap */
+.header-actions > * + * { margin-left: 16px; }
 .lang-btn {
   padding: 4px 12px;
   border: 1px solid var(--color-border);

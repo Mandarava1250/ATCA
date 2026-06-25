@@ -36,8 +36,7 @@ import { config } from '../src/config/app';
 import { errorHandler, notFoundHandler } from '../src/middleware/errorHandler';
 import { setMockMode } from '../src/config/database';
 
-// 模块路由
-import authRouter from '../src/modules/auth/AuthIndex';
+// 模块路由（过程式风格）
 import architectureRouter from '../src/modules/architecture/ArchitectureIndex';
 import quizRouter from '../src/modules/quiz/QuizIndex';
 import assistantRouter from '../src/modules/assistant/AssistantIndex';
@@ -49,6 +48,10 @@ import adminRouter from '../src/modules/admin/AdminIndex';
 import i18nRouter from '../src/modules/i18n/I18nIndex';
 import socialRouter from '../src/modules/social/SocialIndex';
 import knowledgeRouter from '../src/modules/knowledgebase/KnowledgeBaseIndex';
+
+// 控制器模式路由
+import { RouteManager } from '../src/routes/RouteManager';
+import { AuthController } from '../src/controllers/AuthController';
 
 // 创建测试用的Express应用
 const createTestApp = (): express.Application => {
@@ -91,9 +94,13 @@ const createTestApp = (): express.Application => {
     res.json({ status: 'ok', timestamp: new Date().toISOString(), version: '1.0.0' });
   });
 
-  // API路由
+  // API路由（控制器模式）
+  const routeManager = new RouteManager();
+  routeManager.registerController(AuthController);
+  routeManager.install(app);
+
+  // API路由（过程式风格）
   const apiPrefix = config.apiPrefix;
-  app.use(`${apiPrefix}/auth`, authRouter);
   app.use(`${apiPrefix}/architecture`, architectureRouter);
   app.use(`${apiPrefix}/quiz`, quizRouter);
   app.use(`${apiPrefix}/assistant`, assistantRouter);
@@ -136,20 +143,21 @@ describe('API接口测试', () => {
     it('POST /api/v1/auth/login 应该支持登录', async () => {
       const response = await request(app)
         .post(`${apiPrefix}/auth/login`)
-        .send({ username: 'test', password: 'test' });
+        .send({ username: 'admin', password: 'admin123' });
       expect(response.status).toBe(200);
-      expect(response.body).toHaveProperty('success');
+      expect(response.body).toHaveProperty('success', true);
     });
 
     it('POST /api/v1/auth/register 应该支持注册', async () => {
+      const uniqueUsername = `testuser_${Date.now()}`;
       const response = await request(app)
         .post(`${apiPrefix}/auth/register`)
         .send({
-          username: 'newuser',
-          password: 'password123',
-          email: 'newuser@example.com',
+          username: uniqueUsername,
+          password: 'K9x#mNp$2Qr!',
+          email: `${uniqueUsername}@example.com`,
         });
-      expect(response.status).toBe(200);
+      expect(response.status).toBe(201);
       expect(response.body).toHaveProperty('success', true);
     });
   });
@@ -203,7 +211,14 @@ describe('API接口测试', () => {
     });
 
     it('GET /api/v1/quiz/questions 应该返回题目', async () => {
-      const response = await request(app).get(`${apiPrefix}/quiz/questions?mode=entry`);
+      const loginResponse = await request(app)
+        .post(`${apiPrefix}/auth/login`)
+        .send({ username: 'admin', password: 'admin123' });
+      const token = loginResponse.body.data?.tokens?.accessToken;
+      
+      const response = await request(app)
+        .get(`${apiPrefix}/quiz/questions?mode=entry`)
+        .set('Authorization', `Bearer ${token}`);
       expect(response.status).toBe(200);
       expect(response.body).toHaveProperty('success', true);
       expect(response.body.data).toHaveProperty('questions');
@@ -220,15 +235,28 @@ describe('API接口测试', () => {
 
   describe('AI助手API', () => {
     it('GET /api/v1/admin/ai-configs 应该返回AI配置列表', async () => {
-      const response = await request(app).get(`${apiPrefix}/admin/ai-configs`);
+      const loginResponse = await request(app)
+        .post(`${apiPrefix}/auth/login`)
+        .send({ username: 'admin', password: 'admin123' });
+      const token = loginResponse.body.data?.tokens?.accessToken;
+      
+      const response = await request(app)
+        .get(`${apiPrefix}/admin/ai-configs`)
+        .set('Authorization', `Bearer ${token}`);
       expect(response.status).toBe(200);
       expect(response.body).toHaveProperty('success', true);
       expect(Array.isArray(response.body.data)).toBe(true);
     });
 
     it('POST /api/v1/assistant/chat 应该支持AI对话', async () => {
+      const loginResponse = await request(app)
+        .post(`${apiPrefix}/auth/login`)
+        .send({ username: 'admin', password: 'admin123' });
+      const token = loginResponse.body.data?.tokens?.accessToken;
+      
       const response = await request(app)
         .post(`${apiPrefix}/assistant/chat`)
+        .set('Authorization', `Bearer ${token}`)
         .send({ message: '你好' });
       expect(response.status).toBe(200);
       expect(response.body).toHaveProperty('success', true);
@@ -240,15 +268,15 @@ describe('API接口测试', () => {
       const response = await request(app).get(`${apiPrefix}/index/dashboard`);
       expect(response.status).toBe(200);
       expect(response.body).toHaveProperty('success', true);
-      expect(response.body.data).toHaveProperty('stats');
+      expect(response.body.data).toHaveProperty('popularArchitectures');
     });
 
     it('GET /api/v1/index/stats 应该返回统计数据', async () => {
       const response = await request(app).get(`${apiPrefix}/index/stats`);
       expect(response.status).toBe(200);
       expect(response.body).toHaveProperty('success', true);
-      expect(response.body.data).toHaveProperty('totalUsers');
-      expect(response.body.data).toHaveProperty('totalArchitectures');
+      expect(response.body.data).toHaveProperty('userCount');
+      expect(response.body.data).toHaveProperty('architectureCount');
     });
 
     it('GET /api/v1/index/leaderboard 应该返回排行榜', async () => {
@@ -340,7 +368,14 @@ describe('API接口测试', () => {
 
   describe('社交API', () => {
     it('GET /api/v1/social/mute-status 应该返回禁言状态', async () => {
-      const response = await request(app).get(`${apiPrefix}/social/mute-status`);
+      const loginResponse = await request(app)
+        .post(`${apiPrefix}/auth/login`)
+        .send({ username: 'admin', password: 'admin123' });
+      const token = loginResponse.body.data?.tokens?.accessToken;
+      
+      const response = await request(app)
+        .get(`${apiPrefix}/social/mute-status`)
+        .set('Authorization', `Bearer ${token}`);
       expect(response.status).toBe(200);
       expect(response.body).toHaveProperty('success', true);
       expect(response.body.data).toHaveProperty('is_muted');
@@ -355,13 +390,27 @@ describe('API接口测试', () => {
 
   describe('管理员API', () => {
     it('GET /api/v1/admin/dashboard 应该返回管理员仪表盘', async () => {
-      const response = await request(app).get(`${apiPrefix}/admin/dashboard`);
+      const loginResponse = await request(app)
+        .post(`${apiPrefix}/auth/login`)
+        .send({ username: 'admin', password: 'admin123' });
+      const token = loginResponse.body.data?.tokens?.accessToken;
+      
+      const response = await request(app)
+        .get(`${apiPrefix}/admin/dashboard`)
+        .set('Authorization', `Bearer ${token}`);
       expect(response.status).toBe(200);
       expect(response.body).toHaveProperty('success', true);
     });
 
     it('GET /api/v1/admin/users 应该返回用户列表', async () => {
-      const response = await request(app).get(`${apiPrefix}/admin/users`);
+      const loginResponse = await request(app)
+        .post(`${apiPrefix}/auth/login`)
+        .send({ username: 'admin', password: 'admin123' });
+      const token = loginResponse.body.data?.tokens?.accessToken;
+      
+      const response = await request(app)
+        .get(`${apiPrefix}/admin/users`)
+        .set('Authorization', `Bearer ${token}`);
       expect(response.status).toBe(200);
       expect(response.body).toHaveProperty('success', true);
       expect(Array.isArray(response.body.data)).toBe(true);

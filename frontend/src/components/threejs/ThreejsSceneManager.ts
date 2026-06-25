@@ -61,6 +61,11 @@ export class SceneManager {
   private renderer: THREE.WebGLRenderer;
   private controls: OrbitControls;
   private transformControl!: TransformControls;
+
+  /** 获取 TransformControls 的 helper（兼容 Three.js r170+，TransformControls 不再继承 Object3D） */
+  private get transformHelper(): THREE.Object3D {
+    return (this.transformControl as any).getHelper();
+  }
   private container: HTMLElement;
   private components: Map<string, SceneComponent> = new Map();
   private selectionManager: SelectionManager;
@@ -300,7 +305,7 @@ export class SceneManager {
     this.transformControl.addEventListener('change', () => {
       this.syncTransformToComponent();
     });
-    this.scene.add(this.transformControl);
+    this.scene.add(this.transformHelper);
 
     // 事件
     window.addEventListener('resize', this.onResize);
@@ -562,13 +567,13 @@ export class SceneManager {
         this.transformControl.setMode(
             this.transformMode === 'translate' ? 'translate' : this.transformMode === 'rotate' ? 'rotate' : 'scale'
         );
-        this.transformControl.visible = true;
+        this.transformHelper.visible = true;
         this.transformControl.enabled = true;
         return;
       }
     }
     this.transformControl.detach();
-    this.transformControl.visible = false;
+    this.transformHelper.visible = false;
     this.transformControl.enabled = false;
   }
 
@@ -608,7 +613,7 @@ export class SceneManager {
 
     this.mouse.set(x, y);
     this.raycaster.setFromCamera(this.mouse, this.camera);
-    if (this.transformControl.visible) {
+    if (this.transformHelper.visible) {
       const gizmoIntersects = this.raycaster.intersectObject((this.transformControl as any).getHelper(), true);
       if (gizmoIntersects.length > 0) return;
     }

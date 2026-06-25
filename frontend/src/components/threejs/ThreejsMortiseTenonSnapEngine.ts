@@ -235,7 +235,14 @@ export class MortiseTenonSnapEngine {
       targetRot?: { x: number; y: number; z: number },
       targetDir?: [number, number, number]
   ): boolean {
-    if (!sourceDir || !targetDir || !targetRot) return true; // 无方向信息时跳过
+    // 严格模式下，任一方向信息缺失都必须返回不兼容
+    if (this.strictMode && (!sourceDir || !targetDir)) {
+      return false;
+    }
+    // 自由模式下，方向信息缺失时跳过检查（返回兼容）
+    if (!sourceDir || !targetDir || !targetRot) {
+      return true;
+    }
 
     const sWorld = this.rotateVector(sourceDir, sourceRot);
     const tWorld = this.rotateVector(targetDir, targetRot);
