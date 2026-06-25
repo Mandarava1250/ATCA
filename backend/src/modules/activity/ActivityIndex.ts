@@ -57,10 +57,18 @@ router.get('/user-achievements', authMiddleware, asyncHandler(async (req: AuthRe
     const achievementIds = userAchievements.map((ua: any) => ua.achievement_id);
     
     // 查询成就详情（从 Activity 数据库）
+    // 使用参数化查询防止SQL注入
+    const placeholders = achievementIds.map((_, i) => `@id${i}`).join(',');
+    const params: Record<string, number> = {};
+    achievementIds.forEach((id: number, i: number) => {
+      params[`id${i}`] = id;
+    });
+    
     const achievements = await query('activity',
       `SELECT [achievement_id], [achievement_name], [description], [icon], [badge_url], [required_points]
        FROM dbo.[achievement]
-       WHERE [achievement_id] IN (${achievementIds.join(',')})`
+       WHERE [achievement_id] IN (${placeholders})`,
+      params
     );
     
     // 合并数据

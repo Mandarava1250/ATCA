@@ -32,7 +32,13 @@ async function handleListQuery(req: any, res: any, isMock: boolean) {
     let filtered = [...mockArchitectures];
     if (searchTerm) {
       logger.info('应用搜索过滤', { searchTerm });
-      filtered = filtered.filter((a: any) => a.name.includes(searchTerm) || a.brief_description?.includes(searchTerm));
+      // 支持搜索名称、描述和朝代字段
+      filtered = filtered.filter((a: any) => 
+        a.name.includes(searchTerm) || 
+        a.brief_description?.includes(searchTerm) ||
+        a.founding_dynasty?.includes(searchTerm) ||
+        a.location?.includes(searchTerm)
+      );
     }
     if (type) {
       logger.info('应用类型过滤', { type });
@@ -59,7 +65,11 @@ async function handleListQuery(req: any, res: any, isMock: boolean) {
 
   let whereClause = 'WHERE 1=1';
   const params: any = {};
-  if (searchTerm) { whereClause += ' AND ([name] LIKE @q OR [brief_description] LIKE @q)'; params.q = `%${searchTerm}%`; }
+  // 支持搜索名称、描述、朝代和位置字段
+  if (searchTerm) { 
+    whereClause += ' AND ([name] LIKE @q OR [chinese_name] LIKE @q OR [brief_description] LIKE @q OR [founding_dynasty] LIKE @q OR [location] LIKE @q)'; 
+    params.q = `%${searchTerm}%`; 
+  }
   if (type) { whereClause += ' AND [type] = @type'; params.type = type; }
   if (dynasty) { whereClause += ' AND [founding_dynasty] = @dynasty'; params.dynasty = dynasty; }
   if (protection) { whereClause += ' AND [protection_level] = @protection'; params.protection = protection; }

@@ -9,12 +9,6 @@
           <p class="atca-text-muted">{{ t('workshop.subtitle') }}</p>
         </div>
         <div class="header-actions" style="display:flex;align-items:center;gap:12px;">
-          <!-- 语言切换 -->
-          <select v-model="currentLanguage" @change="onLanguageChange" class="lang-switcher" :title="t('workshop.switchLang')">
-            <option v-for="lang in languages" :key="lang.language_code" :value="lang.language_code">
-              {{ lang.native_name }}
-            </option>
-          </select>
           <router-link to="/workshop/editor?mode=free" class="btn btn-sec btn-enter" :title="t('workshop.freeTip')">
             <svg viewBox="0 0 24 24" width="14" height="14"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
             {{ t('workshop.free') }}
@@ -450,13 +444,6 @@ onMounted(async () => {
 .empty-workshop h3 { font-size: 1.125rem; margin-bottom: 8px; color: var(--text); }
 .empty-workshop p { font-size: 0.875rem; margin-bottom: 24px; }
 
-@media (max-width: 1024px) { .model-grid { grid-template-columns: repeat(3, 1fr); } }
-@media (max-width: 768px) {
-  .model-grid { grid-template-columns: repeat(2, 1fr); }
-  .workshop-header { flex-direction: column; align-items: flex-start; }
-}
-@media (max-width: 480px) { .model-grid { grid-template-columns: 1fr; } }
-
 /* 模型可见性标签 */
 .model-visibility {
   position: absolute;
@@ -573,26 +560,6 @@ onMounted(async () => {
   font-weight: 600;
 }
 
-/* 语言切换器 */
-.lang-switcher {
-  padding: 6px 10px;
-  border: 1px solid var(--border);
-  border-radius: var(--r-md);
-  background: var(--bg-card);
-  color: var(--text);
-  font-size: 0.8125rem;
-  cursor: pointer;
-  transition: all var(--t);
-  outline: none;
-}
-.lang-switcher:hover {
-  border-color: var(--c-red);
-}
-.lang-switcher:focus {
-  border-color: var(--c-red);
-  box-shadow: 0 0 0 2px rgba(var(--gold-rgb), 0.1);
-}
-
 /* ===== 古建工坊增强 ===== */
 .workshop-hero {
   position: relative;
@@ -631,8 +598,5 @@ onMounted(async () => {
   height: 20px;
   background: var(--c-red);
   border-radius: 2px;
-}
-.lang-switcher {
-  font-family: 'Noto Serif SC','STSong',serif;
 }
 </style>

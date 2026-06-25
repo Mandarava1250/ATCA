@@ -82,7 +82,10 @@ function getClientId(req: Request): string {
 // ============================================
 // 检测是否为爬虫
 // ============================================
-function isBot(userAgent: string): boolean {
+export function isBot(userAgent: string | undefined): boolean {
+  if (!userAgent) {
+    return false;
+  }
   const lowerUA = userAgent.toLowerCase();
   return CONFIG.BOT_USER_AGENTS.some(bot => lowerUA.includes(bot));
 }

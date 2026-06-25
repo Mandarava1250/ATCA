@@ -89,6 +89,7 @@ function formatMessage(level: LogLevel, message: string, context?: LogContext): 
 export const logger = {
   /**
    * 记录ERROR级别日志 - 始终输出
+   * 捕获所有错误类型：运行时异常、业务逻辑错误、系统级错误
    */
   error: (message: string, context?: LogContext): void => {
     const formatted = formatMessage('ERROR', message, context);
@@ -97,11 +98,25 @@ export const logger = {
 
   /**
    * 记录WARN级别日志 - 始终输出
+   * 用于提示警告信息，可能影响系统功能
    */
   warn: (message: string, context?: LogContext): void => {
     const timestamp = new Date().toISOString();
     const module = context?.module || 'GLOBAL';
-    console.warn(`[${timestamp}] [WARN] [${module}] - ${message}`, context || '');
+    const method = context?.method || '';
+    let formatted = `[${timestamp}] [WARN] [${module}]`;
+    if (method) formatted += ` [${method}]`;
+    formatted += ` - ${message}`;
+    if (context) {
+      const filteredContext = { ...context };
+      delete filteredContext.module;
+      delete filteredContext.method;
+      const contextKeys = Object.keys(filteredContext);
+      if (contextKeys.length > 0) {
+        formatted += ` | ${JSON.stringify(filteredContext)}`;
+      }
+    }
+    console.warn(formatted);
   },
 
   /**
@@ -126,7 +141,7 @@ export const logger = {
   },
 };
 
-// 日志级别配置
+// 日志级别配置 - ERROR和WARN级别
 export const logLevels: LogLevel[] = ['ERROR', 'WARN'];
 
 // 检查日志级别是否启用

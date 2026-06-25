@@ -6,6 +6,7 @@
 
 import sql from 'mssql';
 import { queryCache } from '../services/queryCache';
+import { queryStats } from '../services/queryStats';
 
 export interface DbConfig {
   server: string;
@@ -25,9 +26,14 @@ export interface DbConfig {
 }
 
 // Mock 模式标志
-let mockMode = false;
+let mockMode = process.env.MOCK_MODE === 'true';
 // 连接失败的数据库记录
 const failedDbs: Set<string> = new Set();
+
+// 如果环境变量设置了MOCK_MODE=true，直接启用Mock模式
+if (mockMode) {
+  console.warn('[DB] 环境变量 MOCK_MODE=true，已启用 Mock 模式，所有数据为模拟数据');
+}
 
 export function isMockMode(): boolean {
   return mockMode;
@@ -224,10 +230,14 @@ export async function query<T = any>(
     params?: any,
     useCache: boolean = true
 ): Promise<T[]> {
+  const startTime = Date.now();
+  
   // 如果启用缓存，先尝试从缓存获取
   if (useCache && !mockMode) {
     const cachedData = queryCache.get(dbName, sqlString, params);
     if (cachedData !== null) {
+      const duration = Date.now() - startTime;
+      queryStats.record(dbName, sqlString, params, duration, true, cachedData.length);
       return cachedData;
     }
   }
@@ -251,6 +261,10 @@ export async function query<T = any>(
 
   const result = await request.query(sqlString);
   const data = result.recordset as T[];
+  const duration = Date.now() - startTime;
+
+  // 记录查询统计
+  queryStats.record(dbName, sqlString, params, duration, false, data.length);
 
   // 如果启用缓存，将结果存入缓存
   if (useCache && !mockMode) {

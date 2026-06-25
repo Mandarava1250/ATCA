@@ -1,6 +1,45 @@
 <template>
-  <div class="page" :class="{ 'fullscreen-mode': isFullscreen }">
-    <Navbar v-show="!isFullscreen" />
+  <!-- 小屏幕设备警告遮罩 -->
+  <div v-if="showWorkshopWarning && !warningDismissed" class="workshop-warning-overlay">
+    <div class="workshop-warning-modal">
+      <div class="warning-icon">
+        <svg viewBox="0 0 24 24" width="64" height="64">
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" fill="currentColor"/>
+        </svg>
+      </div>
+      <h2 class="warning-title">屏幕尺寸不足</h2>
+      <p class="warning-message">
+        3D营造工作台需要更大的屏幕空间才能正常运行。<br/>
+        当前设备屏幕尺寸无法完整展示工作台界面，<br/>
+        所有交互功能已暂时禁用。
+      </p>
+      <div class="warning-suggestion">
+        <div class="suggestion-item">
+          <span class="suggestion-icon">&#128187;</span>
+          <span>请使用桌面电脑或笔记本电脑访问</span>
+        </div>
+        <div class="suggestion-item">
+          <span class="suggestion-icon">&#128190;</span>
+          <span>将浏览器窗口最大化</span>
+        </div>
+        <div class="suggestion-item">
+          <span class="suggestion-icon">&#128267;</span>
+          <span>或切换到横屏模式（仅限平板设备）</span>
+        </div>
+      </div>
+      <div class="warning-info">
+        <span>当前分辨率: {{ screenDimensions.width }} x {{ screenDimensions.height }}</span>
+        <span class="required-size">最小需求: {{ screenDimensions.minWidth }} x {{ screenDimensions.minHeight }}</span>
+      </div>
+      <button class="warning-dismiss-btn" @click="dismissWarning">
+        返回首页
+      </button>
+      <p class="warning-note">点击"返回首页"将离开营造工作台</p>
+    </div>
+  </div>
+
+  <div class="page" :class="{ 'fullscreen-mode': isFullscreen }" :style="{ pointerEvents: workshopDisabled ? 'none' : 'auto' }">
+    <Navbar v-show="!isFullscreen && !workshopDisabled" />
     <div class="workshop-layout" :class="{ 'fullscreen-layout': isFullscreen }">
       <!-- 左侧边栏：构件库 + 构件树 -->
       <aside class="panel panel-left" v-show="leftPanelVisible || !isFullscreen" :class="{ 'panel-hidden': !leftPanelVisible && isFullscreen }">
@@ -1032,6 +1071,55 @@ import {
 } from '@/components/threejs/ThreejsArchitectureComponents';
 import { model3dApi } from '@/services/api';
 
+// 小屏幕设备检测
+const MIN_WORKSHOP_WIDTH = 1050; // 最小工作区宽度（像素）
+const MIN_WORKSHOP_HEIGHT = 600; // 最小工作区高度（像素）
+const isSmallScreen = ref(false);
+const workshopDisabled = ref(false);
+const showWorkshopWarning = ref(false);
+const warningDismissed = ref(false);
+const currentScreenWidth = ref(window.innerWidth);
+const currentScreenHeight = ref(window.innerHeight);
+
+// 暴露给模板使用的屏幕尺寸
+const screenDimensions = computed(() => ({
+  width: currentScreenWidth.value,
+  height: currentScreenHeight.value,
+  minWidth: MIN_WORKSHOP_WIDTH,
+  minHeight: MIN_WORKSHOP_HEIGHT,
+}));
+
+// 检测屏幕尺寸是否满足3D工作台要求
+function checkScreenSize() {
+  const width = window.innerWidth;
+  const height = window.innerHeight;
+  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  
+  // 更新屏幕尺寸
+  currentScreenWidth.value = width;
+  currentScreenHeight.value = height;
+  
+  // 如果是移动设备或者屏幕太小，则禁用工作台
+  const shouldDisable = isMobile || width < MIN_WORKSHOP_WIDTH || height < MIN_WORKSHOP_HEIGHT;
+  
+  if (shouldDisable !== isSmallScreen.value) {
+    isSmallScreen.value = shouldDisable;
+    workshopDisabled.value = shouldDisable;
+    if (shouldDisable) {
+      showWorkshopWarning.value = true;
+      warningDismissed.value = false;
+    }
+  }
+}
+
+// 关闭警告提示并跳转到首页
+function dismissWarning() {
+  warningDismissed.value = true;
+  showWorkshopWarning.value = false;
+  // 跳转到首页
+  router.push('/workshop');
+}
+
 const canvasContainer = ref<HTMLElement>();
 let sceneManager: SceneManager | null = null;
 const router = useRouter();
@@ -1077,12 +1165,24 @@ const myModelsLoading = ref(false);
 const showMyModels = ref(true);
 
 async function loadMyModels() {
+  // 仅在用户已登录时加载模型列表
+  if (!userStore.isLoggedIn) {
+    myModels.value = [];
+    return;
+  }
+  
   myModelsLoading.value = true;
   try {
     const res = await model3dApi.getMyModels();
+    // 忽略401错误（未登录）
     if (res.success) myModels.value = res.data || [];
-  } catch (e) { console.error('加载我的模型失败:', e); }
-  finally { myModelsLoading.value = false; }
+  } catch (e: any) { 
+    // 忽略401/403等认证错误
+    if (e?.response?.status !== 401 && e?.response?.status !== 403) {
+      console.error('加载我的模型失败:', e); 
+    }
+    myModels.value = [];
+  } finally { myModelsLoading.value = false; }
 }
 
 // 统计
@@ -2515,7 +2615,10 @@ function $t(key: string): string {
 
 // ===== 生命周期 =====
 onMounted(async () => {
-  if (canvasContainer.value) {
+  // 首先检测屏幕尺寸
+  checkScreenSize();
+  
+  if (!workshopDisabled.value && canvasContainer.value) {
     sceneManager = new SceneManager(canvasContainer.value);
     sceneManager.setBuildMode(buildMode.value);
     sceneManager.onSelect((uuids: string[]) => { refreshComponents(); });
@@ -2559,6 +2662,7 @@ onMounted(async () => {
     }
   }
   window.addEventListener('keydown', onKeyDown);
+  window.addEventListener('resize', checkScreenSize);
   document.addEventListener('fullscreenchange', handleFullscreenChange);
 });
 
@@ -2566,11 +2670,216 @@ onUnmounted(() => {
   sceneManager?.destroy();
   sceneManager = null;
   window.removeEventListener('keydown', onKeyDown);
+  window.removeEventListener('resize', checkScreenSize);
   document.removeEventListener('fullscreenchange', handleFullscreenChange);
 });
 </script>
 
 <style scoped>
+/* ===== 小屏幕设备警告遮罩 ===== */
+.workshop-warning-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: linear-gradient(135deg, rgba(22, 20, 18, 0.98) 0%, rgba(44, 36, 30, 0.98) 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  animation: warningFadeIn 0.3s ease-out;
+}
+
+@keyframes warningFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.workshop-warning-modal {
+  max-width: 480px;
+  width: 90%;
+  padding: 40px 36px;
+  background: linear-gradient(180deg, rgba(60, 50, 40, 0.95) 0%, rgba(44, 36, 30, 0.98) 100%);
+  border: 2px solid rgba(210, 176, 124, 0.4);
+  border-radius: 16px;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 0 40px rgba(210, 176, 124, 0.1);
+  animation: warningModalSlide 0.4s ease-out;
+}
+
+@keyframes warningModalSlide {
+  from {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.warning-icon {
+  margin-bottom: 20px;
+  color: #d2b07c;
+  animation: warningPulse 2s ease-in-out infinite;
+}
+
+@keyframes warningPulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 0.8;
+  }
+}
+
+.warning-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #d2b07c;
+  margin: 0 0 20px 0;
+  letter-spacing: 0.05em;
+  font-family: 'Noto Serif SC', 'STSong', serif;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.warning-message {
+  font-size: 0.95rem;
+  color: #c4bbaa;
+  line-height: 1.8;
+  margin: 0 0 28px 0;
+  font-family: 'Noto Serif SC', 'STSong', serif;
+}
+
+.warning-suggestion {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 28px;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 10px;
+  border: 1px solid rgba(210, 176, 124, 0.15);
+}
+
+.suggestion-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.9rem;
+  color: #a8a095;
+  font-family: 'Noto Serif SC', 'STSong', serif;
+}
+
+.suggestion-icon {
+  font-size: 1.4rem;
+  flex-shrink: 0;
+}
+
+.warning-info {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 24px;
+  padding: 16px;
+  background: rgba(210, 176, 124, 0.08);
+  border-radius: 8px;
+  border: 1px solid rgba(210, 176, 124, 0.2);
+}
+
+.warning-info span {
+  font-size: 0.85rem;
+  color: #8c8275;
+  font-family: 'Courier New', monospace;
+}
+
+.warning-info .required-size {
+  color: #d2b07c;
+  font-weight: 600;
+}
+
+.warning-dismiss-btn {
+  display: inline-block;
+  padding: 14px 40px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #161412;
+  background: linear-gradient(135deg, #d2b07c 0%, #c4a070 100%);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-family: 'Noto Serif SC', 'STSong', serif;
+  letter-spacing: 0.1em;
+  box-shadow: 0 4px 15px rgba(210, 176, 124, 0.3);
+}
+
+.warning-dismiss-btn:hover {
+  background: linear-gradient(135deg, #e0c08a 0%, #d4b07e 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(210, 176, 124, 0.4);
+}
+
+.warning-dismiss-btn:active {
+  transform: translateY(0);
+}
+
+.warning-note {
+  font-size: 0.75rem;
+  color: #6b6358;
+  margin: 16px 0 0 0;
+  line-height: 1.5;
+  font-family: 'Noto Serif SC', 'STSong', serif;
+}
+
+/* 响应式适配 */
+@media (max-width: 600px) {
+  .workshop-warning-modal {
+    padding: 30px 24px;
+    margin: 20px;
+  }
+
+  .warning-icon svg {
+    width: 48px;
+    height: 48px;
+  }
+
+  .warning-title {
+    font-size: 1.25rem;
+  }
+
+  .warning-message {
+    font-size: 0.875rem;
+  }
+
+  .suggestion-item {
+    font-size: 0.85rem;
+  }
+
+  .warning-dismiss-btn {
+    padding: 12px 32px;
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 400px) {
+  .workshop-warning-modal {
+    padding: 24px 18px;
+  }
+
+  .warning-suggestion {
+    padding: 16px;
+  }
+}
+
+/* ===== 基础布局 ===== */
 .page { min-height: 100vh; display: flex; flex-direction: column; }
 
 .workshop-layout {
@@ -3496,19 +3805,6 @@ onUnmounted(() => {
 .vis-option strong { font-size: 0.8125rem; font-weight: 500; }
 .vis-option span { font-size: 0.6875rem; color: var(--text-muted); }
 .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 16px; }
-
-/* ===== 响应式 ===== */
-@media (max-width: 1024px) {
-  .panel { width: 240px; }
-  .canvas-hints { display: none; }
-}
-@media (max-width: 768px) {
-  .workshop-layout { flex-direction: column; height: auto; }
-  .panel { width: 100%; max-height: 300px; }
-  .panel-right { border-left: none; border-top: 1px solid var(--border); }
-  .toolbar { flex-wrap: wrap; }
-  .status-bar { flex-wrap: wrap; }
-}
 
 /* ===== 按钮 ===== */
 .atca-btn-sm { padding: 3px 10px; font-size: 0.6875rem; }

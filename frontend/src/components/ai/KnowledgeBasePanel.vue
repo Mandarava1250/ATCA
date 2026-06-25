@@ -570,16 +570,4 @@ onMounted(() => {
   opacity: 0;
 }
 
-/* 响应式 */
-@media (max-width: 480px) {
-  .kb-panel {
-    bottom: 10px;
-    right: 10px;
-  }
-  
-  .kb-content {
-    width: calc(100vw - 20px);
-    max-height: 60vh;
-  }
-}
 </style>

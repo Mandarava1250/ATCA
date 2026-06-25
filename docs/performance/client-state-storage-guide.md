@@ -1,369 +1,426 @@
-# 客户端状态存储配置指南
+# 华夏营造 - 客户端状态存储配置指南
 
-## 📋 概述
+## 概述
 
-客户端状态存储现已支持内存和 Redis 两种模式，可通过配置灵活切换。
-
----
-
-## 🎯 存储模式对比
-
-| 特性 | 内存存储 | Redis 存储 |
-|------|---------|-----------|
-| **适用场景** | 单进程、2核2G服务器 | 多进程集群、高并发 |
-| **状态共享** | ❌ 不共享 | ✅ 共享 |
-| **性能** | ⚡ 极快 | 🚀 快速 |
-| **内存占用** | ⚠️ 进程内 | ✅ 外部存储 |
-| **持久化** | ❌ 重启丢失 | ✅ 可持久化 |
-| **部署复杂度** | ✅ 简单 | ⚠️ 需 Redis |
+本文档详细介绍华夏营造项目中客户端状态存储系统的配置和使用方法。该系统采用双模式存储（内存 + Redis），支持 LRU 淘汰策略，提供高效的状态管理能力。
 
 ---
 
-## 🔧 配置方式
+## 架构设计
 
-### 1. 内存存储（默认）
-
-**适用场景**：单进程部署、2核2G服务器
-
-```typescript
-// main.ts
-import { initBrowseStateStore } from './middleware/browseState';
-
-// 初始化内存存储
-initBrowseStateStore({ type: 'memory' });
+```
+┌──────────────────────────────────────────────────────────────────┐
+│                    客户端状态存储架构                            │
+├──────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  ┌──────────────────┐                                           │
+│  │   应用层 API     │                                           │
+│  │  get/set/delete  │                                           │
+│  └────────┬─────────┘                                           │
+│           │                                                     │
+│           ▼                                                     │
+│  ┌──────────────────┐                                           │
+│  │   存储管理器     │  ← 路由选择、策略管理                      │
+│  └────────┬─────────┘                                           │
+│           │                                                     │
+│     ┌─────┴─────┐                                               │
+│     │           │                                               │
+│     ▼           ▼                                               │
+│  ┌───────┐  ┌─────────┐                                         │
+│  │ 内存  │  │  Redis  │                                         │
+│  │ 存储  │  │   存储   │  ← 持久化备份                          │
+│  └───────┘  └─────────┘                                         │
+│                                                                 │
+└──────────────────────────────────────────────────────────────────┘
 ```
 
-**特点**：
-- 无需额外配置
-- 性能最佳
-- 适合低配服务器
-- 进程重启后状态丢失
+---
+
+## 配置参数
+
+### 基础配置
+
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `maxSize` | number | 1000 | 最大存储条目数 |
+| `ttl` | number | 3600000 | 默认过期时间(ms) |
+| `evictionPolicy` | string | 'LRU' | 淘汰策略 |
+| `enablePersistence` | boolean | true | 是否启用持久化 |
+| `persistenceInterval` | number | 60000 | 持久化间隔(ms) |
+| `redisUrl` | string | - | Redis连接地址 |
+
+### 淘汰策略说明
+
+| 策略 | 说明 | 适用场景 |
+|------|------|----------|
+| `LRU` | 最近最少使用 | 通用场景 |
+| `LFU` | 最不经常使用 | 访问频率差异大 |
+| `FIFO` | 先进先出 | 时序数据 |
 
 ---
 
-### 2. Redis 存储
+## 配置示例
 
-**适用场景**：多进程集群、PM2 集群模式、高并发
-
-#### 安装 Redis
-
-```bash
-# Ubuntu/Debian
-sudo apt-get install redis-server
-
-# CentOS/RHEL
-sudo yum install redis
-
-# Windows
-# 下载 Redis Windows 版本
-# https://github.com/microsoftarchive/redis/releases
-```
-
-#### 配置 Redis 存储
+### 基本配置
 
 ```typescript
-// main.ts
-import { initBrowseStateStore } from './middleware/browseState';
+// src/config/storage.ts
+import { createClientStateStorage } from '@/utils/storage';
 
-// 初始化 Redis 存储
-initBrowseStateStore({
-  type: 'redis',
-  redis: {
-    host: 'localhost',        // Redis 主机地址
-    port: 6379,               // Redis 端口
-    password: 'your-password', // Redis 密码（可选）
-    db: 0,                    // Redis 数据库编号（可选）
-    keyPrefix: 'atca:client:', // 键前缀（可选）
-    ttl: 3600,                // 过期时间（秒，可选）
-  },
+export const stateStorage = createClientStateStorage({
+  maxSize: 1000,
+  ttl: 3600000, // 1小时
+  evictionPolicy: 'LRU',
+  enablePersistence: true,
+  persistenceInterval: 60000, // 1分钟
+  redisUrl: process.env.REDIS_URL || 'redis://localhost:6379'
 });
 ```
 
-#### 环境变量配置
+### 不同场景配置
 
-```bash
-# .env
-REDIS_HOST=localhost
-REDIS_PORT=6379
-REDIS_PASSWORD=your-password
-REDIS_DB=0
-```
+#### 场景1：高频访问数据
 
 ```typescript
-// main.ts
-initBrowseStateStore({
-  type: 'redis',
-  redis: {
-    host: process.env.REDIS_HOST || 'localhost',
-    port: parseInt(process.env.REDIS_PORT || '6379'),
-    password: process.env.REDIS_PASSWORD,
-    db: parseInt(process.env.REDIS_DB || '0'),
-  },
+export const hotStorage = createClientStateStorage({
+  maxSize: 5000,
+  ttl: 1800000, // 30分钟
+  evictionPolicy: 'LRU',
+  enablePersistence: true
+});
+```
+
+#### 场景2：临时会话数据
+
+```typescript
+export const sessionStorage = createClientStateStorage({
+  maxSize: 100,
+  ttl: 1800000, // 30分钟
+  evictionPolicy: 'FIFO',
+  enablePersistence: false // 不需要持久化
+});
+```
+
+#### 场景3：用户偏好设置
+
+```typescript
+export const preferencesStorage = createClientStateStorage({
+  maxSize: 100,
+  ttl: 86400000 * 30, // 30天
+  evictionPolicy: 'LFU',
+  enablePersistence: true
 });
 ```
 
 ---
 
-## 📊 性能对比
+## API 接口
 
-### 内存存储
+### 基础操作
 
-```bash
-# 测试结果（2核2G服务器）
-并发用户: 100
-平均响应时间: 45ms
-内存占用: 50MB
-状态查询: <1ms
+```typescript
+// 设置值
+await storage.set('key', value, { ttl: 300000 });
+
+// 获取值
+const value = await storage.get('key');
+
+// 删除值
+await storage.delete('key');
+
+// 检查键是否存在
+const exists = await storage.has('key');
+
+// 清空所有数据
+await storage.clear();
+
+// 获取所有键
+const keys = await storage.keys();
 ```
 
-### Redis 存储
+### 批量操作
 
-```bash
-# 测试结果（Redis 服务器）
-并发用户: 100
-平均响应时间: 65ms
-内存占用: 20MB（进程）
-状态查询: 2-5ms
+```typescript
+// 批量设置
+await storage.multiSet([
+  ['key1', 'value1'],
+  ['key2', 'value2']
+]);
+
+// 批量获取
+const values = await storage.multiGet(['key1', 'key2']);
+
+// 批量删除
+await storage.multiDelete(['key1', 'key2']);
 ```
 
----
+### 高级操作
 
-## 🚀 PM2 集群模式配置
+```typescript
+// 获取并更新（原子操作）
+const result = await storage.getAndUpdate('counter', (current) => {
+  return (current || 0) + 1;
+});
 
-### 使用内存存储（不推荐）
+// 设置值（如果不存在）
+const success = await storage.setIfNotExists('unique-key', 'value');
 
-```javascript
-// ecosystem.config.js
-module.exports = {
-  apps: [{
-    name: 'atca-backend',
-    script: 'dist/main.js',
-    instances: 2,  // 2个进程
-    exec_mode: 'cluster',
-    // 问题：各进程状态不共享
-  }],
-};
-```
-
-### 使用 Redis 存储（推荐）
-
-```javascript
-// ecosystem.config.js
-module.exports = {
-  apps: [{
-    name: 'atca-backend',
-    script: 'dist/main.js',
-    instances: 'max',  // 自动根据CPU核心数
-    exec_mode: 'cluster',
-    env: {
-      REDIS_HOST: 'localhost',
-      REDIS_PORT: 6379,
-      // 所有进程共享 Redis 状态
-    },
-  }],
-};
+// 获取并删除
+const value = await storage.getAndDelete('temp-key');
 ```
 
 ---
 
-## 🔍 监控与诊断
+## 使用示例
 
-### 查看存储状态
+### 场景1：用户偏好设置
 
-```bash
-# 内存存储
-curl http://localhost:5000/api/monitor/client-states
+```typescript
+// src/stores/preferences.ts
+import { stateStorage } from '@/config/storage';
 
-# Redis 存储
-redis-cli
-> KEYS atca:client:*
-> GET atca:client:192.168.1.1:Mozilla/5.0...
-```
-
-### 存储统计信息
-
-```json
-{
-  "success": true,
-  "data": {
-    "totalCount": 1250,
-    "activeCount": 850,
-    "idleCount": 400,
-    "recentActiveCount": 950,
-    "maxCapacity": 10000,
-    "utilizationRate": "12.50%"
+export async function getUserPreferences(userId: number) {
+  const key = `user:${userId}:preferences`;
+  const cached = await stateStorage.get(key);
+  
+  if (cached) {
+    return JSON.parse(cached);
   }
+  
+  // 从API获取
+  const preferences = await fetchPreferencesFromAPI(userId);
+  
+  // 缓存30天
+  await stateStorage.set(key, JSON.stringify(preferences), { ttl: 86400000 * 30 });
+  
+  return preferences;
+}
+
+export async function saveUserPreferences(userId: number, preferences: object) {
+  const key = `user:${userId}:preferences`;
+  await stateStorage.set(key, JSON.stringify(preferences), { ttl: 86400000 * 30 });
+  await savePreferencesToAPI(userId, preferences);
+}
+```
+
+### 场景2：API 响应缓存
+
+```typescript
+// src/utils/apiCache.ts
+import { stateStorage } from '@/config/storage';
+
+export async function cachedApiCall<T>(
+  key: string,
+  fetcher: () => Promise<T>,
+  ttl: number = 300000
+): Promise<T> {
+  const cached = await stateStorage.get(key);
+  
+  if (cached) {
+    try {
+      return JSON.parse(cached);
+    } catch {
+      // 缓存数据格式错误，重新获取
+    }
+  }
+  
+  const result = await fetcher();
+  await stateStorage.set(key, JSON.stringify(result), { ttl });
+  
+  return result;
+}
+
+// 使用示例
+const buildings = await cachedApiCall(
+  'architecture:list:page=1:limit=10',
+  () => fetch('/api/architecture?page=1&limit=10'),
+  600000 // 10分钟
+);
+```
+
+### 场景3：临时表单数据
+
+```typescript
+// src/composables/useFormStorage.ts
+import { ref, watch } from 'vue';
+import { stateStorage } from '@/config/storage';
+
+export function useFormStorage<T>(formId: string, initialValue: T) {
+  const formData = ref<T>(initialValue);
+  const storageKey = `form:${formId}`;
+  
+  // 初始化时加载缓存
+  stateStorage.get(storageKey).then(cached => {
+    if (cached) {
+      try {
+        formData.value = JSON.parse(cached);
+      } catch {
+        // 忽略解析错误
+      }
+    }
+  });
+  
+  // 监听变化并缓存
+  watch(formData, (newValue) => {
+    stateStorage.set(storageKey, JSON.stringify(newValue), { ttl: 3600000 });
+  }, { deep: true });
+  
+  // 清除缓存
+  const clear = () => {
+    stateStorage.delete(storageKey);
+    formData.value = initialValue;
+  };
+  
+  return {
+    formData,
+    clear
+  };
 }
 ```
 
 ---
 
-## 🛠️ 故障恢复
+## 监控与调试
 
-### 内存存储故障
-
-```bash
-# 进程重启后状态丢失
-pm2 restart atca-backend
-
-# 手动清理
-curl -X POST http://localhost:5000/api/monitor/cleanup
-```
-
-### Redis 存储故障
-
-```bash
-# Redis 连接失败自动回退到内存存储
-# 日志输出：
-[BrowseState] Redis 连接错误: Connection refused
-[ClientStateStore] Redis 初始化失败，回退到内存存储
-[ClientStateStore] 客户端状态存储: 内存模式（Redis 失败回退）
-```
-
----
-
-## 📋 最佳实践
-
-### 2核2G服务器
+### 监控指标
 
 ```typescript
-// 推荐：内存存储
-initBrowseStateStore({ type: 'memory' });
-
-// 原因：
-// 1. 无需额外 Redis 服务器
-// 2. 性能最佳
-// 3. 内存占用可控（自动清理）
-// 4. 单进程部署足够
+// 获取存储统计信息
+const stats = await storage.getStats();
+console.log(stats);
+// {
+//   size: 450,
+//   hits: 12500,
+//   misses: 2500,
+//   hitRate: 0.83,
+//   evictions: 50
+// }
 ```
 
-### 4核4G及以上服务器
+### 调试模式
 
 ```typescript
-// 推荐：Redis 存储 + PM2 集群
-initBrowseStateStore({
-  type: 'redis',
-  redis: {
-    host: 'localhost',
-    port: 6379,
-  },
+// 启用调试模式
+const debugStorage = createClientStateStorage({
+  maxSize: 1000,
+  ttl: 3600000,
+  enableDebug: true, // 启用调试日志
+  logLevel: 'info' // 'debug' | 'info' | 'warn' | 'error'
+});
+```
+
+### 日志输出
+
+```typescript
+// 监听存储事件
+storage.on('set', (key, value) => {
+  console.log(`Set ${key}: ${JSON.stringify(value)}`);
 });
 
-// 原因：
-// 1. 多进程状态共享
-// 2. 更高并发处理能力
-// 3. 状态持久化
-// 4. 负载均衡
-```
+storage.on('get', (key, value) => {
+  console.log(`Get ${key}: ${JSON.stringify(value)}`);
+});
 
----
+storage.on('delete', (key) => {
+  console.log(`Delete ${key}`);
+});
 
-## 🔧 高级配置
-
-### 自定义清理策略
-
-```typescript
-// browseState.ts - 修改 CONFIG
-const CONFIG = {
-  IDLE_TIMEOUT: 1800,          // 空闲超时（30分钟）
-  MAX_CLIENT_STATES: 10000,   // 最大状态数
-  CLEANUP_INTERVAL: 180000,   // 清理间隔（3分钟）
-};
-```
-
-### Redis 连接池优化
-
-```typescript
-// clientStateStore.ts
-const redisClient = new Redis({
-  host: config.redis.host,
-  port: config.redis.port,
-  maxRetriesPerRequest: 3,
-  retryStrategy: (times) => {
-    if (times > 3) return null;
-    return Math.min(times * 100, 3000);
-  },
-  lazyConnect: true,
-  keepAlive: 10000,
+storage.on('evict', (key, value) => {
+  console.log(`Evict ${key}: ${JSON.stringify(value)}`);
 });
 ```
 
 ---
 
-## 📊 内存占用估算
+## 性能优化建议
 
-### 内存存储
+### 1. 合理设置 TTL
 
-```bash
-# 单个客户端状态约 2KB
-# 1000 个客户端 = 2MB
-# 10000 个客户端 = 20MB
-# 最大限制：10000 个客户端（可调整）
+```typescript
+// 频繁变化的数据 - 短TTL
+await storage.set('real-time-data', data, { ttl: 60000 }); // 1分钟
+
+// 相对稳定的数据 - 长TTL
+await storage.set('config-data', config, { ttl: 86400000 }); // 1天
 ```
 
-### Redis 存储
+### 2. 使用命名空间
 
-```bash
-# 单个客户端状态约 2KB（JSON）
-# Redis 内存占用与内存存储相同
-# 但不在 Node.js 进程内
+```typescript
+// 使用命名空间避免键冲突
+const userNamespace = `user:${userId}:`;
+const preferencesKey = `${userNamespace}preferences`;
+const sessionKey = `${userNamespace}session`;
+```
+
+### 3. 批量操作优化
+
+```typescript
+// 推荐：批量操作
+await storage.multiSet([
+  ['key1', 'value1'],
+  ['key2', 'value2'],
+  ['key3', 'value3']
+]);
+
+// 不推荐：多次单独操作
+await storage.set('key1', 'value1');
+await storage.set('key2', 'value2');
+await storage.set('key3', 'value3');
+```
+
+### 4. 压缩大数据
+
+```typescript
+// 对大型数据进行压缩存储
+import { compress, decompress } from 'lz-string';
+
+const largeData = generateLargeData();
+const compressed = compress(JSON.stringify(largeData));
+await storage.set('large-data', compressed);
+
+// 读取时解压
+const cached = await storage.get('large-data');
+const data = JSON.parse(decompress(cached));
 ```
 
 ---
 
-## 🎯 迁移指南
+## 常见问题
 
-### 从内存存储迁移到 Redis
+### Q1: 缓存数据不一致
 
-1. **安装 Redis**
-   ```bash
-   sudo apt-get install redis-server
-   ```
+**问题**: 修改了后端数据，但前端缓存未更新
 
-2. **修改配置**
-   ```typescript
-   // main.ts
-   initBrowseStateStore({
-     type: 'redis',
-     redis: { host: 'localhost', port: 6379 },
-   });
-   ```
+**解决方案**:
+```typescript
+// 修改数据后主动删除缓存
+await updateData(id, newData);
+await storage.delete(`data:${id}`);
+```
 
-3. **重启服务**
-   ```bash
-   npm run build
-   pm2 restart atca-backend
-   ```
+### Q2: 内存占用过高
 
-4. **验证**
-   ```bash
-   curl http://localhost:5000/api/monitor/client-states
-   redis-cli KEYS "atca:client:*"
-   ```
+**问题**: 存储条目过多导致内存占用过高
 
----
+**解决方案**:
+```typescript
+// 减小 maxSize
+const storage = createClientStateStorage({
+  maxSize: 500, // 减小最大条目数
+  ttl: 1800000 // 缩短过期时间
+});
+```
 
-## 📞 常见问题
+### Q3: 持久化延迟
 
-### Q: 内存存储会内存泄漏吗？
+**问题**: 数据修改后 Redis 中未立即更新
 
-**A**: 不会。系统有自动清理机制：
-- 定期清理过期状态（每3分钟）
-- LRU 驱逐策略（超过10000条时）
-- 优雅关闭时清理
-
-### Q: Redis 连接失败怎么办？
-
-**A**: 系统自动回退到内存存储，不影响服务运行。
-
-### Q: 如何选择存储模式？
-
-**A**: 
-- 单进程/低配服务器 → 内存存储
-- 多进程/高并发 → Redis 存储
-
----
-
-**文档版本**: 1.0.0  
-**最后更新**: 2026-06-19  
-**维护者**: ATCA Development Team
+**解决方案**:
+```typescript
+// 关键数据使用同步持久化
+await storage.set('critical-data', value, {
+  ttl: 3600000,
+  syncPersistence: true // 立即持久化
+});
+```

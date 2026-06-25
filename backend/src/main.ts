@@ -10,6 +10,7 @@ import path from 'path';
 import dotenv from 'dotenv';
 import swaggerUi from 'swagger-ui-express';
 import compression from 'compression';
+import { createServer as createHttpServer } from 'http';
 
 dotenv.config({ path: '.env.db' });
 
@@ -39,9 +40,14 @@ import {
   performanceEndpoint, 
   startPeriodicCheck 
 } from './middleware/performanceMonitor';
+import { 
+  startKeepAliveService, 
+  stopKeepAliveService, 
+  recordRequestActivity 
+} from './services/serverKeepAlive';
+import { initSyncService, getSyncStats } from './services/SyncService';
 
-// 模块路由
-import authRouter from './modules/auth/AuthIndex';
+// 模块路由（过程式风格）
 import architectureRouter from './modules/architecture/ArchitectureIndex';
 import quizRouter from './modules/quiz/QuizIndex';
 import assistantRouter from './modules/assistant/AssistantIndex';
@@ -53,6 +59,18 @@ import adminRouter from './modules/admin/AdminIndex';
 import i18nRouter from './modules/i18n/I18nIndex';
 import socialRouter from './modules/social/SocialIndex';
 import knowledgeRouter from './modules/knowledgebase/KnowledgeBaseIndex';
+import knowledgeGraphRouter from './modules/knowledge-graph/KnowledgeGraphIndex';
+import performanceRouter from './modules/admin/performance/PerformanceIndex';
+
+// 控制器模式路由（新架构）
+import { RouteManager } from './routes/RouteManager';
+import { AuthController } from './controllers/AuthController';
+
+// 服务注册框架（新架构）
+import { registerCoreServices, initializeServices, disposeServices, getServiceStatusSummary } from './core';
+
+const routeManager = new RouteManager();
+routeManager.registerController(AuthController);
 
 const app = express();
 
@@ -136,6 +154,41 @@ app.use(securityLogger);
 app.use(validateRequestSize);
 app.use(sqlInjectionDetection);
 app.use(pathTraversalProtection);
+
+// ============================================
+// 请求活动记录中间件（用于服务器保活）
+// ============================================
+app.use((_req, _res, next) => {
+  recordRequestActivity();
+  next();
+});
+
+// ============================================
+// 健康检查端点（不经过速率限制）
+// ============================================
+app.get('/api/health', (_req, res) => {
+  res.json({
+    success: true,
+    data: {
+      status: 'healthy',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+    },
+  });
+});
+
+app.get('/api/v1/health', (_req, res) => {
+  res.json({
+    success: true,
+    data: {
+      status: 'healthy',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+    },
+  });
+});
+
+// 速率限制（健康检查端点已豁免）
 app.use(generalRateLimiter);
 app.use(express.json({ limit: '100mb' }));
 app.use(express.urlencoded({ extended: true, limit: '100mb' }));
@@ -211,12 +264,22 @@ app.get('/health', (_req, res) => {
 // 3. 性能监控端点
 app.get('/api/monitor/performance', performanceEndpoint);
 
+// 4. 同步服务监控端点
+app.get('/api/monitor/sync', (_req, res) => {
+  res.json({
+    success: true,
+    data: getSyncStats(),
+  });
+});
+
 // 3. Swagger API文档
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
-// 4. API路由
+// 4. API路由（控制器模式）
+routeManager.install(app);
+
+// 4. API路由（过程式风格）
 const apiPrefix = '/api/v1';
-app.use(`${apiPrefix}/auth`, authRouter);
 
 // 架构浏览API - 启用条件性输出（浏览状态检测）
 app.use(`${apiPrefix}/architecture`, conditionalOutput, architectureRouter);
@@ -228,6 +291,8 @@ app.use(`${apiPrefix}/profile`, profileRouter);
 app.use(`${apiPrefix}/index`, indexRouter);
 app.use(`${apiPrefix}/activities`, activityRouter);
 app.use(`${apiPrefix}/admin`, adminRouter);
+app.use(`${apiPrefix}/admin/knowledge-graph`, knowledgeGraphRouter);
+app.use(`${apiPrefix}/admin/performance`, performanceRouter);
 app.use(`${apiPrefix}/i18n`, i18nRouter);
 app.use(`${apiPrefix}/social`, socialRouter);
 
@@ -269,6 +334,9 @@ async function startServer() {
   // 初始化浏览状态存储（默认内存模式，适合 2核2G 服务器）
   // 如需 Redis 存储，可传入配置: initBrowseStateStore({ type: 'redis', redis: {...} })
   initBrowseStateStore({ type: 'memory' });
+
+  // 注册核心服务
+  registerCoreServices();
   
   try {
     await preconnectAll();
@@ -278,9 +346,30 @@ async function startServer() {
     setMockMode(true);
   }
 
-  const server = app.listen(PORT, '0.0.0.0', () => {
+  // 初始化所有已注册服务
+  try {
+    await initializeServices();
+    const status = getServiceStatusSummary();
+    console.log('[ServiceRegistry] 服务状态:', {
+      state: status.state,
+      ready: status.services.filter(s => s.state === 'ready').length,
+      total: status.services.length
+    });
+  } catch (error: any) {
+    console.error('[ServiceRegistry] 服务初始化失败:', error.message);
+    // 非致命错误，继续启动
+  }
+
+  // 创建 HTTP Server（支持 WebSocket）
+  const httpServer = createHttpServer(app);
+
+  // 初始化 WebSocket 同步服务
+  initSyncService(httpServer);
+
+  httpServer.listen(PORT, '0.0.0.0', () => {
     console.log(`[ATCA Server] 运行于 http://0.0.0.0:${PORT}`);
     console.log(`[ATCA Server] API地址: http://0.0.0.0:${PORT}${apiPrefix}`);
+    console.log(`[ATCA Server] WebSocket: ws://0.0.0.0:${PORT}`);
     console.log(`[ATCA Server] 健康检查: http://0.0.0.0:${PORT}/health`);
     console.log(`[ATCA Server] 性能监控: http://0.0.0.0:${PORT}/api/monitor/performance`);
     console.log(`[ATCA Server] 环境: ${config.nodeEnv}`);
@@ -290,6 +379,14 @@ async function startServer() {
     
     // 启动定期性能检查（针对2核2GiB服务器）
     startPeriodicCheck();
+    
+    // 启动服务器保活服务（防止2核2GiB服务器长时间空闲后进入休眠状态）
+    startKeepAliveService({
+      enabled: true,
+      interval: 30000, // 30秒执行一次保活操作
+      healthCheckInterval: 120000, // 2分钟执行一次健康检查
+      maxIdleTime: 1800000, // 30分钟最大空闲时间
+    });
   });
 
   process.on('uncaughtException', (err) => {
@@ -301,7 +398,14 @@ async function startServer() {
 
   const gracefulShutdown = async (signal: string) => {
     console.log(`[ATCA Server] 收到 ${signal}，开始优雅关闭...`);
-    server.close(async () => {
+    
+    // 停止保活服务
+    stopKeepAliveService();
+    
+    // 销毁所有服务
+    await disposeServices();
+    
+    httpServer.close(async () => {
       await closeAllPools();
       console.log('[ATCA Server] 已关闭');
       process.exit(0);

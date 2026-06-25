@@ -20,7 +20,7 @@
           </div>
           <h1 class=" -xl">{{ architecture.chinese_name || architecture.name }}</h1>
           <p v-if="architecture.chinese_name" class="detail-chinese">{{ architecture.chinese_name }}</p>
-          <p class="detail-desc">{{ architecture.full_description || architecture.brief_description }}</p>
+          <TextClamp :text="architecture.full_description || architecture.brief_description" :max-lines="5" expand-text="展开详情" collapse-text="收起详情" class="detail-desc" />
           
           <!-- Extra metadata -->
           <div class="detail-meta-grid" v-if="hasExtraMetadata">
@@ -104,9 +104,9 @@
             <p>{{ $t('architecture.detail.noData') }}</p>
           </div>
           <div v-else class="timeline">
-            <div v-for="(item, idx) in architecture.historicalDevelopments" :key="item.development_id" class="timeline-item" :style="{ animationDelay: `${idx * 100}ms` }">
+            <div v-for="(item, idx) in architecture.historicalDevelopments" :key="item.development_id" class="timeline-item" :style="{ animationDelay: `${(idx as number) * 100}ms` }">
               <div class="timeline-marker">
-                <span class="timeline-num">{{ idx + 1 }}</span>
+                <span class="timeline-num">{{ (idx as number) + 1 }}</span>
               </div>
               <div class="timeline-content">
                 <div class="timeline-header">
@@ -132,7 +132,7 @@
             <p>{{ $t('architecture.detail.noData') }}</p>
           </div>
           <div class="structure-grid">
-            <div v-for="(item, idx) in architecture.technicalStructures" :key="idx" class="structure-card" :style="{ animationDelay: `${idx * 100}ms` }">
+            <div v-for="(item, idx) in architecture.technicalStructures" :key="idx" class="structure-card" :style="{ animationDelay: `${(idx as number) * 100}ms` }">
               <div class="structure-header">
                 <h3>{{ item.technique_name || '未命名技术' }}</h3>
                 <span class="tag tag-pri" v-if="item.category">{{ item.category }}</span>
@@ -149,7 +149,7 @@
             <p>{{ $t('architecture.detail.noData') }}</p>
           </div>
           <div v-else class="features-list">
-            <div v-for="(item, idx) in architecture.architecturalFeatures" :key="item.feature_id" class="feature-detail-card" :style="{ animationDelay: `${idx * 100}ms` }">
+            <div v-for="(item, idx) in architecture.architecturalFeatures" :key="item.feature_id" class="feature-detail-card" :style="{ animationDelay: `${(idx as number) * 100}ms` }">
               <h3 class="feature-title">{{ item.feature_name }}</h3>
               
               <div v-if="item.design_philosophy" class="feature-section">
@@ -182,7 +182,7 @@
             <p>{{ $t('architecture.detail.noData') }}</p>
           </div>
           <div v-else class="culture-list">
-            <div v-for="(item, idx) in architecture.culturalSignificances" :key="item.significance_id" class="culture-card" :style="{ animationDelay: `${idx * 100}ms` }">
+            <div v-for="(item, idx) in architecture.culturalSignificances" :key="item.significance_id" class="culture-card" :style="{ animationDelay: `${(idx as number) * 100}ms` }">
               <h3>{{ item.significance_aspect }}</h3>
               
               <div v-if="item.philosophical_basis" class="culture-section culture-philosophy">
@@ -215,7 +215,7 @@
             <p>{{ $t('architecture.detail.noData') }}</p>
           </div>
           <div v-else class="quotes-list">
-            <blockquote v-for="(item, idx) in architecture.expertQuotes" :key="item.quote_id" class="quote-block" :style="{ animationDelay: `${idx * 100}ms` }">
+            <blockquote v-for="(item, idx) in architecture.expertQuotes" :key="item.quote_id" class="quote-block" :style="{ animationDelay: `${(idx as number) * 100}ms` }">
               <div class="quote-icon">
                 <svg viewBox="0 0 24 24" width="24" height="24"><path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h3.983v10h-9.983z" fill="currentColor" opacity="0.2"/></svg>
               </div>
@@ -289,6 +289,7 @@ import PageBackground from '@/components/common/PageBackground.vue';
 import CommentSection from '@/components/social/CommentSection.vue';
 import ShareButton from '@/components/social/ShareButton.vue';
 import NoteEditor from '@/components/notes/NoteEditor.vue';
+import TextClamp from '@/components/common/TextClamp.vue';
 import { architectureApi } from '@/services/api';
 import { useUserStore } from '@/stores';
 import { noteManager, type Note } from '@/utils/noteManager';
@@ -854,16 +855,6 @@ onMounted(loadDetail);
   font-style: italic;
 }
 
-/* ===== Responsive ===== */
-@media (max-width: 768px) {
-  .detail-header { grid-template-columns: 1fr; gap: 24px; }
-  .detail-tabs { gap: 0; }
-  .tab-btn { padding: 10px 14px; font-size: 0.8rem; }
-  .detail-meta-grid { grid-template-columns: 1fr; }
-  .timeline-header { flex-direction: column; align-items: flex-start; }
-  .quote-footer { flex-direction: column; align-items: flex-start; }
-}
-
 /* ===== 古建筑详情增强 ===== */
 .architecture-detail {
   background: var(--color-background);
@@ -982,4 +973,235 @@ onMounted(loadDetail);
 .note-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
 .note-tag { font-size: 0.6875rem; padding: 2px 8px; border-radius: var(--r-full); background: rgba(201, 169, 110, 0.1); color: var(--gold-dim); }
 .note-date { font-size: 0.75rem; color: var(--text-dim); }
+
+/* ===== 响应式适配 ===== */
+
+/* 平板端 */
+@media screen and (max-width: 1024px) {
+  .detail-header {
+    flex-direction: column;
+    gap: 24px;
+  }
+  .detail-image {
+    width: 100%;
+    height: 300px;
+  }
+  .detail-info {
+    width: 100%;
+  }
+  .detail-badges {
+    flex-wrap: wrap;
+  }
+  .detail-meta-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .detail-actions {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .detail-tabs {
+    flex-wrap: wrap;
+  }
+  .tab-btn {
+    padding: 8px 16px;
+    font-size: 0.8125rem;
+  }
+  .timeline-item {
+    gap: 16px;
+  }
+  .structure-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* 移动端 */
+@media screen and (max-width: 767px) {
+  .page-content {
+    padding-top: 70px !important;
+  }
+  .detail-header {
+    flex-direction: column;
+    gap: 16px;
+    padding: 16px;
+  }
+  .detail-image {
+    width: 100%;
+    height: 220px;
+    border-radius: var(--r-md);
+  }
+  .detail-info {
+    width: 100%;
+  }
+  .detail-badges {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .detail-badges .tag {
+    font-size: 0.6875rem;
+    padding: 2px 8px;
+  }
+  .detail-title-xl {
+    font-size: 1.375rem;
+    line-height: 1.4;
+  }
+  .detail-chinese {
+    font-size: 0.875rem;
+  }
+  .detail-desc {
+    font-size: 0.8125rem;
+  }
+  .detail-meta-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  .meta-item {
+    padding: 10px;
+  }
+  .meta-label {
+    font-size: 0.6875rem;
+  }
+  .meta-value {
+    font-size: 0.8125rem;
+  }
+  .detail-actions {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .btn-favorite {
+    padding: 8px 14px;
+    font-size: 0.75rem;
+  }
+  .btn-note {
+    padding: 8px 14px;
+    font-size: 0.75rem;
+  }
+  .btn-sec {
+    padding: 8px 14px;
+    font-size: 0.75rem;
+  }
+  .detail-tabs {
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 12px 0;
+  }
+  .tab-btn {
+    padding: 6px 12px;
+    font-size: 0.75rem;
+    border-radius: var(--r-sm);
+  }
+  .detail-body {
+    padding: 16px;
+  }
+  .timeline {
+    gap: 16px;
+  }
+  .timeline-item {
+    flex-direction: column;
+    gap: 12px;
+  }
+  .timeline-marker {
+    width: 28px;
+    height: 28px;
+  }
+  .timeline-num {
+    font-size: 0.75rem;
+  }
+  .timeline-header h3 {
+    font-size: 0.9375rem;
+  }
+  .timeline-period {
+    font-size: 0.6875rem;
+  }
+  .timeline-desc {
+    font-size: 0.8125rem;
+  }
+  .timeline-detail-box {
+    font-size: 0.75rem;
+    padding: 10px;
+  }
+  .structure-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  .structure-card {
+    padding: 14px;
+  }
+  .structure-header h3 {
+    font-size: 0.9375rem;
+  }
+  .structure-desc {
+    font-size: 0.8125rem;
+  }
+  .feature-detail-card {
+    padding: 14px;
+  }
+  .feature-title {
+    font-size: 0.9375rem;
+  }
+  .feature-section-label {
+    font-size: 0.6875rem;
+  }
+  .feature-section p {
+    font-size: 0.8125rem;
+  }
+  .culture-card {
+    padding: 14px;
+  }
+  .culture-card h3 {
+    font-size: 0.9375rem;
+  }
+  .culture-section-label {
+    font-size: 0.6875rem;
+  }
+  .culture-section p {
+    font-size: 0.8125rem;
+  }
+  .quote-block {
+    padding: 14px;
+  }
+  .quote-content {
+    font-size: 0.8125rem;
+  }
+  .quote-name {
+    font-size: 0.8125rem;
+  }
+  .quote-title {
+    font-size: 0.6875rem;
+  }
+  .note-card {
+    padding: 14px;
+  }
+  .note-title {
+    font-size: 0.9375rem;
+  }
+  .note-content {
+    font-size: 0.8125rem;
+  }
+  .empty-state {
+    padding: 32px 16px;
+  }
+}
+
+/* 小屏移动端 */
+@media screen and (max-width: 359px) {
+  .detail-header {
+    padding: 12px;
+  }
+  .detail-image {
+    height: 180px;
+  }
+  .detail-title-xl {
+    font-size: 1.25rem;
+  }
+  .detail-tabs {
+    gap: 2px;
+  }
+  .tab-btn {
+    padding: 5px 10px;
+    font-size: 0.6875rem;
+  }
+  .detail-body {
+    padding: 12px;
+  }
+}
 </style>

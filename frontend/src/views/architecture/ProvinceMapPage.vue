@@ -31,9 +31,9 @@
     <div class="toast" :class="{ show: toastVisible }" :style="toastStyle">{{ toastMsg }}</div>
 
     <!-- 建筑列表面板 -->
-    <div v-show="currentLevel > 1" class="building-list-panel">
-      <div class="list-header">{{ listTitle }}</div>
-      <div class="list-content">
+    <div v-show="currentLevel > 1" class="building-list-panel" :class="{ 'panel-collapsed': !listPanelExpanded && isMobile }">
+      <div class="list-header" @click="toggleListPanel">{{ listTitle }}<span v-if="isMobile" class="panel-toggle-icon">{{ listPanelExpanded ? '▼' : '▲' }}</span></div>
+      <div v-show="listPanelExpanded || !isMobile" class="list-content">
         <div v-if="filteredBuildings.length === 0" style="text-align:center; color:#8c8275; margin-top:20px;">当前暂无收录</div>
         <div v-for="item in filteredBuildings" :key="item.name" class="building-item" :style="item.name === locatedBuildingName ? { borderColor: '#d2b07c', boxShadow: '0 0 10px rgba(210,176,124,0.3)' } : {}" @click="navigateToDetail(item)">
           <div class="building-name">{{ item.name }}</div>
@@ -43,9 +43,9 @@
     </div>
 
     <!-- 省份概志面板（精简版：无营建大家） -->
-    <div v-show="showProvinceInfo" class="province-info-panel">
-      <div class="list-header">{{ currentProvince }}概志</div>
-      <div class="list-content">
+    <div v-show="showProvinceInfo" class="province-info-panel" :class="{ 'panel-collapsed': !provincePanelExpanded && isMobile }">
+      <div class="list-header" @click="toggleProvincePanel">{{ currentProvince }}概志<span v-if="isMobile" class="panel-toggle-icon">{{ provincePanelExpanded ? '▼' : '▲' }}</span></div>
+      <div v-show="provincePanelExpanded || !isMobile" class="list-content">
         <section class="info-section">
           <h3>◈ 历史沿革</h3>
           <p>{{ provinceHistory }}</p>
@@ -611,13 +611,6 @@ function initMap() {
       }
     }
   });
-
-  window.addEventListener('resize', handleResize);
-}
-
-function handleResize() {
-  chart && chart.resize();
-  statsChart && statsChart.resize();
 }
 
 function renderNationalMap() {
@@ -1089,7 +1082,100 @@ function extractCategoriesFromData() {
 // 生命周期
 // ============================================
 
+// 设备检测和响应式处理
+const isMobile = ref(false);
+const isTablet = ref(false);
+const isLandscape = ref(false);
+const screenWidth = ref(window.innerWidth);
+const screenHeight = ref(window.innerHeight);
+
+// 检测设备类型
+function detectDevice() {
+  screenWidth.value = window.innerWidth;
+  screenHeight.value = window.innerHeight;
+  isLandscape.value = screenWidth.value > screenHeight.value;
+  
+  // 设备类型判断
+  isMobile.value = screenWidth.value < 600;
+  isTablet.value = screenWidth.value >= 600 && screenWidth.value < 1024;
+  
+  // 根据设备类型调整点采样配置
+  if (isMobile.value) {
+    MAX_POINTS_PER_REGION.national = 50;
+    MAX_POINTS_PER_REGION.province = 30;
+    MAX_POINTS_PER_REGION.city = 20;
+  } else if (isTablet.value) {
+    MAX_POINTS_PER_REGION.national = 80;
+    MAX_POINTS_PER_REGION.province = 40;
+    MAX_POINTS_PER_REGION.city = 25;
+  } else {
+    MAX_POINTS_PER_REGION.national = 100;
+    MAX_POINTS_PER_REGION.province = 50;
+    MAX_POINTS_PER_REGION.city = 30;
+  }
+  
+  // 横屏模式下增加点数量
+  if (isLandscape.value && (isMobile.value || isTablet.value)) {
+    MAX_POINTS_PER_REGION.national = Math.min(MAX_POINTS_PER_REGION.national + 20, 120);
+    MAX_POINTS_PER_REGION.province = Math.min(MAX_POINTS_PER_REGION.province + 10, 60);
+    MAX_POINTS_PER_REGION.city = Math.min(MAX_POINTS_PER_REGION.city + 5, 35);
+  }
+}
+
+// 处理窗口大小变化
+function handleResize() {
+  detectDevice();
+  
+  // 如果图表已初始化，重新调整大小
+  if (chart) {
+    chart.resize({
+      width: 'auto',
+      height: 'auto'
+    });
+  }
+  if (statsChart) {
+    statsChart.resize({
+      width: 'auto',
+      height: 'auto'
+    });
+  }
+}
+
+// 触摸事件优化 - 防止双击缩放
+function preventDoubleZoom(e: TouchEvent) {
+  if (e.touches.length > 1) {
+    e.preventDefault();
+  }
+}
+
+// 移动端面板折叠控制
+const listPanelExpanded = ref(true);
+const provincePanelExpanded = ref(true);
+
+function toggleListPanel() {
+  if (isMobile.value) {
+    listPanelExpanded.value = !listPanelExpanded.value;
+  }
+}
+
+function toggleProvincePanel() {
+  if (isMobile.value) {
+    provincePanelExpanded.value = !provincePanelExpanded.value;
+  }
+}
+
 onMounted(async () => {
+  // 检测设备类型
+  detectDevice();
+  
+  // 添加窗口大小变化监听
+  window.addEventListener('resize', handleResize);
+  
+  // 移动端触摸事件优化
+  if ('ontouchstart' in window) {
+    document.addEventListener('touchstart', preventDoubleZoom, { passive: false });
+  }
+  
   // 先加载建筑数据，再加载地图，确保数据就绪
   await loadBuildings();
   initMap();
@@ -1099,6 +1185,12 @@ onBeforeUnmount(() => {
   if (autoCycleTimer) clearInterval(autoCycleTimer);
   if (toastTimer) clearTimeout(toastTimer);
   window.removeEventListener('resize', handleResize);
+  
+  // 移除触摸事件监听
+  if ('ontouchstart' in window) {
+    document.removeEventListener('touchstart', preventDoubleZoom);
+  }
+  
   chart && chart.dispose();
   statsChart && statsChart.dispose();
 });
@@ -1625,5 +1717,782 @@ onBeforeUnmount(() => {
 @keyframes fadeInDown {
   from { opacity: 0; transform: translateY(-10px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+/* ========== 移动端面板折叠样式 ========== */
+.panel-toggle-icon {
+  margin-left: 8px;
+  font-size: 10px;
+  opacity: 0.7;
+}
+
+.panel-collapsed {
+  max-height: 40px !important;
+  overflow: hidden;
+}
+
+.panel-collapsed .list-content {
+  display: none;
+}
+
+/* ========== 多端响应式适配 ========== */
+
+/* 大屏幕桌面端 (>= 1440px) */
+@media screen and (min-width: 1440px) {
+  .title-box h1 { font-size: 36px; }
+  .building-list-panel { width: 340px; }
+  .province-info-panel { width: 340px; }
+  .stats-info-card { flex: 1; }
+}
+
+/* 中等屏幕桌面端 (1024px - 1439px) */
+@media screen and (min-width: 1024px) and (max-width: 1439px) {
+  .title-box h1 { font-size: 30px; }
+  .building-list-panel { width: 280px; }
+  .province-info-panel { width: 280px; }
+  .stats-chart-container { flex: 2.5; }
+  .stats-info-card { flex: 0.7; }
+}
+
+/* 平板端 (768px - 1023px) */
+@media screen and (min-width: 768px) and (max-width: 1023px) {
+  .title-box { top: 20px; }
+  .title-box h1 { font-size: 24px; letter-spacing: 1px; }
+  
+  .map-btn { 
+    padding: 8px 18px; 
+    font-size: 14px; 
+    top: 25px;
+    left: 20px;
+  }
+  
+  .guide-container { 
+    top: 25px; 
+    left: 150px;
+  }
+  .guide-toggle-btn { 
+    padding: 8px 16px; 
+    font-size: 13px;
+  }
+  .guide-content p { font-size: 12px; }
+  
+  .building-list-panel { 
+    width: 260px; 
+    right: 15px;
+    top: 60px;
+    height: calc(100vh - 120px);
+  }
+  .list-header { font-size: 16px; padding: 12px; }
+  .building-name { font-size: 14px; }
+  .locate-btn { font-size: 10px; padding: 2px 5px; }
+  
+  .province-info-panel { 
+    width: 260px; 
+    left: 15px;
+    max-height: 60vh;
+  }
+  .info-section h3 { font-size: 14px; }
+  .info-section p { font-size: 12px; }
+  
+  .stats-btn { 
+    top: 25px; 
+    right: 20px;
+    padding: 8px 18px;
+    font-size: 13px;
+  }
+  
+  .category-panel { 
+    bottom: 20px; 
+    right: 20px;
+  }
+  .category-btn { 
+    padding: 8px 16px; 
+    font-size: 13px;
+    border-radius: 16px;
+  }
+  .dynamic-toggle-btn { 
+    padding: 8px 12px; 
+    font-size: 13px;
+    border-radius: 16px;
+  }
+  .category-list { width: 170px; }
+  .cat-item { padding: 8px 12px; font-size: 13px; }
+  
+  .category-status-tag {
+    right: 18%;
+    top: 40%;
+    padding: 8px 4px;
+  }
+  .status-text { font-size: 10px; letter-spacing: 2px; }
+  
+  .stats-page { padding: 2vh 2vw; }
+  .stats-header h2 { font-size: 20px; letter-spacing: 2px; }
+  .stats-back-btn { padding: 8px 18px; font-size: 13px; }
+  .stats-main-content { gap: 20px; }
+  .stats-chart-container { padding: 20px; }
+  .stats-info-card { padding: 20px; }
+  .stats-scroll-text { font-size: 13px; }
+  
+  .toast { 
+    top: 100px; 
+    padding: 12px 24px;
+    font-size: 13px;
+  }
+}
+
+/* 小平板/大手机 (600px - 767px) */
+@media screen and (min-width: 600px) and (max-width: 767px) {
+  .title-box { top: 15px; }
+  .title-box h1 { font-size: 20px; letter-spacing: 1px; }
+  
+  .map-btn { 
+    padding: 6px 14px; 
+    font-size: 12px; 
+    top: 20px;
+    left: 15px;
+    border-radius: 6px;
+  }
+  
+  .guide-container { 
+    top: 20px; 
+    left: 120px;
+  }
+  .guide-toggle-btn { 
+    padding: 6px 12px; 
+    font-size: 11px;
+    border-radius: 6px;
+  }
+  .guide-content { 
+    padding: 10px 15px;
+    margin-top: 8px;
+  }
+  .guide-content p { font-size: 11px; margin: 6px 0; }
+  
+  .building-list-panel { 
+    width: 220px; 
+    right: 10px;
+    top: 50px;
+    height: calc(100vh - 100px);
+    border-radius: 6px;
+  }
+  .list-header { font-size: 14px; padding: 10px; }
+  .building-item { padding: 8px; margin-bottom: 6px; }
+  .building-name { font-size: 12px; }
+  .locate-btn { font-size: 9px; padding: 1px 4px; }
+  
+  .province-info-panel { 
+    width: 220px; 
+    left: 10px;
+    max-height: 55vh;
+    border-radius: 4px;
+  }
+  .info-section { margin-bottom: 12px; }
+  .info-section h3 { font-size: 13px; }
+  .info-section p { font-size: 11px; line-height: 1.6; }
+  
+  .stats-btn { 
+    top: 20px; 
+    right: 15px;
+    padding: 6px 14px;
+    font-size: 11px;
+    border-radius: 6px;
+  }
+  
+  .category-panel { 
+    bottom: 15px; 
+    right: 15px;
+  }
+  .category-btn { 
+    padding: 6px 12px; 
+    font-size: 11px;
+    border-radius: 14px;
+  }
+  .dynamic-toggle-btn { 
+    padding: 6px 10px; 
+    font-size: 11px;
+    border-radius: 14px;
+  }
+  .category-list { 
+    width: 150px; 
+    padding: 8px;
+    border-radius: 8px;
+  }
+  .cat-item { padding: 6px 10px; font-size: 11px; }
+  .cat-dot { width: 6px; height: 6px; margin-right: 6px; }
+  
+  .category-status-tag {
+    right: 15%;
+    top: 38%;
+    padding: 6px 3px;
+    border-radius: 14px;
+  }
+  .status-dot { width: 5px; height: 5px; margin-bottom: 4px; }
+  .status-text { font-size: 9px; letter-spacing: 1px; }
+  
+  .stats-page { padding: 1.5vh 1.5vw; }
+  .stats-header h2 { font-size: 18px; letter-spacing: 2px; }
+  .stats-back-btn { padding: 6px 14px; font-size: 11px; }
+  .stats-main-content { 
+    flex-direction: column;
+    gap: 15px;
+  }
+  .stats-chart-container { 
+    flex: 1;
+    padding: 15px;
+    min-height: 40vh;
+  }
+  .stats-info-card { 
+    flex: 0.5;
+    padding: 15px;
+    max-height: 35vh;
+  }
+  .stats-scroll-text { font-size: 12px; line-height: 1.6; }
+  
+  .toast { 
+    top: 80px; 
+    padding: 10px 20px;
+    font-size: 11px;
+    border-radius: 4px;
+    max-width: 80vw;
+  }
+}
+
+/* 手机端 (< 600px) */
+@media screen and (max-width: 599px) {
+  .title-box { top: 10px; }
+  .title-box h1 { 
+    font-size: 16px; 
+    letter-spacing: 1px;
+    text-shadow: 1px 1px 3px rgba(0,0,0,0.8);
+  }
+  
+  .map-btn { 
+    padding: 5px 10px; 
+    font-size: 11px; 
+    top: 12px;
+    left: 10px;
+    border-radius: 4px;
+    letter-spacing: 1px;
+  }
+  
+  .guide-container { 
+    top: 12px; 
+    left: 100px;
+  }
+  .guide-toggle-btn { 
+    padding: 5px 10px; 
+    font-size: 10px;
+    border-radius: 4px;
+  }
+  .guide-content { 
+    padding: 8px 12px;
+    margin-top: 6px;
+    border-radius: 4px;
+    max-width: calc(100vw - 120px);
+  }
+  .guide-content p { 
+    font-size: 10px; 
+    margin: 4px 0;
+    white-space: normal;
+    line-height: 1.5;
+  }
+  
+  /* 建筑列表面板 - 手机端底部弹出 */
+  .building-list-panel { 
+    position: fixed;
+    width: calc(100vw - 20px);
+    left: 10px;
+    right: 10px;
+    bottom: 10px;
+    top: auto;
+    height: auto;
+    max-height: 45vh;
+    border-radius: 8px 8px 8px 8px;
+    transform: translateY(0);
+    transition: transform 0.3s ease, max-height 0.3s ease;
+  }
+  .list-header { 
+    font-size: 13px; 
+    padding: 8px;
+    cursor: pointer;
+  }
+  .building-item { 
+    padding: 6px; 
+    margin-bottom: 4px;
+    border-radius: 3px;
+  }
+  .building-name { font-size: 11px; }
+  .locate-btn { 
+    font-size: 8px; 
+    padding: 1px 3px;
+    border-radius: 3px;
+  }
+  
+  /* 省份概志面板 - 手机端隐藏或简化 */
+  .province-info-panel { 
+    position: fixed;
+    width: calc(100vw - 20px);
+    left: 10px;
+    right: 10px;
+    bottom: 10px;
+    top: auto;
+    transform: none;
+    max-height: 40vh;
+    border-radius: 8px;
+    z-index: 30;
+  }
+  .info-section { margin-bottom: 8px; padding: 0 3px; }
+  .info-section h3 { font-size: 12px; margin-bottom: 4px; }
+  .info-section p { font-size: 10px; line-height: 1.5; }
+  
+  .stats-btn { 
+    top: 12px; 
+    right: 10px;
+    padding: 5px 10px;
+    font-size: 10px;
+    border-radius: 4px;
+  }
+  
+  /* 分类面板 - 手机端底部横向布局 */
+  .category-panel { 
+    position: fixed;
+    bottom: 60px;
+    right: 10px;
+    left: 10px;
+    width: auto;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .category-btn { 
+    padding: 5px 10px; 
+    font-size: 10px;
+    border-radius: 12px;
+    flex: 1;
+    text-align: center;
+    margin-right: 5px;
+  }
+  .dynamic-toggle-btn { 
+    padding: 5px 8px; 
+    font-size: 10px;
+    border-radius: 12px;
+    flex-shrink: 0;
+  }
+  .category-list { 
+    position: absolute;
+    bottom: 100%;
+    right: 0;
+    width: calc(100vw - 20px);
+    max-width: 200px;
+    padding: 6px;
+    border-radius: 6px;
+    margin-bottom: 5px;
+  }
+  .cat-item { padding: 5px 8px; font-size: 10px; }
+  .cat-dot { width: 5px; height: 5px; margin-right: 5px; }
+  
+  /* 分类状态标签 - 手机端隐藏 */
+  .category-status-tag {
+    display: none;
+  }
+  
+  /* 统计页面 - 手机端全屏 */
+  .stats-page { 
+    padding: 1vh 1vw;
+  }
+  .stats-header { 
+    flex-direction: column;
+    gap: 10px;
+    text-align: center;
+  }
+  .stats-header h2 { 
+    font-size: 14px; 
+    letter-spacing: 1px;
+  }
+  .stats-back-btn { 
+    padding: 5px 12px;
+    font-size: 10px;
+    border-radius: 4px;
+  }
+  .stats-main-content { 
+    flex-direction: column;
+    gap: 10px;
+  }
+  .stats-chart-container { 
+    flex: 1;
+    padding: 10px;
+    min-height: 35vh;
+    border-radius: 8px;
+  }
+  .stats-info-card { 
+    flex: 0.6;
+    padding: 10px;
+    max-height: 30vh;
+    border-radius: 8px;
+  }
+  .stats-info-card h3 { font-size: 12px; padding-bottom: 6px; }
+  .stats-scroll-text { 
+    font-size: 10px; 
+    line-height: 1.5;
+    padding-right: 5px;
+  }
+  
+  .toast { 
+    top: 60px; 
+    padding: 8px 15px;
+    font-size: 10px;
+    border-radius: 3px;
+    max-width: 90vw;
+    line-height: 1.5;
+  }
+  
+  /* 滚动条优化 */
+  ::-webkit-scrollbar { width: 3px; height: 3px; }
+  ::-webkit-scrollbar-thumb { border-radius: 5px; }
+}
+
+/* 超小屏幕 (< 360px) */
+@media screen and (max-width: 359px) {
+  .title-box h1 { font-size: 14px; }
+  
+  .map-btn { 
+    padding: 4px 8px; 
+    font-size: 10px;
+    left: 5px;
+    top: 8px;
+  }
+  
+  .guide-container { left: 80px; top: 8px; }
+  .guide-toggle-btn { padding: 4px 8px; font-size: 9px; }
+  .guide-content { padding: 6px 10px; }
+  .guide-content p { font-size: 9px; }
+  
+  .building-list-panel { 
+    width: calc(100vw - 10px);
+    left: 5px;
+    right: 5px;
+    max-height: 40vh;
+  }
+  .list-header { font-size: 11px; padding: 6px; }
+  .building-item { padding: 5px; }
+  .building-name { font-size: 10px; }
+  .locate-btn { font-size: 7px; padding: 1px 2px; }
+  
+  .province-info-panel { 
+    width: calc(100vw - 10px);
+    left: 5px;
+    max-height: 35vh;
+  }
+  .info-section h3 { font-size: 11px; }
+  .info-section p { font-size: 9px; }
+  
+  .stats-btn { 
+    right: 5px;
+    padding: 4px 8px;
+    font-size: 9px;
+  }
+  
+  .category-panel { 
+    bottom: 50px;
+    left: 5px;
+    right: 5px;
+  }
+  .category-btn { 
+    padding: 4px 8px; 
+    font-size: 9px;
+  }
+  .dynamic-toggle-btn { 
+    padding: 4px 6px; 
+    font-size: 9px;
+  }
+  .cat-item { padding: 4px 6px; font-size: 9px; }
+  
+  .stats-header h2 { font-size: 12px; }
+  .stats-back-btn { padding: 4px 10px; font-size: 9px; }
+  .stats-scroll-text { font-size: 9px; }
+}
+
+/* ========== 横屏模式适配 ========== */
+
+/* 手机横屏 (landscape) */
+@media screen and (max-width: 900px) and (orientation: landscape) {
+  .title-box { top: 5px; }
+  .title-box h1 { font-size: 14px; }
+  
+  .map-btn { 
+    top: 8px;
+    padding: 4px 10px;
+    font-size: 10px;
+  }
+  
+  .guide-container { top: 8px; left: 130px; }
+  .guide-toggle-btn { padding: 4px 10px; font-size: 10px; }
+  .guide-content {
+    max-width: 50vw;
+  }
+  
+  /* 建筑列表 - 横屏时右侧显示 */
+  .building-list-panel { 
+    position: absolute;
+    top: 40px;
+    right: 10px;
+    bottom: auto;
+    width: 200px;
+    height: calc(100vh - 60px);
+    transform: none;
+  }
+  
+  /* 省份概志 - 横屏时左侧显示 */
+  .province-info-panel { 
+    position: absolute;
+    top: 40px;
+    left: 10px;
+    bottom: auto;
+    width: 200px;
+    max-height: calc(100vh - 60px);
+    transform: none;
+  }
+  
+  .stats-btn { top: 8px; right: 10px; padding: 4px 10px; font-size: 10px; }
+  
+  .category-panel { 
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    left: auto;
+    flex-direction: column;
+  }
+  .category-btn { padding: 4px 10px; font-size: 10px; }
+  .dynamic-toggle-btn { padding: 4px 8px; font-size: 10px; }
+  .category-list { width: 140px; }
+  
+  /* 统计页面横屏 */
+  .stats-page { padding: 1vh 2vw; }
+  .stats-main-content { 
+    flex-direction: row;
+    gap: 15px;
+  }
+  .stats-chart-container { 
+    flex: 2;
+    min-height: 60vh;
+  }
+  .stats-info-card { 
+    flex: 0.8;
+    max-height: none;
+  }
+}
+
+/* 平板横屏 */
+@media screen and (min-width: 768px) and (max-width: 1023px) and (orientation: landscape) {
+  .building-list-panel { width: 240px; }
+  .province-info-panel { width: 240px; }
+  .stats-main-content { gap: 25px; }
+  .stats-chart-container { flex: 3; min-height: 70vh; }
+}
+
+/* ========== 触摸设备优化 ========== */
+
+/* 触摸设备通用优化 */
+@media (hover: none) and (pointer: coarse) {
+  /* 增大按钮点击区域 */
+  .map-btn { min-height: 36px; }
+  .guide-toggle-btn { min-height: 36px; }
+  .stats-btn { min-height: 36px; }
+  .category-btn { min-height: 36px; }
+  .dynamic-toggle-btn { min-height: 36px; }
+  .cat-item { min-height: 36px; padding: 10px 14px; }
+  .building-item { min-height: 44px; }
+  .locate-btn { 
+    min-width: 40px;
+    min-height: 28px;
+    padding: 4px 8px;
+  }
+  .stats-back-btn { min-height: 36px; }
+  
+  /* 移除hover效果，使用active效果替代 */
+  .map-btn:hover { transform: none; }
+  .map-btn:active { 
+    background: rgba(210, 176, 124, 0.25);
+    transform: scale(0.98);
+  }
+  
+  .guide-toggle-btn:hover { transform: none; }
+  .guide-toggle-btn:active {
+    background: rgba(210, 176, 124, 0.2);
+    transform: scale(0.98);
+  }
+  
+  .category-btn:hover { transform: none; }
+  .category-btn:active {
+    background: rgba(210, 176, 124, 0.25);
+    transform: scale(0.98);
+  }
+  
+  .dynamic-toggle-btn:hover { transform: none; }
+  .dynamic-toggle-btn:active {
+    background: rgba(210, 176, 124, 0.25);
+    transform: scale(0.98);
+  }
+  
+  .cat-item:hover { background: transparent; }
+  .cat-item:active {
+    background: rgba(210, 176, 124, 0.1);
+  }
+  
+  .building-item:hover { 
+    border-color: rgba(210, 176, 124, 0.1);
+    background: transparent;
+  }
+  .building-item:active {
+    border-color: #d2b07c;
+    background: rgba(210, 176, 124, 0.15);
+  }
+  
+  .stats-btn:hover { transform: none; }
+  .stats-btn:active {
+    background: #d2b07c;
+    color: #161412;
+  }
+  
+  .stats-back-btn:hover { transform: none; }
+  .stats-back-btn:active {
+    background: #d2b07c;
+    color: #161412;
+  }
+  
+  /* 禁用backdrop-filter以提升性能 */
+  .guide-toggle-btn,
+  .guide-content,
+  .building-list-panel,
+  .province-info-panel,
+  .stats-btn,
+  .category-btn,
+  .dynamic-toggle-btn,
+  .category-list,
+  .stats-back-btn {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
+
+/* ========== 高分辨率屏幕适配 ========== */
+@media screen and (min-resolution: 2dppx) {
+  /* 优化边框和阴影在高分屏上的显示 */
+  .map-btn,
+  .guide-toggle-btn,
+  .stats-btn,
+  .category-btn,
+  .dynamic-toggle-btn,
+  .stats-back-btn {
+    border-width: 0.5px;
+  }
+  
+  .building-list-panel,
+  .province-info-panel,
+  .category-list {
+    border-width: 0.5px;
+  }
+}
+
+/* ========== 打印样式 ========== */
+@media print {
+  .map-fullscreen {
+    position: static;
+    width: 100%;
+    height: auto;
+    background: white;
+    color: black;
+  }
+  
+  .map-btn,
+  .guide-container,
+  .stats-btn,
+  .category-panel,
+  .category-status-tag,
+  .toast {
+    display: none;
+  }
+  
+  .building-list-panel,
+  .province-info-panel {
+    position: static;
+    width: 100%;
+    background: white;
+    border: 1px solid #ccc;
+    color: black;
+    max-height: none;
+  }
+  
+  .stats-page {
+    position: static;
+    background: white;
+    color: black;
+  }
+}
+
+/* ========== iOS Safari 特殊处理 ========== */
+@supports (-webkit-touch-callout: none) {
+  /* 修复iOS Safari 100vh问题 */
+  .map-fullscreen,
+  .stats-page {
+    height: -webkit-fill-available;
+  }
+  
+  /* 修复iOS Safari底部安全区域 */
+  .category-panel {
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+  
+  .building-list-panel {
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+}
+
+/* ========== Android Chrome 特殊处理 ========== */
+@media screen and (max-width: 599px) {
+  /* 修复Android Chrome地址栏影响 */
+  .map-fullscreen {
+    min-height: 100vh;
+    min-height: -moz-available;
+    min-height: -webkit-fill-available;
+    min-height: fill-available;
+  }
+}
+
+/* ========== 可访问性优化 ========== */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* 高对比度模式 */
+@media (prefers-contrast: high) {
+  .map-btn,
+  .guide-toggle-btn,
+  .stats-btn,
+  .category-btn,
+  .dynamic-toggle-btn,
+  .stats-back-btn {
+    border-width: 2px;
+    border-color: currentColor;
+  }
+  
+  .building-item,
+  .cat-item {
+    border-width: 1px;
+    border-color: currentColor;
+  }
+  
+  .toast {
+    border-width: 2px;
+  }
+}
+
+/* 暗色模式适配（如果用户系统偏好暗色） */
+@media (prefers-color-scheme: dark) {
+  /* 当前页面已经是暗色主题，无需额外处理 */
 }
 </style>

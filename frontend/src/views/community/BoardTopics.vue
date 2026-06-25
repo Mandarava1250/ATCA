@@ -237,8 +237,4 @@ onMounted(() => {
 .form-group input:focus, .form-group textarea:focus { border-color: var(--gold-dim); box-shadow: 0 0 0 3px rgba(201,169,110,0.08); }
 .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border); }
 
-@media (max-width: 640px) {
-  .board-main { padding: 88px 16px 32px; }
-  .board-title { font-size: 1.375rem; }
-}
 </style>

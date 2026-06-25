@@ -106,19 +106,41 @@ class QueryCache {
     logger.debug('缓存设置', { key: key.substring(0, 50), dataSize: JSON.stringify(data).length, ttl: entry.ttl });
   }
 
-  // 缓存驱逐策略（LRU）
+  // 缓存驱逐策略（增强型LRU）
   evict(): void {
     const entries = Array.from(this.cache.entries());
-    // 按最后访问时间排序，删除最久未访问的
-    entries.sort((a, b) => a[1].lastAccess - b[1].lastAccess);
-    
+    const now = Date.now();
+
+    // 考虑 TTL、访问频率和最后访问时间
+    entries.sort((a, b) => {
+      const aTtlRemaining = (a[1].ttl * 1000) - (now - a[1].timestamp);
+      const bTtlRemaining = (b[1].ttl * 1000) - (now - b[1].timestamp);
+
+      // 优先删除已过期的
+      if (aTtlRemaining <= 0) return -1;
+      if (bTtlRemaining <= 0) return 1;
+
+      // TTL 剩余比例较小但命中次数较少的优先删除
+      const aScore = a[1].lastAccess - (a[1].hitCount * 1000);
+      const bScore = b[1].lastAccess - (b[1].hitCount * 1000);
+      return aScore - bScore;
+    });
+
     // 删除前10%的条目
     const toDelete = Math.ceil(entries.length * 0.1) || 1;
+    let deleted = 0;
     for (let i = 0; i < toDelete; i++) {
-      this.cache.delete(entries[i][0]);
+      const entry = entries[i];
+      const ttlRemaining = (entry[1].ttl * 1000) - (now - entry[1].timestamp);
+      // 不删除 TTL 还剩 50% 以上的高频热点数据
+      if (ttlRemaining > entry[1].ttl * 500 && entry[1].hitCount > 5) {
+        continue;
+      }
+      this.cache.delete(entry[0]);
+      deleted++;
     }
-    
-    logger.debug(`缓存驱逐: 删除 ${toDelete} 条记录`);
+
+    logger.debug(`缓存驱逐: 删除 ${deleted} 条记录`);
   }
 
   // 清理过期缓存

@@ -242,10 +242,4 @@ onMounted(() => {
   align-self: flex-end;
 }
 
-@media (max-width: 768px) {
-  .chat-container { height: calc(100vh - 240px); }
-  .message-content { max-width: 90%; }
-  .input-row { flex-direction: column; }
-  .send-btn { width: 100%; }
-}
 </style>

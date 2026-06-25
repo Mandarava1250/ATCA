@@ -7,46 +7,46 @@
         <aside class="profile-sidebar">
           <div class="profile-card">
             <div class="avatar-wrapper">
-              <img :src="avatarFullUrl" class="profile-avatar" @click="triggerAvatarUpload" />
+              <SafeImage :src="avatarFullUrl" class="profile-avatar" @click="triggerAvatarUpload" fallback="https://api.dicebear.com/7.x/avataaars/svg?seed=user" />
               <div class="avatar-overlay" @click="triggerAvatarUpload">
                 <svg viewBox="0 0 24 24" width="20" height="20"><path d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" stroke="currentColor" fill="none" stroke-width="1.5"/><path d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
-                <span>更换头像</span>
+                <span>{{ t('profile.changeAvatar') }}</span>
               </div>
               <input ref="avatarInput" type="file" accept="image/*" style="display: none" @change="handleAvatarChange" />
             </div>
             <h2>{{ profile?.nickname || profile?.username }}</h2>
             <p class="profile-username">@{{ profile?.username }}</p>
             <p class="profile-role" :class="profile?.role">{{ roleLabel }}</p>
-            <p class="profile-bio">{{ profile?.bio || '暂无简介，点击设置添加...' }}</p>
+            <p class="profile-bio">{{ profile?.bio || t('profile.bioEmpty') }}</p>
 
             <!-- 等级进度 -->
             <div class="level-section">
               <div class="level-header">
                 <span class="level-badge">Lv.{{ profile?.level || 1 }}</span>
-                <span class="level-points">{{ profile?.points || 0 }} / {{ nextLevelPoints }} 积分</span>
+                <span class="level-points">{{ profile?.points || 0 }} / {{ nextLevelPoints }} {{ t('profile.pointsLabel') }}</span>
               </div>
               <div class="level-progress-bar">
                 <div class="level-progress-fill" :style="{ width: levelProgressPercent + '%' }"></div>
               </div>
-              <p class="level-next">还需 {{ pointsToNext }} 积分升级</p>
+              <p class="level-next">{{ t('profile.pointsToNext', { points: pointsToNext }) }}</p>
             </div>
 
             <div class="profile-stats">
               <div class="stat-box">
                 <strong>{{ profile?.points || 0 }}</strong>
-                <span>积分</span>
+                <span>{{ t('profile.stats.points') }}</span>
               </div>
               <div class="stat-box">
                 <strong>{{ stats.totalFavorites }}</strong>
-                <span>收藏</span>
+                <span>{{ t('profile.stats.favorites') }}</span>
               </div>
               <div class="stat-box">
                 <strong>{{ stats.totalModels }}</strong>
-                <span>模型</span>
+                <span>{{ t('profile.stats.models') }}</span>
               </div>
               <div class="stat-box">
                 <strong>{{ stats.totalQuizzes }}</strong>
-                <span>答题</span>
+                <span>{{ t('profile.stats.quizzes') }}</span>
               </div>
             </div>
 
@@ -57,11 +57,11 @@
               </p>
               <p>
                 <svg viewBox="0 0 24 24" width="14" height="14"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
-                加入于 {{ formatDate(profile?.created_at) }}
+                {{ t('profile.joinDate') }} {{ formatDate(profile?.created_at) }}
               </p>
               <p v-if="profile?.last_login">
                 <svg viewBox="0 0 24 24" width="14" height="14"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
-                上次登录 {{ formatDate(profile?.last_login) }}
+                {{ t('profile.lastLogin') }} {{ formatDate(profile?.last_login) }}
               </p>
             </div>
           </div>
@@ -70,11 +70,21 @@
           <div class="achievements-card" v-if="achievements.length">
             <h3>
               <svg viewBox="0 0 24 24" width="16" height="16"><path d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
-              最近成就
+              {{ t('profile.recentAchievements') }}
             </h3>
             <div class="achievements-list">
               <div v-for="ach in achievements.slice(0, 3)" :key="ach.achievement_id" class="achievement-item" :title="ach.description">
-                <span class="achievement-icon">{{ ach.icon || '🏆' }}</span>
+                <span class="achievement-icon">
+                  <SafeImage 
+                    v-if="ach.icon && ach.icon.startsWith('/')" 
+                    :src="ach.icon" 
+                    :alt="ach.name" 
+                    class="achievement-icon-img" 
+                    fallback="🏆"
+                    :show-error="false"
+                  />
+                  <template v-else>{{ ach.icon || '🏆' }}</template>
+                </span>
                 <div class="achievement-info">
                   <span class="achievement-name">{{ ach.name }}</span>
                   <span class="achievement-date">{{ formatDate(ach.unlocked_at) }}</span>
@@ -124,8 +134,8 @@
             </div>
             <div v-else class="empty-state">
               <svg viewBox="0 0 24 24" width="48" height="48"><path d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
-              <p>暂无收藏的古建筑</p>
-              <router-link to="/architecture" class="atca-btn atca-btn-primary">去探索古建筑</router-link>
+              <p>{{ t('profile.noFavorites') }}</p>
+              <router-link to="/architecture" class="atca-btn atca-btn-primary">{{ t('profile.goExplore') }}</router-link>
             </div>
           </div>
 
@@ -138,18 +148,18 @@
                 </div>
                 <div class="model-info">
                   <h4>{{ model.model_name }}</h4>
-                  <p>{{ model.component_count || 0 }} 构件 · 创建于 {{ formatDate(model.created_at) }}</p>
+                  <p>{{ model.component_count || 0 }} {{ t('profile.components') }} · {{ t('profile.createdAt') }} {{ formatDate(model.created_at) }}</p>
                   <div class="model-tags">
                     <span class="tag" v-if="model.category">{{ model.category }}</span>
-                    <span class="tag" v-if="model.is_public">公开</span>
-                    <span class="tag private" v-else>私密</span>
+                    <span class="tag" v-if="model.is_public">{{ t('profile.public') }}</span>
+                    <span class="tag private" v-else>{{ t('profile.private') }}</span>
                   </div>
                 </div>
                 <div class="model-actions">
-                  <button class="btn-icon" @click="editModel(model.model_id)" title="编辑">
+                  <button class="btn-icon" @click="editModel(model.model_id)" :title="t('profile.edit')">
                     <svg viewBox="0 0 24 24" width="16" height="16"><path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
                   </button>
-                  <button class="btn-icon danger" @click="deleteModel(model.model_id)" title="删除">
+                  <button class="btn-icon danger" @click="deleteModel(model.model_id)" :title="t('profile.delete')">
                     <svg viewBox="0 0 24 24" width="16" height="16"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
                   </button>
                 </div>
@@ -157,8 +167,8 @@
             </div>
             <div v-else class="empty-state">
               <svg viewBox="0 0 24 24" width="48" height="48"><path d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-2 1m2-1l-2-1m2 1v2.5M14 4l-2-1-2 1M4 7l2-1M4 7l2 1M4 7v2.5M12 21l-2-1m2 1l2-1m-2 1v-2.5M6 18l-2-1v-2.5M18 18l2-1v-2.5" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
-              <p>暂无3D模型</p>
-              <router-link to="/workshop" class="atca-btn atca-btn-primary">去3D工坊创建</router-link>
+              <p>{{ t('profile.noModels') }}</p>
+              <router-link to="/workshop" class="atca-btn atca-btn-primary">{{ t('profile.createModel') }}</router-link>
             </div>
           </div>
 
@@ -167,15 +177,15 @@
             <div class="points-summary" v-if="points.length">
               <div class="points-stat">
                 <span class="points-total">{{ profile?.points || 0 }}</span>
-                <span class="points-label">当前积分</span>
+                <span class="points-label">{{ t('profile.currentPoints') }}</span>
               </div>
               <div class="points-stat">
                 <span class="points-earned">+{{ totalPointsEarned }}</span>
-                <span class="points-label">累计获得</span>
+                <span class="points-label">{{ t('profile.totalEarned') }}</span>
               </div>
               <div class="points-stat">
                 <span class="points-spent">-{{ totalPointsSpent }}</span>
-                <span class="points-label">累计消耗</span>
+                <span class="points-label">{{ t('profile.totalSpent') }}</span>
               </div>
             </div>
             <div v-if="points.length" class="points-list">
@@ -195,18 +205,18 @@
             </div>
             <div v-else class="empty-state">
               <svg viewBox="0 0 24 24" width="48" height="48"><path d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
-              <p>暂无积分记录</p>
-              <p class="empty-hint">参与知识竞赛可以获得积分哦</p>
+              <p>{{ t('profile.noPoints') }}</p>
+              <p class="empty-hint">{{ t('profile.hintQuiz') }}</p>
             </div>
           </div>
 
           <!-- 笔记Tab -->
           <div v-if="activeTab === 'notes'" class="tab-panel">
             <div class="notes-manage-header">
-              <h3>我的笔记</h3>
+              <h3>{{ t('profile.tabs.notes') }}</h3>
               <button class="atca-btn atca-btn-primary atca-btn-sm" @click="openNoteEditor(null)">
                 <svg viewBox="0 0 24 24" width="14" height="14"><path d="M12 5v14M5 12h14" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round"/></svg>
-                新建笔记
+                {{ t('profile.createNote') }}
               </button>
             </div>
             <div v-if="userNotes.length > 0" class="notes-manage-list">
@@ -214,10 +224,10 @@
                 <div class="note-manage-header">
                   <h4>{{ note.title }}</h4>
                   <div class="note-manage-actions">
-                    <span v-if="note.isPublic" class="note-badge public">公开</span>
-                    <span v-else class="note-badge private">私密</span>
-                    <button class="btn-text" @click="openNoteEditor(note)">编辑</button>
-                    <button class="btn-text danger" @click="deleteUserNote(note.id)">删除</button>
+                    <span v-if="note.isPublic" class="note-badge public">{{ t('profile.public') }}</span>
+                    <span v-else class="note-badge private">{{ t('profile.private') }}</span>
+                    <button class="btn-text" @click="openNoteEditor(note)">{{ t('profile.edit') }}</button>
+                    <button class="btn-text danger" @click="deleteUserNote(note.id)">{{ t('profile.delete') }}</button>
                   </div>
                 </div>
                 <p class="note-manage-content">{{ note.content }}</p>
@@ -235,8 +245,8 @@
             </div>
             <div v-else class="empty-state">
               <svg viewBox="0 0 24 24" width="48" height="48"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" stroke="currentColor" fill="none" stroke-width="1.5"/><path d="M14 2v6h6" stroke="currentColor" fill="none" stroke-width="1.5"/><path d="M16 13H8M16 17H8M10 9H8" stroke="currentColor" fill="none" stroke-width="1.5" stroke-linecap="round"/></svg>
-              <p>暂无笔记</p>
-              <p class="empty-hint">点击"新建笔记"开始记录</p>
+              <p>{{ t('profile.noNotes') }}</p>
+              <p class="empty-hint">{{ t('profile.createNote') }}</p>
             </div>
           </div>
 
@@ -245,33 +255,33 @@
             <div class="settings-sections">
               <!-- 基本资料 -->
               <div class="settings-section">
-                <h3>基本资料</h3>
+                <h3>{{ t('profile.basicInfo') }}</h3>
                 <div class="settings-form">
                   <div class="form-row">
                     <div class="form-group">
-                      <label>昵称</label>
-                      <input v-model="settingsForm.nickname" class="atca-input" placeholder="请输入昵称" />
+                      <label>{{ t('profile.nickname') }}</label>
+                      <input v-model="settingsForm.nickname" class="atca-input" :placeholder="t('profile.nickname')" />
                     </div>
                     <div class="form-group">
-                      <label>所在地 <button v-if="!geoLoading" class="btn-text" @click.prevent="getGeoLocation">📍自动获取</button><span v-else-if="geoLoading" class="hint">定位中...</span></label>
+                      <label>{{ t('profile.location') }} <button v-if="!geoLoading" class="btn-text" @click.prevent="getGeoLocation">📍{{ t('profile.autoGet') }}</button><span v-else-if="geoLoading" class="hint">{{ t('profile.locating') }}</span></label>
                       <div class="location-selector">
                         <select v-model="settingsForm.province" class="atca-input">
-                          <option value="">请选择省份</option>
+                          <option value="">{{ t('profile.noProvince') }}</option>
                           <option v-for="province in provinceData" :key="province.name" :value="province.name">{{ province.name }}</option>
                         </select>
                         <select v-model="settingsForm.city" class="atca-input" :disabled="!settingsForm.province">
-                          <option value="">请选择城市</option>
+                          <option value="">{{ t('profile.noCity') }}</option>
                           <option v-for="city in currentCities" :key="city" :value="city">{{ city }}</option>
                         </select>
                       </div>
                     </div>
                   </div>
                   <div class="form-group">
-                    <label>个人简介</label>
-                    <textarea v-model="settingsForm.bio" class="atca-input" rows="3" placeholder="写一段简介介绍自己..."></textarea>
+                    <label>{{ t('profile.bio') }}</label>
+                    <textarea v-model="settingsForm.bio" class="atca-input" rows="3" :placeholder="t('profile.bio')"></textarea>
                   </div>
                   <div class="form-group">
-                    <label>个人主页可见性</label>
+                    <label>{{ t('profile.visibility') }}</label>
                     <div class="visibility-options">
                       <label class="visibility-option" :class="{ active: settingsForm.visibility === 'public' }">
                         <div class="option-content">
@@ -281,8 +291,8 @@
                             </svg>
                           </div>
                           <div class="option-text">
-                            <div class="option-title">公开</div>
-                            <div class="option-desc">所有人可见您的主页</div>
+                            <div class="option-title">{{ t('profile.public') }}</div>
+                            <div class="option-desc">{{ t('profile.publicDesc') }}</div>
                           </div>
                         </div>
                         <input type="radio" v-model="settingsForm.visibility" value="public" />
@@ -297,8 +307,8 @@
                             </svg>
                           </div>
                           <div class="option-text">
-                            <div class="option-title">仅好友可见</div>
-                            <div class="option-desc">只有您的好友能看到主页</div>
+                            <div class="option-title">{{ t('profile.friends') }}</div>
+                            <div class="option-desc">{{ t('profile.friends') }}</div>
                           </div>
                         </div>
                         <input type="radio" v-model="settingsForm.visibility" value="friends" />
@@ -313,8 +323,8 @@
                             </svg>
                           </div>
                           <div class="option-text">
-                            <div class="option-title">私密</div>
-                            <div class="option-desc">只有您自己能看到主页</div>
+                            <div class="option-title">{{ t('profile.private') }}</div>
+                            <div class="option-desc">{{ t('profile.privateDesc') }}</div>
                           </div>
                         </div>
                         <input type="radio" v-model="settingsForm.visibility" value="private" />
@@ -323,22 +333,22 @@
                     </div>
                   </div>
                   <button class="atca-btn atca-btn-primary" @click="saveSettings" :disabled="saving">
-                    <span v-if="saving">保存中...</span>
-                    <span v-else>保存资料</span>
+                    <span v-if="saving">{{ t('profile.saving') }}</span>
+                    <span v-else>{{ t('profile.saveProfile') }}</span>
                   </button>
                 </div>
               </div>
 
               <!-- 动画设置 -->
               <div class="settings-section">
-                <h3>动画设置</h3>
+                <h3>{{ t('profile.animationSettings') }}</h3>
                 <div class="settings-form">
                   <div class="form-group">
-                    <label>转场动画</label>
+                    <label>{{ t('profile.animationSettings') }}</label>
                     <div class="toggle-option">
                       <div class="toggle-info">
-                        <span class="toggle-label">跳过转场动画</span>
-                        <span class="toggle-hint">直接跳转，无页面切换动画</span>
+                        <span class="toggle-label">{{ t('profile.skipTransition') }}</span>
+                        <span class="toggle-hint">{{ t('profile.skipTransitionHint') }}</span>
                       </div>
                       <div class="toggle-switch" :class="{ active: animationSettings.skipTransition }" @click="animationSettings.skipTransition = !animationSettings.skipTransition">
                         <div class="toggle-knob"></div>
@@ -350,25 +360,25 @@
 
               <!-- 修改密码 -->
               <div class="settings-section">
-                <h3>安全设置</h3>
+                <h3>{{ t('profile.security') }}</h3>
                 <div class="settings-form">
                   <div class="form-group">
-                    <label>当前密码</label>
-                    <input v-model="passwordForm.oldPassword" type="password" class="atca-input" placeholder="输入当前密码" />
+                    <label>{{ t('profile.currentPassword') }}</label>
+                    <input v-model="passwordForm.oldPassword" type="password" class="atca-input" :placeholder="t('profile.currentPassword')" />
                   </div>
                   <div class="form-row">
                     <div class="form-group">
-                      <label>新密码</label>
-                      <input v-model="passwordForm.newPassword" type="password" class="atca-input" placeholder="至少6位" />
+                      <label>{{ t('profile.newPassword') }}</label>
+                      <input v-model="passwordForm.newPassword" type="password" class="atca-input" :placeholder="t('profile.minChars')" />
                     </div>
                     <div class="form-group">
-                      <label>确认新密码</label>
-                      <input v-model="passwordForm.confirmPassword" type="password" class="atca-input" placeholder="再次输入" />
+                      <label>{{ t('profile.newPassword') }}</label>
+                      <input v-model="passwordForm.confirmPassword" type="password" class="atca-input" :placeholder="t('profile.minChars')" />
                     </div>
                   </div>
                   <button class="atca-btn atca-btn-secondary" @click="changePassword" :disabled="changingPassword">
-                    <span v-if="changingPassword">修改中...</span>
-                    <span v-else>修改密码</span>
+                    <span v-if="changingPassword">{{ t('profile.saving') }}</span>
+                    <span v-else>{{ t('profile.savePassword') }}</span>
                   </button>
                 </div>
               </div>
@@ -394,6 +404,7 @@ import { ref, onMounted, computed, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import Navbar from '@/components/common/CommonNavbar.vue';
 import Footer from '@/components/common/CommonFooter.vue';
+import SafeImage from '@/components/common/SafeImage.vue';
 import { profileApi, authApi, activityApi, model3dApi, API_HOST } from '@/services/api';
 import { formatDate } from '@shared/utils';
 import { noteManager } from '@/utils/noteManager';
@@ -481,8 +492,8 @@ const avatarFullUrl = computed(() => {
 });
 
 const roleLabel = computed(() => {
-  const roles: Record<string, string> = { admin: '管理员', moderator: '版主', user: '用户' };
-  return roles[profile.value?.role] || '用户';
+  const roles: Record<string, string> = { admin: t('role.admin'), moderator: t('role.moderator'), user: t('role.user') };
+  return roles[profile.value?.role] || t('role.user');
 });
 
 const tabs = computed(() => [
@@ -553,7 +564,7 @@ watch(() => settingsForm.value.province, () => {
 });
 
 async function getGeoLocation() {
-  if (!navigator.geolocation) { alert('您的浏览器不支持地理定位'); return; }
+  if (!navigator.geolocation) { alert(t('profile.browserNoGeo')); return; }
   geoLoading.value = true;
   navigator.geolocation.getCurrentPosition(
     async (pos) => {
@@ -587,14 +598,14 @@ async function getGeoLocation() {
         }
         
         if (!settingsForm.value.province) {
-          alert('无法自动识别位置，请手动选择省份和城市');
+          alert(t('profile.geoFail'));
         }
       } catch {
-        alert('无法获取位置信息，请手动选择省份和城市');
+        alert(t('profile.geoFail'));
       }
       geoLoading.value = false;
     },
-    () => { alert('无法获取位置信息，请手动选择省份和城市'); geoLoading.value = false; },
+    () => { alert(t('profile.geoFail')); geoLoading.value = false; },
     { timeout: 10000 }
   );
 }
@@ -656,7 +667,7 @@ function onNoteSaved() {
   userNotes.value = noteManager.getAll();
 }
 function deleteUserNote(id: string) {
-  if (!confirm('确定删除这条笔记？')) return;
+  if (!confirm(t('profile.confirmDeleteNote'))) return;
   noteManager.delete(id);
   userNotes.value = noteManager.getAll();
 }
@@ -710,11 +721,11 @@ async function loadAchievements() {
 async function saveSettings() {
   // 验证省份和城市
   if (!settingsForm.value.province) {
-    alert('请选择省份');
+    alert(t('profile.noProvince'));
     return;
   }
   if (!settingsForm.value.city) {
-    alert('请选择城市');
+    alert(t('profile.noCity'));
     return;
   }
   
@@ -731,10 +742,10 @@ async function saveSettings() {
       bio: settingsForm.value.bio,
       location: location,
     });
-    alert('设置已保存');
+    alert(t('profile.saveSuccess'));
     loadProfile();
   } catch (e: any) {
-    alert('保存失败: ' + (e.message || '未知错误'));
+    alert(t('profile.saveFail') + (e.message || 'Unknown error'));
   } finally {
     saving.value = false;
   }
@@ -742,15 +753,15 @@ async function saveSettings() {
 
 async function changePassword() {
   if (!passwordForm.value.oldPassword || !passwordForm.value.newPassword) {
-    alert('请填写所有密码字段');
+    alert(t('profile.fillAllFields'));
     return;
   }
   if (passwordForm.value.newPassword !== passwordForm.value.confirmPassword) {
-    alert('两次输入的新密码不一致');
+    alert(t('profile.passwordMismatch'));
     return;
   }
   if (passwordForm.value.newPassword.length < 6) {
-    alert('新密码至少6位');
+    alert(t('profile.passwordMinChars'));
     return;
   }
   changingPassword.value = true;
@@ -759,10 +770,10 @@ async function changePassword() {
       oldPassword: passwordForm.value.oldPassword,
       newPassword: passwordForm.value.newPassword,
     });
-    alert('密码修改成功');
+    alert(t('profile.saveSuccess'));
     passwordForm.value = { oldPassword: '', newPassword: '', confirmPassword: '' };
   } catch (e: any) {
-    alert('密码修改失败: ' + (e.response?.data?.error?.message || e.message || '请检查当前密码是否正确'));
+    alert(t('profile.saveFail') + (e.response?.data?.error?.message || e.message || 'Please check your current password'));
   } finally {
     changingPassword.value = false;
   }
@@ -778,7 +789,7 @@ async function handleAvatarChange(e: Event) {
 
   // 文件类型验证
   if (!isValidImageType(file)) {
-    alert('只支持 JPG、PNG、GIF 或 WebP 格式的图片');
+    alert(t('profile.imageTypeError'));
     return;
   }
 
@@ -826,12 +837,12 @@ async function handleAvatarChange(e: Event) {
         localStorage.setItem('atca_user', JSON.stringify(userStore.user));
       }
 
-      alert('头像上传成功！');
+      alert(t('profile.uploadSuccess'));
       console.log('[Profile] 头像上传成功', { avatarUrl: newAvatarUrl });
     } else {
       // 上传失败，恢复原头像
-      const errorMsg = (res as any)?.error?.message || '服务器错误，请重试';
-      alert('头像上传失败：' + errorMsg);
+      const errorMsg = (res as any)?.error?.message || t('profile.serverError');
+      alert(t('profile.uploadFail') + errorMsg);
       if (profile.value) profile.value.avatar = originalAvatar;
     }
   } catch (e: any) {
@@ -841,15 +852,15 @@ async function handleAvatarChange(e: Event) {
 
     // 提供更友好的错误提示
     if (e.message?.includes('压缩')) {
-      alert('图片压缩失败，请尝试选择其他图片');
+      alert(t('profile.compressFail'));
     } else if (e.response?.status === 401) {
-      alert('登录已过期，请重新登录后再试');
+      alert(t('profile.loginExpired'));
     } else if (e.response?.status === 413) {
-      alert('图片太大，请选择更小的图片（不超过2MB）');
+      alert(t('profile.imageTooLarge'));
     } else if (e.response?.data?.error?.message) {
-      alert('上传失败：' + e.response.data.error.message);
+      alert(t('profile.uploadFail') + e.response.data.error.message);
     } else {
-      alert('头像上传失败，请检查网络连接后重试');
+      alert(t('profile.uploadFail') + 'Network error, please retry');
     }
   }
 
@@ -862,14 +873,14 @@ function editModel(id: number) {
 }
 
 async function deleteModel(id: number) {
-  if (!confirm('确定删除此模型吗？此操作不可恢复。')) return;
+  if (!confirm(t('profile.confirmDeleteModel'))) return;
   try {
     await model3dApi.deleteModel(id);
     models.value = models.value.filter(m => m.model_id !== id);
     stats.value.totalModels = models.value.length;
-    alert('模型已删除');
+    alert(t('profile.deleteSuccess'));
   } catch (e: any) {
-    alert('删除失败: ' + (e.message || '未知错误'));
+    alert(t('profile.deleteFail') + (e.message || 'Unknown error'));
   }
 }
 
@@ -1093,6 +1104,17 @@ onMounted(async () => {
 }
 .achievement-icon {
   font-size: 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+}
+.achievement-icon-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 .achievement-info {
   display: flex;
@@ -1210,10 +1232,21 @@ onMounted(async () => {
 }
 .fav-image-wrapper {
   position: relative;
+  /* IE11 fallback for aspect-ratio */
+  padding-bottom: 62.5%; /* 10/16 = 62.5% */
   aspect-ratio: 16/10;
   overflow: hidden;
 }
+.fav-image-wrapper::before {
+  content: '';
+  display: block;
+  width: 100%;
+  padding-bottom: 62.5%;
+}
 .fav-image-wrapper img {
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -1670,18 +1703,332 @@ onMounted(async () => {
 .note-manage-meta { display: flex; align-items: center; justify-content: space-between; font-size: 0.75rem; color: var(--text-dim); }
 .note-manage-link { display: flex; align-items: center; gap: 4px; color: var(--gold-dim); }
 
-/* 响应式 */
-@media (max-width: 1024px) {
-  .profile-layout { grid-template-columns: 280px 1fr; }
-  .favorites-grid { grid-template-columns: repeat(2, 1fr); }
+/* ===== 响应式适配 ===== */
+
+/* 大屏桌面 (最小1400px) */
+@media screen and (min-width: 1400px) {
+  .profile-layout {
+    grid-template-columns: 340px 1fr;
+    gap: 32px;
+  }
+  .profile-card {
+    padding: 32px 28px;
+  }
+  .profile-avatar {
+    width: 110px;
+    height: 110px;
+    border-width: 3px;
+  }
+  .profile-card h2 {
+    font-size: 1.375rem;
+  }
 }
-@media (max-width: 768px) {
-  .profile-layout { grid-template-columns: 1fr; }
-  .profile-sidebar { position: static; }
-  .favorites-grid { grid-template-columns: 1fr; }
-  .points-summary { flex-direction: column; gap: 16px; }
-  .form-row { grid-template-columns: 1fr; }
-  .profile-tabs { overflow-x: auto; }
-  .tab-btn { flex-shrink: 0; flex: none; padding: 12px 20px; }
+
+/* 桌面端 (992px - 1399px) */
+@media screen and (max-width: 1399px) {
+  .profile-layout {
+    grid-template-columns: 300px 1fr;
+    gap: 24px;
+  }
+  .profile-card {
+    padding: 26px 22px;
+  }
+  .profile-avatar {
+    width: 95px;
+    height: 95px;
+  }
 }
+
+/* 平板端 (600px - 991px) */
+@media screen and (max-width: 991px) {
+  .profile-layout {
+    grid-template-columns: 260px 1fr;
+    gap: 20px;
+  }
+  .page-content {
+    padding-top: 80px;
+    padding-bottom: 40px;
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+  .profile-card {
+    padding: 22px 18px;
+  }
+  .profile-avatar {
+    width: 85px;
+    height: 85px;
+    border-width: 2px;
+  }
+  .profile-card h2 {
+    font-size: 1.125rem;
+  }
+  .profile-username {
+    font-size: 0.8125rem;
+  }
+  .profile-stats {
+    gap: 8px;
+    margin: 16px 0;
+  }
+  .stat-box {
+    padding: 10px 4px;
+  }
+  .stat-box strong {
+    font-size: 1rem;
+  }
+  .stat-box span {
+    font-size: 0.625rem;
+  }
+  .favorites-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .models-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .quiz-history-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* 移动端 (最大599px) */
+@media screen and (max-width: 599px) {
+  .profile-layout {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  .page-content {
+    padding-top: 70px;
+    padding-bottom: 32px;
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+  .profile-sidebar {
+    position: relative;
+    min-height: auto;
+  }
+  .profile-card {
+    padding: 20px 16px;
+    text-align: center;
+  }
+  .avatar-wrapper {
+    margin-bottom: 14px;
+  }
+  .profile-avatar {
+    width: 80px;
+    height: 80px;
+    border-width: 2px;
+  }
+  .profile-card h2 {
+    font-size: 1.125rem;
+    margin-bottom: 4px;
+  }
+  .profile-username {
+    font-size: 0.75rem;
+    margin-bottom: 8px;
+  }
+  .profile-role {
+    padding: 2px 8px;
+    font-size: 0.625rem;
+    margin-bottom: 10px;
+  }
+  .profile-bio {
+    font-size: 0.75rem;
+    margin-bottom: 14px;
+  }
+  .level-section {
+    padding: 10px;
+    margin-bottom: 14px;
+  }
+  .level-badge {
+    font-size: 0.75rem;
+  }
+  .level-points {
+    font-size: 0.625rem;
+  }
+  .level-next {
+    font-size: 0.625rem;
+  }
+  .profile-stats {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+    margin: 14px 0;
+    padding: 4px 0;
+  }
+  .stat-box {
+    padding: 10px 4px;
+    min-height: 56px;
+  }
+  .stat-box strong {
+    font-size: 0.9375rem;
+  }
+  .stat-box span {
+    font-size: 0.625rem;
+  }
+  .profile-meta {
+    font-size: 0.7rem;
+    padding-top: 10px;
+  }
+  .profile-main {
+    min-height: 400px;
+  }
+  .tab-panel {
+    padding: 16px;
+    min-height: 400px;
+  }
+  .profile-tabs {
+    padding: 4px 8px;
+    gap: 4px;
+  }
+  .profile-tabs button {
+    padding: 8px 12px;
+    font-size: 0.75rem;
+  }
+  .favorites-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .fav-card {
+    border-radius: var(--r-md);
+  }
+  .fav-image-wrapper {
+    padding-bottom: 75%; /* 3/4 = 75% fallback for aspect-ratio */
+    aspect-ratio: 4/3;
+  }
+  .fav-info {
+    padding: 10px;
+  }
+  .fav-name {
+    font-size: 0.8125rem;
+  }
+  .fav-location {
+    font-size: 0.7rem;
+  }
+  .models-list {
+    gap: 10px;
+  }
+  .model-card {
+    padding: 12px;
+    gap: 12px;
+  }
+  .model-thumb {
+    width: 48px;
+    height: 48px;
+  }
+  .model-info h4 {
+    font-size: 0.875rem;
+  }
+  .model-info p {
+    font-size: 0.7rem;
+  }
+  .quiz-history-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .quiz-card {
+    padding: 14px;
+  }
+  .quiz-card h4 {
+    font-size: 0.875rem;
+  }
+  .quiz-meta {
+    font-size: 0.7rem;
+  }
+  .achievements-card {
+    padding: 16px;
+  }
+  .achievements-card h3 {
+    font-size: 0.8125rem;
+    margin-bottom: 12px;
+  }
+  .achievement-item {
+    padding: 10px;
+    gap: 10px;
+    min-height: 48px;
+  }
+  .achievement-icon-wrapper {
+    width: 36px;
+    height: 36px;
+  }
+  .achievement-icon-emoji {
+    font-size: 1.25rem;
+  }
+  .achievement-name {
+    font-size: 0.75rem;
+  }
+  .achievement-date {
+    font-size: 0.625rem;
+  }
+  /* 表单适配 */
+  .form-row {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+  .form-group {
+    margin-bottom: 14px;
+  }
+  .form-group label {
+    font-size: 0.75rem;
+  }
+  .radio-group {
+    gap: 8px;
+  }
+  .radio-option {
+    padding: 10px 12px;
+    gap: 8px;
+  }
+  .location-selector {
+    flex-direction: column;
+    gap: 10px;
+  }
+  .visibility-option {
+    padding: 14px 16px;
+  }
+  .option-content {
+    gap: 12px;
+  }
+  .option-icon {
+    width: 40px;
+    height: 40px;
+  }
+  .option-title {
+    font-size: 0.875rem;
+  }
+  .option-desc {
+    font-size: 0.7rem;
+  }
+  .toggle-option {
+    padding: 12px 14px;
+  }
+  .toggle-label {
+    font-size: 0.8125rem;
+  }
+  .toggle-hint {
+    font-size: 0.7rem;
+  }
+}
+
+/* 超小屏 (最大360px) */
+@media screen and (max-width: 360px) {
+  .profile-avatar {
+    width: 70px;
+    height: 70px;
+  }
+  .profile-card h2 {
+    font-size: 1rem;
+  }
+  .profile-stats {
+    gap: 4px;
+  }
+  .stat-box {
+    padding: 8px 2px;
+    min-height: 48px;
+  }
+  .stat-box strong {
+    font-size: 0.875rem;
+  }
+  .profile-tabs button {
+    padding: 6px 8px;
+    font-size: 0.7rem;
+  }
+}
+
 </style>

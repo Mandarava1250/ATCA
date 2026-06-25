@@ -87,3 +87,4 @@ async function addColumns(): Promise<void> {
 }
 
 addColumns();
+

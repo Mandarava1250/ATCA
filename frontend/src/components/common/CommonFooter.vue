@@ -18,39 +18,39 @@
               <path d="M20 4L4 16H10V32H16V22H24V32H30V16H36L20 4Z" fill="currentColor"/>
             </svg>
             <div>
-              <h3 class="footer-title">华夏营造</h3>
-              <p class="footer-subtitle">中国古代建筑文化传承平台</p>
+              <h3 class="footer-title">{{ $t('footer.brandTitle') }}</h3>
+              <p class="footer-subtitle">{{ $t('footer.brandSubtitle') }}</p>
             </div>
           </div>
-          <p class="footer-desc">传承千年营造智慧， digitally 复原古建之美。以三维互动与人工智能，让每一座古建重生于数字世界。</p>
+          <p class="footer-desc">{{ $t('footer.description') }}</p>
           <div class="footer-stats">
-            <div><strong>6</strong><span>朝建筑</span></div>
-            <div><strong>5</strong><span>竞赛模式</span></div>
-            <div><strong>18</strong><span>传统构件</span></div>
+            <div><strong>6</strong><span>{{ $t('footer.dynasticArchitectures') }}</span></div>
+            <div><strong>5</strong><span>{{ $t('footer.competitionModes') }}</span></div>
+            <div><strong>18</strong><span>{{ $t('footer.traditionalComponents') }}</span></div>
           </div>
         </div>
 
         <!-- Links -->
         <div class="footer-links-col">
-          <h4>功 能</h4>
-          <router-link to="/architecture">古建筑馆</router-link>
-          <router-link to="/quiz">知识竞赛</router-link>
-          <router-link to="/workshop">3D工坊</router-link>
-          <router-link to="/community">社区讨论</router-link>
+          <h4>{{ $t('footer.features') }}</h4>
+          <router-link to="/architecture" class="text-truncate">{{ $t('footer.architectureHall') }}</router-link>
+          <router-link to="/quiz" class="text-truncate">{{ $t('footer.knowledgeQuiz') }}</router-link>
+          <router-link to="/workshop" class="text-truncate">{{ $t('footer.workshop3D') }}</router-link>
+          <router-link to="/community" class="text-truncate">{{ $t('footer.community') }}</router-link>
         </div>
 
         <div class="footer-links-col">
-          <h4>关 于</h4>
-          <a href="#">展览简介</a>
-          <a href="#">使用指南</a>
-          <a href="#">联系我们</a>
-          <a href="#">隐私政策</a>
+          <h4>{{ $t('footer.about') }}</h4>
+          <a href="#" class="text-truncate">{{ $t('footer.aboutExhibition') }}</a>
+          <a href="#" class="text-truncate">{{ $t('footer.userGuide') }}</a>
+          <a href="#" class="text-truncate">{{ $t('footer.contactUs') }}</a>
+          <a href="#" class="text-truncate">{{ $t('footer.privacyPolicy') }}</a>
         </div>
       </div>
 
       <!-- Bottom -->
       <div class="footer-bottom">
-        <p> 2024 华夏营造 Ancient Chinese Architecture Digital Exhibition &nbsp;|&nbsp; 
+        <p> 2024 {{ $t('footer.copyright') }} &nbsp;|&nbsp; 
           <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer" class="icp-link">沪ICP备2026025927号</a>
         </p>
       </div>
@@ -181,9 +181,28 @@
   text-decoration: underline;
 }
 
-@media (max-width: 768px) {
-  .footer-grid { grid-template-columns: 1fr; gap: 32px; }
+@media screen and (max-width: 767px) {
+  .footer-grid {
+    grid-template-columns: 1fr;
+    gap: 32px;
+    padding-bottom: 24px;
+  }
   .footer-brand-col { max-width: 100%; }
-  .footer-links-col { border-top: 1px solid var(--border); padding-top: 16px; }
+  .footer-stats { justify-content: center; }
+  .footer-links-col h4 { margin-bottom: 12px; }
+  .footer-brand-col .footer-desc {
+    font-size: 0.75rem;
+    line-height: 1.6;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+  }
+  .footer-links-col a {
+    padding: 8px 0;
+    font-size: 0.8125rem;
+  }
+  .footer-bottom {
+    font-size: 0.6875rem;
+    padding: 16px 0;
+  }
 }
 </style>

@@ -846,12 +846,4 @@ onUnmounted(() => {
   transition: all 0.2s ease;
 }
 
-@media (max-width: 768px) {
-  .page-content { padding: 80px 12px 32px; max-width: 100%; }
-  .result-stats { grid-template-columns: repeat(2, 1fr); }
-  .result-score { font-size: 2.5rem; }
-  .question-card { padding: 18px; }
-  .quiz-actions { flex-direction: column; }
-  .quiz-actions .atca-btn { width: 100%; }
-}
 </style>

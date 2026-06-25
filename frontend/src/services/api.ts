@@ -33,6 +33,9 @@ apiClient.interceptors.request.use(
     (error) => Promise.reject(error)
 );
 
+// 防止重复跳转登录页的标志
+let isRedirecting = false;
+
 // 响应拦截器
 apiClient.interceptors.response.use(
     (response) => response.data,
@@ -53,9 +56,19 @@ apiClient.interceptors.response.use(
             originalRequest.headers.Authorization = `Bearer ${accessToken}`;
             return apiClient(originalRequest);
           } catch {
-            const userStore = useUserStore();
-            userStore.logout();
-            window.location.href = '/login';
+            // 防止重复调用 logout 和跳转
+            if (!isRedirecting) {
+              isRedirecting = true;
+              const userStore = useUserStore();
+              userStore.logout();
+              // 使用 setTimeout 确保其他 pending 请求有机会完成
+              setTimeout(() => {
+                if (!window.location.href.includes('/login')) {
+                  window.location.href = '/login';
+                }
+                isRedirecting = false;
+              }, 100);
+            }
           }
         }
       }
@@ -326,6 +339,24 @@ export const i18nApi = {
       http.post<{ success: boolean; data: any }>('/i18n/translate', data),
   autoTranslate: (data: { entity_type?: string; entity_id?: number; field_name?: string; source_text: string; target_lang?: string }) =>
       http.post<{ success: boolean; data: { translated_text: string; is_machine_translated: boolean } }>('/i18n/translate/auto', data),
+  deleteTranslation: (id: number) =>
+      http.delete<{ success: boolean; data: { deleted_count: number } }>(`/i18n/translate/${id}`),
+  batchDeleteTranslations: (ids: number[]) =>
+      http.post<{ success: boolean; data: { deleted_count: number } }>('/i18n/translate/batch-delete', { translation_ids: ids }),
+  getTranslationList: (params?: { search?: string; entity_type?: string; language?: string; status?: string; page?: number; limit?: number }) =>
+      http.get<{ success: boolean; data: { list: any[]; total: number; totalPages: number } }>('/i18n/translations', params),
+  getTranslationStats: () =>
+      http.get<{ success: boolean; data: any }>('/i18n/stats'),
+  reviewTranslation: (data: { translation_id: number; review_status: string; review_notes?: string; quality_score?: number }) =>
+      http.post<{ success: boolean; data: { review_id: number } }>('/i18n/review', data),
+  getTranslationVersions: (id: number) =>
+      http.get<{ success: boolean; data: any[] }>(`/i18n/translations/${id}/versions`),
+  lookupMemory: (data: { source_text: string; target_language: string }) =>
+      http.post<{ success: boolean; data: any[] }>('/i18n/memory/lookup', data),
+  getMemoryList: (params?: { search?: string; page?: number; limit?: number }) =>
+      http.get<{ success: boolean; data: any[] }>('/i18n/memory', params),
+  batchTranslate: (data: { entityType: string; targetLang: string; fields: string[] }) =>
+      http.post<{ success: boolean; data: any }>('/i18n/batch-translate', data),
 };
 
 // 认证API补充
@@ -357,6 +388,8 @@ export const adminApi = {
   updateUser: (id: number, data: any) => http.put(`/admin/users/${id}`, data),
   deleteUser: (id: number) => http.delete(`/admin/users/${id}`),
   batchDeleteUsers: (ids: number[]) => http.post('/admin/users/batch-delete', { ids }),
+  batchUpdateUserRole: (ids: number[], role: string) => http.post('/admin/users/batch-update-role', { ids, role }),
+  batchUpdateUserStatus: (ids: number[], is_active: boolean) => http.post('/admin/users/batch-update-status', { ids, is_active }),
   getArchitectures: (params?: any) => http.get<{ success: boolean; data: any[]; meta?: any }>('/admin/architectures', params),
   batchDeleteArchitectures: (ids: number[]) => http.post('/admin/architectures/batch-delete', { ids }),
   createArchitecture: (data: any) => http.post('/admin/architectures', data),
@@ -404,6 +437,9 @@ export const adminApi = {
   deleteReplyAdmin: (id: number) => http.delete(`/social/admin/forum/replies/${id}`),
   // 3D模型批量导入
   batchImportModels: (models: any[]) => http.post('/models/batch-import', { models }),
+  // 知识图谱数据导入
+  importKnowledgeGraph: (data: { format: string; data: string; conflictStrategy: string; validateOnly: boolean; batchSize: number }) =>
+      http.post<{ success: boolean; data?: any; error?: { message: string } }>('/admin/knowledge-graph/import', data),
 };
 
 // 活动API

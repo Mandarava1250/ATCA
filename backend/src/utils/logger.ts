@@ -88,8 +88,8 @@ class Logger {
 
   constructor(module: string) {
     this.module = module;
-    // 只输出ERROR和WARN级别 - 生产环境和开发环境均如此
-    // 常规操作(INFO/DEBUG/TRACE)不输出日志
+    // 仅输出ERROR和WARN级别 - 生产环境和开发环境均如此
+    // INFO/DEBUG/TRACE级别不输出日志
     this.enabledLevels = ['ERROR', 'WARN'];
   }
 
@@ -205,7 +205,8 @@ class Logger {
   }
 
   /**
-   * 记录WARN级别日志（生产环境启用）
+   * 记录WARN级别日志（始终输出）
+   * 用于提示警告信息，可能影响系统功能
    */
   warn(message: string, context?: LogContext): void {
     if (this.isLevelEnabled('WARN')) {
@@ -310,10 +311,11 @@ export function createLogger(module: string): Logger {
   return new Logger(module);
 }
 
-// 默认导出的通用日志器（条件触发版本）
+// 默认导出的通用日志器（ERROR和WARN级别）
 export const logger = {
   /**
    * 记录ERROR级别日志 - 始终输出
+   * 捕获所有错误类型：运行时异常、业务逻辑错误、系统级错误
    */
   error: (message: string, context?: LogContext): void => {
     const timestamp = new Date().toISOString();
@@ -346,11 +348,27 @@ export const logger = {
 
   /**
    * 记录WARN级别日志 - 始终输出
+   * 用于提示警告信息，可能影响系统功能
    */
   warn: (message: string, context?: LogContext): void => {
     const timestamp = new Date().toISOString();
     const module = context?.module || 'GLOBAL';
-    console.warn(`[${timestamp}] [WARN] [${module}] - ${message}`, context || '');
+    const method = context?.method || '';
+    
+    let formatted = `[${timestamp}] [WARN] [${module}]`;
+    if (method) formatted += ` [${method}]`;
+    formatted += ` - ${message}`;
+    
+    const filteredContext = { ...context };
+    delete filteredContext.module;
+    delete filteredContext.method;
+    
+    const contextKeys = Object.keys(filteredContext);
+    if (contextKeys.length > 0) {
+      formatted += ` | ${JSON.stringify(filteredContext)}`;
+    }
+    
+    console.warn(formatted);
   },
 
   /**

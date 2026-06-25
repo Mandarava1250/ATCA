@@ -207,6 +207,14 @@ export function initClientStateStore(config: StoreConfig): IClientStateStore {
         logger.error('Redis 连接错误', { error: err.message });
       });
 
+      redisClient.on('reconnecting', () => {
+        logger.info('Redis 正在重连...');
+      });
+
+      redisClient.on('ready', () => {
+        logger.info('Redis 连接已恢复，客户端状态同步完成');
+      });
+
       storeInstance = new RedisClientStateStore(redisClient, {
         keyPrefix: config.redis.keyPrefix,
         ttl: config.redis.ttl,

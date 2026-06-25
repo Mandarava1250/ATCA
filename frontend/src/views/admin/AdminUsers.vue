@@ -1,18 +1,27 @@
 <template>
   <div class="admin-page">
-    <div class="page-toolbar">
-      <button class="atca-btn atca-btn-primary" @click="showCreateModal = true">
+    <div class="page-toolbar responsive-flex-wrap">
+      <button class="atca-btn atca-btn-primary touch-friendly" @click="showCreateModal = true">
         {{ $t('admin.createUser') }}
       </button>
-      <div v-if="selectedIds.length > 0" class="batch-bar" style="margin-left: auto; margin-right: 12px">
-        <span>已选 {{ selectedIds.length }} 项</span>
-        <button class="atca-btn atca-btn-sm atca-btn-danger" @click="batchDelete">批量删除</button>
-        <button class="atca-btn atca-btn-sm" @click="selectedIds = []">取消</button>
+      <div v-if="selectedIds.length > 0" class="batch-bar responsive-flex-col" style="margin-left: auto; margin-right: 12px">
+        <span class="text-responsive">已选 {{ selectedIds.length }} 项</span>
+        <select v-model="batchRole" class="atca-input batch-select responsive-input">
+          <option value="">批量设置角色</option>
+          <option value="user">普通用户</option>
+          <option value="moderator">版主</option>
+          <option value="admin">管理员</option>
+        </select>
+        <button class="atca-btn atca-btn-sm touch-friendly" @click="batchUpdateRole" :disabled="!batchRole">设为角色</button>
+        <button class="atca-btn atca-btn-sm touch-friendly" @click="batchActivate">批量启用</button>
+        <button class="atca-btn atca-btn-sm touch-friendly" @click="batchDeactivate">批量禁用</button>
+        <button class="atca-btn atca-btn-sm atca-btn-danger touch-friendly" @click="batchDelete">批量删除</button>
+        <button class="atca-btn atca-btn-sm touch-friendly" @click="selectedIds = []">取消</button>
       </div>
       <input 
         v-model="search" 
         @input="debounceSearch" 
-        class="atca-input search-input" 
+        class="atca-input search-input responsive-input touch-friendly" 
         :placeholder="$t('admin.searchUsers')" 
       />
     </div>
@@ -172,6 +181,7 @@ const editingUser = ref<any>(null);
 const showCreateModal = ref(false);
 const loading = ref(false);
 const message = ref({ show: false, text: '', type: 'success' });
+const batchRole = ref('');
 
 const editForm = ref({ 
   nickname: '', 
@@ -330,12 +340,17 @@ async function deleteUser(id: number) {
 }
 
 async function batchDelete() {
-  if (!selectedIds.value.length || !confirm(`确认删除 ${selectedIds.value.length} 个用户？`)) return;
+  if (!selectedIds.value.length || !confirm(`确认删除 ${selectedIds.value.length} 个用户？此操作不可撤销！`)) return;
   loading.value = true;
   try {
     const res = await adminApi.batchDeleteUsers(selectedIds.value);
     if (res.success) {
-      showMessage(`成功删除 ${selectedIds.value.length} 个用户`);
+      const { deleted, skipped } = res.data;
+      let msg = `成功删除 ${deleted} 个用户`;
+      if (skipped && skipped > 0) {
+        msg += `，跳过 ${skipped} 个管理员账户`;
+      }
+      showMessage(msg);
       selectedIds.value = [];
       loadUsers();
     } else {
@@ -344,6 +359,84 @@ async function batchDelete() {
   } catch (e: any) {
     console.error('批量删除失败:', e);
     showMessage('批量删除失败: ' + (e.message || '未知错误'), 'error');
+  } finally {
+    loading.value = false;
+  }
+}
+
+async function batchUpdateRole() {
+  if (!selectedIds.value.length || !batchRole.value) return;
+  const roleName = batchRole.value === 'user' ? '普通用户' : batchRole.value === 'moderator' ? '版主' : '管理员';
+  if (!confirm(`确认将选中的 ${selectedIds.value.length} 个用户设置为「${roleName}」角色？`)) return;
+  loading.value = true;
+  try {
+    const res = await adminApi.batchUpdateUserRole(selectedIds.value, batchRole.value);
+    if (res.success) {
+      const { updated, skipped } = res.data;
+      let msg = `成功更新 ${updated} 个用户的角色为「${roleName}」`;
+      if (skipped && skipped > 0) {
+        msg += `，跳过 ${skipped} 个用户`;
+      }
+      showMessage(msg);
+      batchRole.value = '';
+      selectedIds.value = [];
+      loadUsers();
+    } else {
+      showMessage('批量更新角色失败: ' + (res.error?.message || '未知错误'), 'error');
+    }
+  } catch (e: any) {
+    console.error('批量更新角色失败:', e);
+    showMessage('批量更新角色失败: ' + (e.message || '未知错误'), 'error');
+  } finally {
+    loading.value = false;
+  }
+}
+
+async function batchActivate() {
+  if (!selectedIds.value.length || !confirm(`确认启用选中的 ${selectedIds.value.length} 个用户？`)) return;
+  loading.value = true;
+  try {
+    const res = await adminApi.batchUpdateUserStatus(selectedIds.value, true);
+    if (res.success) {
+      const { updated, skipped } = res.data;
+      let msg = `成功启用 ${updated} 个用户`;
+      if (skipped && skipped > 0) {
+        msg += `，跳过 ${skipped} 个用户`;
+      }
+      showMessage(msg);
+      selectedIds.value = [];
+      loadUsers();
+    } else {
+      showMessage('批量启用失败: ' + (res.error?.message || '未知错误'), 'error');
+    }
+  } catch (e: any) {
+    console.error('批量启用失败:', e);
+    showMessage('批量启用失败: ' + (e.message || '未知错误'), 'error');
+  } finally {
+    loading.value = false;
+  }
+}
+
+async function batchDeactivate() {
+  if (!selectedIds.value.length || !confirm(`确认禁用选中的 ${selectedIds.value.length} 个用户？禁用后用户将无法登录。`)) return;
+  loading.value = true;
+  try {
+    const res = await adminApi.batchUpdateUserStatus(selectedIds.value, false);
+    if (res.success) {
+      const { updated, skipped } = res.data;
+      let msg = `成功禁用 ${updated} 个用户`;
+      if (skipped && skipped > 0) {
+        msg += `，跳过 ${skipped} 个用户`;
+      }
+      showMessage(msg);
+      selectedIds.value = [];
+      loadUsers();
+    } else {
+      showMessage('批量禁用失败: ' + (res.error?.message || '未知错误'), 'error');
+    }
+  } catch (e: any) {
+    console.error('批量禁用失败:', e);
+    showMessage('批量禁用失败: ' + (e.message || '未知错误'), 'error');
   } finally {
     loading.value = false;
   }

@@ -90,11 +90,13 @@
           @click="startQuiz(mode.mode_id)"
         >
           <div class="mode-icon">{{ mode.icon }}</div>
-          <h3>{{ mode.title }}</h3>
-          <p>{{ mode.description }}</p>
-          <div class="mode-meta">
-            <span class="atca-tag atca-tag-primary">{{ mode.difficulty }}</span>
-            <span>{{ Math.floor(mode.time_limit / 60) }}{{ $t('quiz.minutes') }}</span>
+          <div class="mode-card-content">
+            <h3>{{ mode.title }}</h3>
+            <p>{{ mode.description }}</p>
+            <div class="mode-meta">
+              <span class="atca-tag atca-tag-primary">{{ mode.difficulty }}</span>
+              <span>{{ Math.floor(mode.time_limit / 60) }}{{ $t('quiz.minutes') }}</span>
+            </div>
           </div>
         </div>
       </div>
@@ -403,8 +405,276 @@ onUnmounted(() => {
   box-shadow: 0 4px 12px rgba(201, 169, 110, 0.35);
 }
 
-@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-@keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+/* ===== 响应式适配 ===== */
+
+/* 桌面端 (默认) */
+
+/* 平板端 (900px - 1199px) */
+@media (max-width: 1199px) {
+  .modes-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  
+  .stats-bar {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .mode-modal {
+    padding: 28px 24px;
+    max-width: 420px;
+  }
+  
+  .mode-title {
+    font-size: 1.375rem;
+  }
+}
+
+/* 小平板/大屏手机 (600px - 899px) */
+@media (max-width: 899px) {
+  .page-content {
+    padding-top: 80px;
+    padding-bottom: 32px;
+  }
+  
+  .page-header {
+    margin-bottom: 24px;
+  }
+  
+  .modes-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 14px;
+  }
+  
+  .mode-card {
+    padding: 22px 18px;
+  }
+  
+  .mode-card .mode-icon {
+    font-size: 1.75rem;
+  }
+  
+  .mode-card h3 {
+    font-size: 0.9375rem;
+  }
+  
+  .mode-card p {
+    font-size: 0.75rem;
+  }
+  
+  .stats-bar {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+  
+  .stat-box {
+    padding: 16px 12px;
+  }
+  
+  .stat-num {
+    font-size: 1.25rem;
+  }
+  
+  .checkin-card {
+    flex-direction: column;
+    gap: 16px;
+    text-align: center;
+  }
+  
+  .checkin-left {
+    flex-direction: column;
+  }
+  
+  .checkin-right {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .checkin-action {
+    align-items: center;
+    width: 100%;
+  }
+  
+  .countdown {
+    align-items: center;
+  }
+  
+  .mode-modal {
+    padding: 24px 20px;
+    max-width: 380px;
+  }
+  
+  .mode-btn {
+    padding: 18px 20px;
+    gap: 12px;
+  }
+  
+  .mode-btn .mode-icon {
+    font-size: 1.5rem;
+  }
+}
+
+/* 移动端 (max 599px) */
+@media (max-width: 599px) {
+  .page-content {
+    padding-top: 72px;
+    padding-bottom: 24px;
+  }
+  
+  .page-header {
+    margin-bottom: 20px;
+  }
+  
+  .page-header h1 {
+    font-size: 1.5rem;
+  }
+  
+  .page-header p {
+    font-size: 0.875rem;
+  }
+  
+  .modes-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  
+  .mode-card {
+    padding: 20px 16px;
+    text-align: left;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  
+  .mode-card .mode-icon {
+    font-size: 1.75rem;
+    flex-shrink: 0;
+  }
+  
+  .mode-card h3 {
+    margin-bottom: 4px;
+  }
+  
+  .mode-card p {
+    margin-bottom: 8px;
+  }
+  
+  .mode-meta {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  
+  .stats-bar {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+  
+  .stat-box {
+    padding: 12px 8px;
+  }
+  
+  .stat-num {
+    font-size: 1.125rem;
+  }
+  
+  .stat-label {
+    font-size: 0.6875rem;
+  }
+  
+  .checkin-card {
+    padding: 14px 16px;
+  }
+  
+  .checkin-icon {
+    width: 38px;
+    height: 38px;
+  }
+  
+  .checkin-info h4 {
+    font-size: 0.875rem;
+  }
+  
+  .checkin-info p {
+    font-size: 0.6875rem;
+  }
+  
+  .checkin-btn {
+    padding: 8px 20px;
+    font-size: 0.75rem;
+  }
+  
+  .countdown-time {
+    font-size: 1rem;
+  }
+  
+  .mode-overlay {
+    padding: 16px;
+  }
+  
+  .mode-modal {
+    padding: 20px 16px;
+    width: 100%;
+  }
+  
+  .mode-title {
+    font-size: 1.25rem;
+  }
+  
+  .mode-subtitle {
+    font-size: 0.8125rem;
+  }
+  
+  .mode-btn {
+    padding: 16px 16px;
+    gap: 10px;
+  }
+  
+  .mode-body h4 {
+    font-size: 0.9375rem;
+  }
+  
+  .mode-body p {
+    font-size: 0.75rem;
+  }
+  
+  .guest-hint {
+    padding: 12px;
+  }
+  
+  .guest-hint p {
+    font-size: 0.8125rem;
+  }
+  
+  .login-btn {
+    padding: 6px 20px;
+    font-size: 0.8125rem;
+  }
+  
+  .mode-cancel {
+    padding: 12px;
+    font-size: 0.8125rem;
+  }
+}
+
+/* 小屏手机 (max 380px) */
+@media (max-width: 380px) {
+  .stats-bar {
+    grid-template-columns: 1fr;
+  }
+  
+  .mode-card {
+    padding: 16px 14px;
+    gap: 12px;
+  }
+  
+  .mode-card .mode-icon {
+    font-size: 1.5rem;
+  }
+  
+  .checkin-card {
+    padding: 12px;
+  }
+}
 
 /* 每日打卡 */
 .checkin-card {
@@ -472,9 +742,15 @@ onUnmounted(() => {
 
 .modes-grid {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 16px;
   margin-bottom: 48px;
+}
+
+@media (min-width: 1200px) {
+  .modes-grid {
+    grid-template-columns: repeat(5, 1fr);
+  }
 }
 .mode-card {
   background: linear-gradient(135deg, var(--bg-card) 0%, rgba(201, 169, 110, 0.03) 100%);
@@ -572,11 +848,407 @@ onUnmounted(() => {
   color: var(--text-muted);
 }
 
-@media (max-width: 1024px) {
-  .modes-grid { grid-template-columns: repeat(3, 1fr); }
+/* ===== 完整响应式适配方案 ===== */
+
+/* 大屏桌面端 (≥1200px) */
+@media screen and (min-width: 1200px) {
+  .page-content {
+    padding-top: 110px;
+    padding-bottom: 56px;
+  }
+  
+  .modes-grid {
+    gap: 20px;
+  }
+  
+  .mode-card {
+    padding: 32px 28px;
+  }
+  
+  .stats-bar {
+    gap: 20px;
+  }
+  
+  .stat-box {
+    padding: 24px 20px;
+  }
 }
-@media (max-width: 768px) {
-  .stats-bar { grid-template-columns: repeat(2, 1fr); }
-  .modes-grid { grid-template-columns: repeat(2, 1fr); }
+
+/* 桌面端 (900px - 1199px) */
+@media screen and (max-width: 1199px) {
+  .page-content {
+    padding-top: 100px;
+    padding-bottom: 48px;
+  }
+  
+  .modes-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+  
+  .mode-card {
+    padding: 24px 20px;
+  }
+  
+  .mode-card h3 {
+    font-size: 1rem;
+  }
+  
+  .mode-card p {
+    font-size: 0.8125rem;
+  }
+  
+  .stats-bar {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 14px;
+  }
+  
+  .stat-box {
+    padding: 18px 16px;
+  }
+  
+  .stat-num {
+    font-size: 1.375rem;
+  }
+  
+  .checkin-card {
+    padding: 14px 18px;
+  }
+  
+  .mode-modal {
+    padding: 30px 24px;
+    max-width: 440px;
+  }
 }
+
+/* 平板端 (600px - 899px) */
+@media screen and (max-width: 899px) {
+  .page-content {
+    padding-top: 84px;
+    padding-bottom: 40px;
+  }
+  
+  .page-header {
+    margin-bottom: 24px;
+  }
+  
+  .page-header h1 {
+    font-size: 1.75rem;
+  }
+  
+  .modes-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 14px;
+  }
+  
+  .mode-card {
+    padding: 20px 16px;
+    text-align: center;
+  }
+  
+  .mode-card .mode-icon {
+    font-size: 2rem;
+    margin-bottom: 10px;
+  }
+  
+  .mode-card h3 {
+    font-size: 0.9375rem;
+    margin-bottom: 6px;
+  }
+  
+  .mode-card p {
+    font-size: 0.75rem;
+    margin-bottom: 12px;
+  }
+  
+  .stats-bar {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+  
+  .stat-box {
+    padding: 14px 10px;
+  }
+  
+  .stat-num {
+    font-size: 1.25rem;
+  }
+  
+  .stat-label {
+    font-size: 0.7rem;
+  }
+  
+  .checkin-card {
+    flex-direction: column;
+    gap: 16px;
+    padding: 16px;
+    text-align: center;
+  }
+  
+  .checkin-left {
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .checkin-right {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .checkin-action {
+    align-items: center;
+    width: 100%;
+    gap: 12px;
+  }
+  
+  .countdown {
+    align-items: center;
+  }
+  
+  .mode-modal {
+    padding: 24px 20px;
+    max-width: 380px;
+  }
+  
+  .mode-title {
+    font-size: 1.25rem;
+  }
+  
+  .mode-btn {
+    padding: 18px 20px;
+    gap: 12px;
+  }
+  
+  .mode-btn .mode-icon {
+    font-size: 1.75rem;
+  }
+  
+  .leaderboard-row {
+    padding: 8px 10px;
+  }
+  
+  .lb-avatar {
+    width: 28px;
+    height: 28px;
+  }
+  
+  .lb-name {
+    font-size: 0.8125rem;
+  }
+  
+  .lb-points, .lb-level {
+    font-size: 0.75rem;
+  }
+}
+
+/* 移动端 (max 599px) */
+@media screen and (max-width: 599px) {
+  .page-content {
+    padding-top: 76px;
+    padding-bottom: 32px;
+  }
+  
+  .page-header {
+    margin-bottom: 20px;
+  }
+  
+  .page-header h1 {
+    font-size: 1.5rem;
+  }
+  
+  .page-header p {
+    font-size: 0.875rem;
+  }
+  
+  .modes-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  
+  .mode-card {
+    padding: 18px 14px;
+    display: flex;
+    align-items: center;
+    text-align: left;
+    gap: 14px;
+  }
+  
+  .mode-card .mode-icon {
+    font-size: 1.75rem;
+    margin-bottom: 0;
+    flex-shrink: 0;
+    width: 56px;
+    text-align: center;
+  }
+  
+  .mode-card-content {
+    flex: 1;
+    min-width: 0;
+  }
+  
+  .mode-card h3 {
+    font-size: 0.9375rem;
+    margin-bottom: 4px;
+  }
+  
+  .mode-card p {
+    font-size: 0.75rem;
+    margin-bottom: 8px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  
+  .mode-meta {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+  
+  .stats-bar {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+  
+  .stat-box {
+    padding: 12px 8px;
+  }
+  
+  .stat-num {
+    font-size: 1.125rem;
+  }
+  
+  .stat-label {
+    font-size: 0.6875rem;
+  }
+  
+  .checkin-card {
+    padding: 12px 14px;
+    gap: 12px;
+  }
+  
+  .checkin-icon {
+    width: 38px;
+    height: 38px;
+  }
+  
+  .checkin-info h4 {
+    font-size: 0.875rem;
+  }
+  
+  .checkin-info p {
+    font-size: 0.7rem;
+  }
+  
+  .checkin-btn {
+    padding: 8px 18px;
+    font-size: 0.75rem;
+  }
+  
+  .countdown-time {
+    font-size: 1rem;
+  }
+  
+  .mode-overlay {
+    padding: 12px;
+  }
+  
+  .mode-modal {
+    padding: 20px 16px;
+    width: 100%;
+    max-width: none;
+  }
+  
+  .mode-title {
+    font-size: 1.125rem;
+  }
+  
+  .mode-subtitle {
+    font-size: 0.8125rem;
+  }
+  
+  .mode-btn {
+    padding: 14px 14px;
+    gap: 10px;
+  }
+  
+  .mode-body h4 {
+    font-size: 0.875rem;
+  }
+  
+  .mode-body p {
+    font-size: 0.75rem;
+  }
+  
+  .guest-hint {
+    padding: 10px;
+  }
+  
+  .login-btn {
+    padding: 6px 18px;
+    font-size: 0.8125rem;
+  }
+  
+  .section-leaderboard {
+    padding: 16px;
+  }
+  
+  .section-leaderboard h2 {
+    font-size: 1rem;
+    margin-bottom: 14px;
+  }
+  
+  .leaderboard-row {
+    padding: 6px 8px;
+    gap: 8px;
+  }
+  
+  .lb-rank {
+    width: 24px;
+    font-size: 0.8125rem;
+  }
+  
+  .lb-avatar {
+    width: 26px;
+    height: 26px;
+  }
+  
+  .lb-name {
+    font-size: 0.75rem;
+  }
+  
+  .lb-points {
+    font-size: 0.75rem;
+  }
+  
+  .lb-level {
+    font-size: 0.6875rem;
+  }
+}
+
+/* 小屏手机 (max 360px) */
+@media screen and (max-width: 360px) {
+  .page-content {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+  
+  .stats-bar {
+    grid-template-columns: 1fr;
+  }
+  
+  .mode-card {
+    padding: 14px 12px;
+    gap: 10px;
+  }
+  
+  .mode-card .mode-icon {
+    font-size: 1.5rem;
+    width: 48px;
+  }
+  
+  .checkin-card {
+    padding: 10px 12px;
+  }
+}
+
 </style>

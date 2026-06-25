@@ -7,8 +7,11 @@ import path from 'path';
 
 // 加载环境变量 - 尝试多个路径（开发环境和Docker环境）
 const envPaths = [
+  path.resolve(process.cwd(), '.env'),
   path.resolve(process.cwd(), '.env.db'),
+  path.resolve(__dirname, '../.env'),
   path.resolve(__dirname, '../.env.db'),
+  path.resolve(__dirname, '../../.env'),
   path.resolve(__dirname, '../../.env.db'),
 ];
 

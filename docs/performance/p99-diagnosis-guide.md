@@ -1,467 +1,383 @@
-# P99响应时间排查指南
+# 华夏营造 - P99响应时间排查指南
 
-## 📋 概述
+## 概述
 
-P99响应时间是指99%的请求响应时间低于此值，是衡量系统性能的重要指标。本指南提供系统化的排查方法。
-
----
-
-## 🎯 P99指标定义
-
-### 什么是P99？
-
-**P99响应时间** = 99%的请求响应时间低于此值
-
-**示例**:
-- 100个请求中，99个请求响应时间低于150ms
-- 只有1个请求响应时间高于150ms
-- P99 = 150ms
-
-### 为什么关注P99？
-
-- **用户体验**: 关注最慢的1%请求
-- **系统稳定性**: 发现潜在性能瓶颈
-- **服务质量**: 确保服务质量一致性
+本文档介绍如何诊断和解决 P99 (99th Percentile) 响应时间问题。P99是衡量系统性能的关键指标，表示99%的请求响应时间都低于该值。
 
 ---
 
-## 🔍 排查步骤
+## 排查流程
 
-### 第一步：确认P99指标
-
-```bash
-# 查看实时性能日志
-curl http://localhost:5000/api/monitor/performance
-
-# 查看历史性能数据
-curl http://localhost:5000/api/monitor/performance/history
 ```
-
-**输出示例**:
-```json
-{
-  "responseTime": {
-    "p50": 35ms,
-    "p90": 80ms,
-    "p99": 150ms,
-    "max": 500ms
-  }
-}
+发现问题 → 数据采集 → 瓶颈定位 → 根因分析 → 实施优化 → 验证效果
 ```
 
 ---
 
-### 第二步：识别慢请求
+## 第一步：数据采集
 
-#### 1. 查看慢请求日志
-
-```bash
-# 查看响应时间超过100ms的请求
-grep "responseTime>100" /var/log/atca/performance.log
-
-# 查看响应时间超过200ms的请求
-grep "responseTime>200" /var/log/atca/performance.log
-```
-
-#### 2. 分析慢请求类型
+### 1.1 收集性能指标
 
 ```bash
-# 统计各API的慢请求数量
-grep "responseTime>100" /var/log/atca/performance.log | \
-  awk '{print $5}' | sort | uniq -c | sort -rn
+# 使用 k6 进行压测并记录详细数据
+k6 run --out json=results.json --out influxdb=http://localhost:8086/k6 tests/performance.js
 ```
 
-**输出示例**:
+### 1.2 分析请求耗时分布
+
+```javascript
+// 分析结果示例
+const results = require('./results.json');
+
+// 计算 P99
+const durations = results.metrics.http_req_duration.values.sort((a, b) => a - b);
+const p99Index = Math.floor(durations.length * 0.99);
+const p99 = durations[p99Index];
+
+console.log(`P99响应时间: ${p99}ms`);
+console.log(`P95响应时间: ${durations[Math.floor(durations.length * 0.95)]}ms`);
+console.log(`平均响应时间: ${durations.reduce((a, b) => a + b, 0) / durations.length}ms`);
 ```
-25 /api/v1/assistant/chat
-15 /api/v1/architecture/search
-10 /api/v1/quiz/submit
+
+### 1.3 识别慢请求
+
+```bash
+# 从日志中筛选慢请求
+grep "duration=" access.log | awk '$NF > 1000' | head -20
+
+# 分析慢请求的URL分布
+grep "duration=" access.log | awk '$NF > 1000 {print $7}' | sort | uniq -c | sort -nr
 ```
 
 ---
 
-### 第三步：分析瓶颈原因
+## 第二步：瓶颈定位
 
-#### 1. 数据库查询瓶颈
+### 2.1 前端性能分析
 
-**检查方法**:
+**使用 Chrome DevTools Performance 面板**:
+
+1. 打开 Chrome DevTools (F12)
+2. 切换到 Performance 面板
+3. 点击 Record 按钮开始录制
+4. 执行待测试操作
+5. 停止录制并分析
+
+**关键指标**:
+- Main Thread 耗时
+- 网络请求瀑布图
+- 长任务 (Long Tasks)
+- 内存使用情况
+
+### 2.2 后端性能分析
+
+**使用 Node.js 内置工具**:
+
 ```bash
-# 查看数据库查询日志
-grep "slow query" /var/log/atca/database.log
+# 启用 CPU 分析
+node --cpu-prof app.js
 
-# 查看查询缓存命中率
-curl http://localhost:5000/api/monitor/cache-stats
+# 启用内存分析
+node --heap-prof app.js
+
+# 使用 clinic.js 进行深度分析
+npx clinic doctor -- node app.js
 ```
 
-**常见原因**:
-- 查询缺少索引
-- 查询返回大量数据
-- 数据库连接池不足
+**使用 New Relic 或类似工具**:
 
-**解决方案**:
-```sql
--- 添加索引
-CREATE INDEX idx_architecture_name ON architecture(name);
+```javascript
+// 自定义指标追踪
+const newrelic = require('newrelic');
 
--- 优化查询
-SELECT * FROM architecture WHERE name LIKE '%关键词%' LIMIT 10;
+app.get('/api/architecture', (req, res) => {
+  const transaction = newrelic.startTransaction('architecture-list');
+  
+  // 业务逻辑
+  architectureService.list().then(data => {
+    res.json(data);
+    transaction.end();
+  });
+});
 ```
 
-#### 2. 缓存命中率低
+### 2.3 数据库性能分析
 
-**检查方法**:
-```bash
-# 查看缓存统计
-curl http://localhost:5000/api/monitor/cache-stats
-```
-
-**输出示例**:
-```json
-{
-  "hitRate": 45%,  // 命中率过低
-  "missCount": 550,
-  "evictions": 150
-}
-```
-
-**解决方案**:
-```typescript
-// 增加缓存大小
-const DEFAULT_CONFIG = {
-  maxSize: 2000,  // 从1000增加到2000
-  ttl: 600,       // 从300增加到600
-};
-```
-
-#### 3. 内存占用过高
-
-**检查方法**:
-```bash
-# 查看内存使用情况
-curl http://localhost:5000/api/monitor/memory-stats
-
-# 查看客户端状态数量
-curl http://localhost:5000/api/monitor/client-states
-```
-
-**输出示例**:
-```json
-{
-  "memory": {
-    "used": 180MB,  // 内存占用过高
-    "free": 20MB,
-    "utilization": 90%
-  },
-  "clientStates": {
-    "totalCount": 15000,  // 超过限制
-    "activeCount": 8000
-  }
-}
-```
-
-**解决方案**:
-```typescript
-// 减少最大客户端状态数
-const CONFIG = {
-  MAX_CLIENT_STATES: 5000,  // 从10000减少到5000
-  IDLE_TIMEOUT: 900,        // 从1800减少到900（15分钟）
-};
-```
-
-#### 4. AI服务响应慢
-
-**检查方法**:
-```bash
-# 查看AI服务响应时间
-grep "assistant" /var/log/atca/performance.log | \
-  awk '{print $NF}' | sort -n | tail -10
-```
-
-**常见原因**:
-- AI模型推理时间长
-- 网络延迟
-- AI服务限流
-
-**解决方案**:
-```typescript
-// 实现AI响应缓存
-const aiResponseCache = new Map();
-
-// 设置超时时间
-const AI_TIMEOUT = 30000;  // 30秒超时
-
-// 实现降级策略
-if (responseTime > 5000) {
-  return cachedResponse || defaultResponse;
-}
-```
-
----
-
-### 第四步：实施优化方案
-
-#### 1. 数据库优化
+**SQL Server 查询分析**:
 
 ```sql
--- 1. 分析慢查询
-EXPLAIN SELECT * FROM architecture WHERE name LIKE '%关键词%';
-
--- 2. 添加索引
-CREATE INDEX idx_architecture_dynasty ON architecture(dynasty);
-CREATE INDEX idx_architecture_type ON architecture(type);
-
--- 3. 优化查询
--- 使用索引字段
-SELECT * FROM architecture WHERE dynasty = '唐' LIMIT 10;
-
--- 减少返回字段
-SELECT id, name, dynasty FROM architecture WHERE dynasty = '唐';
-```
-
-#### 2. 缓存优化
-
-```typescript
-// backend/src/services/queryCache.ts
-
-// 1. 增加缓存大小
-const DEFAULT_CONFIG = {
-  maxSize: 2000,
-  ttl: 600,
-};
-
-// 2. 实现缓存预热
-async function warmupCache() {
-  const hotQueries = [
-    { sql: 'SELECT * FROM architecture LIMIT 10', params: {} },
-    { sql: 'SELECT * FROM dynasty_list', params: {} },
-  ];
-  
-  for (const query of hotQueries) {
-    const result = await dbQuery('main', query.sql, query.params);
-    queryCache.set('main', query.sql, query.params, result);
-  }
-}
-```
-
-#### 3. 内存优化
-
-```typescript
-// backend/src/middleware/browseState.ts
-
-// 1. 减少最大状态数
-const CONFIG = {
-  MAX_CLIENT_STATES: 5000,
-  IDLE_TIMEOUT: 900,
-};
-
-// 2. 加快清理频率
-setInterval(() => cleanupIdleStates(), 60000);  // 每分钟清理
-```
-
-#### 4. AI服务优化
-
-```typescript
-// backend/src/modules/assistant/AssistantIndex.ts
-
-// 1. 实现响应缓存
-const responseCache = new Map();
-
-// 2. 设置超时
-const AI_TIMEOUT = 30000;
-
-// 3. 实现降级
-async function getAIResponse(message: string) {
-  const cacheKey = `ai:${message}`;
-  
-  // 检查缓存
-  if (responseCache.has(cacheKey)) {
-    return responseCache.get(cacheKey);
-  }
-  
-  // 调用AI服务（带超时）
-  try {
-    const response = await Promise.race([
-      callAIService(message),
-      timeout(AI_TIMEOUT),
-    ]);
-    
-    // 缓存响应
-    responseCache.set(cacheKey, response);
-    return response;
-  } catch (error) {
-    // 降级返回默认响应
-    return getDefaultResponse(message);
-  }
-}
+-- 查看慢查询
+SELECT TOP 20
+    total_elapsed_time / 1000000.0 AS elapsed_time_sec,
+    execution_count,
+    total_elapsed_time / 1000000.0 / execution_count AS avg_time_sec,
+    SUBSTRING(st.text, (qs.statement_start_offset / 2) + 1,
+        ((CASE qs.statement_end_offset
+            WHEN -1 THEN DATALENGTH(st.text)
+            ELSE qs.statement_end_offset
+         END - qs.statement_start_offset) / 2) + 1) AS statement_text
+FROM 
+    sys.dm_exec_query_stats qs
+CROSS APPLY 
+    sys.dm_exec_sql_text(qs.sql_handle) st
+ORDER BY 
+    total_elapsed_time DESC;
 ```
 
 ---
 
-### 第五步：验证优化效果
+## 第三步：根因分析
 
-#### 1. 运行性能测试
+### 3.1 常见瓶颈类型
 
-```bash
-# 运行性能测试套件
-cd backend
-npm run test:performance
+| 瓶颈类型 | 表现 | 排查方法 |
+|----------|------|----------|
+| **数据库慢查询** | P99高但平均响应时间正常 | 分析执行计划、检查索引 |
+| **内存泄漏** | 响应时间随时间增长 | 内存快照对比 |
+| **锁竞争** | 请求等待时间长 | 数据库锁分析 |
+| **网络延迟** | 等待时间高 | 网络抓包分析 |
+| **GC停顿** | 周期性响应时间飙升 | GC日志分析 |
 
-# 查看测试报告
-cat performance-report.html
-```
+### 3.2 数据库慢查询分析
 
-#### 2. 监控P99指标
-
-```bash
-# 实时监控P99
-curl http://localhost:5000/api/monitor/performance
-
-# 对比优化前后
-echo "优化前 P99: 150ms"
-echo "优化后 P99: 80ms"
-echo "提升: 46.7%"
-```
-
-#### 3. 检查系统资源
-
-```bash
-# 查看内存使用
-curl http://localhost:5000/api/monitor/memory-stats
-
-# 查看缓存命中率
-curl http://localhost:5000/api/monitor/cache-stats
-```
-
----
-
-## 📊 常见P99问题案例
-
-### 案例1：数据库查询慢
-
-**现象**: P99 = 200ms，建筑搜索API慢
-
-**排查**:
-```bash
-grep "architecture/search" performance.log | \
-  awk '{print $NF}' | sort -n | tail -10
-```
-
-**发现**: 查询缺少索引，返回大量数据
-
-**解决**:
 ```sql
-CREATE INDEX idx_architecture_name ON architecture(name);
-SELECT * FROM architecture WHERE name LIKE '%关键词%' LIMIT 10;
+-- 查看执行计划
+SET SHOWPLAN_XML ON;
+GO
+SELECT * FROM Architecture WHERE Name LIKE '%唐代%';
+GO
+
+-- 检查索引使用
+SELECT 
+    OBJECT_NAME(s.object_id) AS TableName,
+    i.name AS IndexName,
+    user_seeks,
+    user_scans,
+    user_lookups,
+    user_updates
+FROM 
+    sys.dm_db_index_usage_stats s
+JOIN 
+    sys.indexes i ON s.object_id = i.object_id AND s.index_id = i.index_id
+WHERE 
+    OBJECT_NAME(s.object_id) = 'Architecture';
 ```
 
-**效果**: P99从200ms降至80ms
+### 3.3 内存泄漏检测
+
+```javascript
+// 使用 heapdump 捕获内存快照
+const heapdump = require('heapdump');
+
+// 在请求处理中检测内存增长
+let memoryUsage = process.memoryUsage();
+setInterval(() => {
+  const newUsage = process.memoryUsage();
+  const diff = newUsage.heapUsed - memoryUsage.heapUsed;
+  
+  if (diff > 100 * 1024 * 1024) { // 增长超过100MB
+    console.log('Memory leak detected!');
+    heapdump.writeSnapshot(`heap-${Date.now()}.heapsnapshot`);
+  }
+  
+  memoryUsage = newUsage;
+}, 60000);
+```
 
 ---
 
-### 案例2：缓存命中率低
+## 第四步：实施优化
 
-**现象**: P99 = 150ms，缓存命中率45%
+### 4.1 数据库优化
 
-**排查**:
-```bash
-curl http://localhost:5000/api/monitor/cache-stats
+```sql
+-- 添加缺失索引
+CREATE NONCLUSTERED INDEX IX_Architecture_Name
+ON Architecture (Name)
+INCLUDE (Dynasty, Type, Description);
+
+-- 优化复杂查询
+-- 优化前
+SELECT * FROM Architecture WHERE Dynasty = '唐' OR Type = '寺庙';
+
+-- 优化后（使用 UNION ALL）
+SELECT * FROM Architecture WHERE Dynasty = '唐'
+UNION ALL
+SELECT * FROM Architecture WHERE Type = '寺庙' AND Dynasty != '唐';
 ```
 
-**发现**: 缓存大小不足，频繁驱逐
-
-**解决**:
-```typescript
-const DEFAULT_CONFIG = {
-  maxSize: 2000,
-  ttl: 600,
-};
-```
-
-**效果**: 缓存命中率提升至75%，P99降至90ms
-
----
-
-### 案例3：内存占用高
-
-**现象**: P99 = 180ms，内存占用90%
-
-**排查**:
-```bash
-curl http://localhost:5000/api/monitor/memory-stats
-curl http://localhost:5000/api/monitor/client-states
-```
-
-**发现**: 客户端状态过多（15000条）
-
-**解决**:
-```typescript
-const CONFIG = {
-  MAX_CLIENT_STATES: 5000,
-  IDLE_TIMEOUT: 900,
-};
-```
-
-**效果**: 内存占用降至60%，P99降至100ms
-
----
-
-## 🎯 预防措施
-
-### 1. 定期监控
-
-```bash
-# 每小时检查P99指标
-curl http://localhost:5000/api/monitor/performance | \
-  jq '.responseTime.p99' | \
-  awk '{if ($1 > 100) print "警告: P99过高"}'
-```
-
-### 2. 自动告警
+### 4.2 缓存优化
 
 ```typescript
-// 实现P99告警
-if (p99ResponseTime > 100) {
-  logger.warn('P99响应时间过高', { p99: p99ResponseTime });
-  sendAlert('P99响应时间超过100ms');
+// 添加查询缓存
+const queryCache = new RedisCache({ ttl: 300 });
+
+async function getArchitectureList(params: QueryParams) {
+  const cacheKey = `architecture:${JSON.stringify(params)}`;
+  const cached = await queryCache.get(cacheKey);
+  
+  if (cached) {
+    return JSON.parse(cached);
+  }
+  
+  const result = await db.query('SELECT * FROM Architecture ...');
+  await queryCache.set(cacheKey, JSON.stringify(result));
+  
+  return result;
 }
 ```
 
-### 3. 性能测试
+### 4.3 异步处理优化
 
-```bash
-# 每周运行性能测试
-npm run test:performance
+```typescript
+// 并行处理独立查询
+async function getArchitectureDetail(id: number) {
+  const [basicInfo, relatedBuildings, comments] = await Promise.all([
+    architectureRepository.findById(id),
+    architectureRepository.findRelated(id),
+    commentRepository.findByTarget(id, 'architecture')
+  ]);
+  
+  return {
+    ...basicInfo,
+    relatedBuildings,
+    comments
+  };
+}
+```
 
-# 生成性能报告
-cat performance-report.html
+### 4.4 前端优化
+
+```typescript
+// 代码分割
+const ArchitectureDetail = () => import('@/views/ArchitectureDetail.vue');
+
+// 图片懒加载
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      const img = entry.target as HTMLImageElement;
+      img.src = img.dataset.src!;
+      observer.unobserve(img);
+    }
+  });
+});
+
+// 虚拟滚动（处理大量列表）
+import { useVirtualList } from '@vueuse/core';
 ```
 
 ---
 
-## 📝 最佳实践
+## 第五步：验证效果
 
-### 1. P99目标值
+### 5.1 回归测试
 
-- **优秀**: P99 < 100ms
-- **良好**: P99 < 150ms
-- **可接受**: P99 < 200ms
-- **需优化**: P99 > 200ms
+```bash
+# 运行性能测试验证优化效果
+k6 run tests/api-performance.js --out json=optimized-results.json
+```
 
-### 2. 监控频率
+### 5.2 对比分析
 
-- **实时监控**: 每分钟检查
-- **定期分析**: 每小时分析
-- **深度排查**: 每周排查
+```javascript
+// 对比优化前后结果
+const before = require('./before-results.json');
+const after = require('./optimized-results.json');
 
-### 3. 优化优先级
-
-1. **数据库优化**: 影响最大
-2. **缓存优化**: 效果明显
-3. **内存优化**: 稳定性提升
-4. **代码优化**: 长期改进
+console.log('优化前 P99:', before.metrics.http_req_duration.values.p99);
+console.log('优化后 P99:', after.metrics.http_req_duration.values.p99);
+console.log('提升:', ((before.metrics.http_req_duration.values.p99 - after.metrics.http_req_duration.values.p99) / before.metrics.http_req_duration.values.p99 * 100).toFixed(2) + '%');
+```
 
 ---
 
-**文档版本**: 1.0.0  
-**最后更新**: 2026-06-19  
-**维护者**: ATCA Development Team
+## 常见问题与解决方案
+
+### Q1: P99 突然升高
+
+**可能原因**:
+- 数据库索引失效
+- 缓存命中率下降
+- 服务器资源耗尽
+
+**解决方案**:
+```bash
+# 检查数据库索引
+sqlcmd -Q "SELECT * FROM sys.dm_db_index_usage_stats"
+
+# 检查缓存命中率
+redis-cli INFO stats | grep keyspace_hits
+
+# 检查服务器资源
+top
+```
+
+### Q2: 特定接口 P99 高
+
+**可能原因**:
+- 复杂查询
+- 大量数据处理
+- 外部服务调用
+
+**解决方案**:
+```typescript
+// 添加日志追踪
+app.get('/api/slow-endpoint', async (req, res) => {
+  const startTime = Date.now();
+  
+  // 记录每个步骤耗时
+  const step1Start = Date.now();
+  await step1();
+  console.log('Step 1:', Date.now() - step1Start, 'ms');
+  
+  const step2Start = Date.now();
+  await step2();
+  console.log('Step 2:', Date.now() - step2Start, 'ms');
+  
+  console.log('Total:', Date.now() - startTime, 'ms');
+});
+```
+
+### Q3: 周期性 P99 飙升
+
+**可能原因**:
+- GC 停顿
+- 定时任务
+- 缓存失效风暴
+
+**解决方案**:
+```bash
+# 分析 GC 日志
+node --trace-gc app.js
+
+# 检查定时任务
+crontab -l
+
+# 实现缓存失效分散
+const cache = new RedisCache({
+  ttl: 300,
+  jitter: 60 // 添加随机抖动
+});
+```
+
+---
+
+## 监控告警设置
+
+### 设置 P99 告警
+
+```yaml
+# Prometheus 告警规则
+groups:
+- name: performance.rules
+  rules:
+  - alert: HighP99ResponseTime
+    expr: histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket[5m])) by (le)) > 1
+    for: 5m
+    labels:
+      severity: critical
+    annotations:
+      summary: "P99响应时间超过1秒"
+      description: "API {{ $labels.endpoint }} P99响应时间: {{ $value }}s"
+```

@@ -29,7 +29,7 @@
           </div>
         </header>
 
-        <div class="topic-content">{{ topicData.topic?.content }}</div>
+        <TextClamp :text="topicData.topic?.content" :max-lines="5" expand-text="展开内容" collapse-text="收起内容" class="topic-content" />
 
         <!-- 主题操作栏 -->
         <div class="topic-actions-bar">
@@ -67,7 +67,7 @@
                 <svg viewBox="0 0 24 24" width="12" height="12"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
               </button>
             </div>
-            <div class="reply-card-body">{{ reply.content }}</div>
+            <TextClamp :text="reply.content" :max-lines="5" expand-text="展开回复" collapse-text="收起回复" class="reply-card-body" />
           </div>
         </div>
 
@@ -140,6 +140,7 @@ import { useRoute, useRouter } from 'vue-router';
 import Navbar from '@/components/common/CommonNavbar.vue';
 import Footer from '@/components/common/CommonFooter.vue';
 import PageBackground from '@/components/common/PageBackground.vue';
+import TextClamp from '@/components/common/TextClamp.vue';
 import { socialApi } from '@/services/api';
 import { useUserStore } from '@/stores';
 
@@ -344,11 +345,4 @@ onBeforeUnmount(() => {
 .spin-inline { animation: spin 1s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-@media (max-width: 640px) {
-  .topic-main { padding: 88px 16px 32px; }
-  .topic-article { padding: 20px; }
-  .topic-title { font-size: 1.25rem; }
-  .topic-actions-bar { flex-direction: column; }
-  .btn-reply-action, .btn-back-action { width: 100%; justify-content: center; }
-}
 </style>

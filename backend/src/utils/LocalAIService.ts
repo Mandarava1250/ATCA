@@ -2,11 +2,13 @@
  * 华夏营造 - 本地AI模型服务（RAG架构）
  * 在后端运行，提供知识库增强的AI推理能力
  * 增强版：支持偏离分析、推理过程日志记录
+ * 实现 IService 接口以纳入统一服务注册体系
  */
 
 import { createLogger, AIReasoningStep } from '../utils/logger';
 import * as fs from 'fs';
 import * as path from 'path';
+import { IService, ServiceState } from '../core';
 
 const logger = createLogger('LocalAI');
 
@@ -179,14 +181,71 @@ export interface QualityAssessmentResult {
 /**
  * 本地AI模型服务类
  * 基于RAG（检索增强生成）架构 + 知识图谱
+ * 实现 IService 接口以纳入统一服务注册体系
  */
-class LocalAIService {
+class LocalAIService implements IService {
+  readonly serviceId = 'local-ai-service';
+  readonly serviceName = '本地AI服务';
+
+  private static instance: LocalAIService | null = null;
   private knowledgeBase: KnowledgeEntry[] = [];
   private knowledgeGraph: KnowledgeEntity[] = [];
   private domainRules: DomainRule[] = [];
   private initialized = false;
+  private state: ServiceState = ServiceState.UNREGISTERED;
   // 实体名称到实体的索引映射，用于快速查找
   private entityNameIndex: Map<string, KnowledgeEntity> = new Map();
+
+  /**
+   * 私有构造函数，防止直接实例化
+   */
+  private constructor() {
+    // 私有构造函数
+  }
+
+  /**
+   * 获取单例实例
+   */
+  static getInstance(): LocalAIService {
+    if (!LocalAIService.instance) {
+      LocalAIService.instance = new LocalAIService();
+    }
+    return LocalAIService.instance;
+  }
+
+  /**
+   * 服务工厂函数（用于服务注册中心）
+   */
+  static createInstance(): LocalAIService {
+    return LocalAIService.getInstance();
+  }
+
+  /**
+   * 获取服务状态
+   */
+  getState(): ServiceState {
+    return this.state;
+  }
+
+  /**
+   * 健康检查
+   */
+  async healthCheck(): Promise<boolean> {
+    return this.state === ServiceState.READY && this.initialized;
+  }
+
+  /**
+   * 销毁服务
+   */
+  async dispose(): Promise<void> {
+    this.knowledgeBase = [];
+    this.knowledgeGraph = [];
+    this.domainRules = [];
+    this.entityNameIndex.clear();
+    this.initialized = false;
+    this.state = ServiceState.DISPOSED;
+    logger.info('本地AI服务已销毁');
+  }
   
   /**
    * 初始化知识库
@@ -194,6 +253,7 @@ class LocalAIService {
   async initialize(): Promise<void> {
     if (this.initialized) return;
     
+    this.state = ServiceState.INITIALIZING;
     logger.info('初始化本地AI知识库...');
     
     try {
@@ -266,6 +326,7 @@ class LocalAIService {
     }
     
     this.initialized = true;
+    this.state = ServiceState.READY;
     logger.info('本地AI知识库初始化完成', { 
       knowledgeCount: this.knowledgeBase.length,
       graphEntityCount: this.knowledgeGraph.length,
@@ -1250,5 +1311,6 @@ class LocalAIService {
   }
 }
 
-// 单例导出
-export const localAIService = new LocalAIService();
+// 导出类和服务实例
+export { LocalAIService };
+export const localAIService = LocalAIService.getInstance();

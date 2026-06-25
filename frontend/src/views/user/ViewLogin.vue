@@ -409,4 +409,126 @@ const handleLogin = preventDoubleClick(async () => {
   transition: color 0.2s ease;
 }
 .auth-back-link:hover { color: var(--gold); }
+
+/* ===== 响应式适配 ===== */
+
+/* 平板端 */
+@media screen and (max-width: 1024px) {
+  .auth-center {
+    max-width: 380px;
+    padding: 16px;
+  }
+  .auth-card {
+    padding: 32px 28px;
+  }
+  .auth-logo {
+    width: 48px;
+    height: 48px;
+  }
+  .auth-brand {
+    font-size: 1rem;
+  }
+}
+
+/* 移动端 */
+@media screen and (max-width: 767px) {
+  .auth-page {
+    padding: 16px;
+  }
+  .auth-center {
+    max-width: 100%;
+    padding: 12px;
+  }
+  .auth-logo-link {
+    margin-bottom: 20px;
+  }
+  .auth-logo {
+    width: 44px;
+    height: 44px;
+  }
+  .auth-brand {
+    font-size: 0.9375rem;
+    letter-spacing: 0.15em;
+  }
+  .auth-card {
+    padding: 28px 20px;
+    border-radius: var(--r-md);
+  }
+  .auth-title {
+    font-size: 1.25rem;
+  }
+  .auth-subtitle {
+    font-size: 0.75rem;
+    margin-bottom: 24px;
+  }
+  .auth-form {
+    gap: 14px;
+  }
+  .form-group label {
+    font-size: 0.6875rem;
+  }
+  .auth-input {
+    padding: 10px 12px;
+    font-size: 0.8125rem;
+  }
+  .auth-btn {
+    padding: 11px;
+    font-size: 0.875rem;
+    min-height: 42px;
+  }
+  .auth-or {
+    margin: 16px 0;
+    font-size: 0.6875rem;
+  }
+  .auth-link-btn {
+    padding: 10px;
+    font-size: 0.8125rem;
+    margin-bottom: 12px;
+  }
+  .auth-back-link {
+    font-size: 0.75rem;
+  }
+}
+
+/* 小屏移动端 */
+@media screen and (max-width: 359px) {
+  .auth-page {
+    padding: 8px;
+  }
+  .auth-center {
+    padding: 8px;
+  }
+  .auth-logo-link {
+    margin-bottom: 16px;
+  }
+  .auth-logo {
+    width: 40px;
+    height: 40px;
+  }
+  .auth-brand {
+    font-size: 0.875rem;
+  }
+  .auth-card {
+    padding: 24px 16px;
+  }
+  .auth-title {
+    font-size: 1.125rem;
+  }
+  .auth-subtitle {
+    font-size: 0.6875rem;
+    margin-bottom: 20px;
+  }
+  .auth-form {
+    gap: 12px;
+  }
+  .auth-input {
+    padding: 8px 10px;
+    font-size: 0.75rem;
+  }
+  .auth-btn {
+    padding: 10px;
+    font-size: 0.8125rem;
+    min-height: 40px;
+  }
+}
 </style>

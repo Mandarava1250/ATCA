@@ -30,8 +30,8 @@ describe('内存管理功能', () => {
   });
 
   describe('统计信息功能', () => {
-    it('应该能够获取客户端状态统计', () => {
-      const stats = getClientStateStats();
+    it('应该能够获取客户端状态统计', async () => {
+      const stats = await getClientStateStats();
       
       expect(stats).toHaveProperty('totalCount');
       expect(stats).toHaveProperty('activeCount');
@@ -45,15 +45,15 @@ describe('内存管理功能', () => {
       expect(typeof stats.utilizationRate).toBe('string');
     });
 
-    it('应该能正确计算利用率', () => {
-      const stats = getClientStateStats();
+    it('应该能正确计算利用率', async () => {
+      const stats = await getClientStateStats();
       expect(stats.utilizationRate).toMatch(/\d+\.\d+%/);
     });
   });
 
   describe('清理功能', () => {
-    it('应该能够手动触发清理', () => {
-      const cleaned = triggerCleanup();
+    it('应该能够手动触发清理', async () => {
+      const cleaned = await triggerCleanup();
       expect(typeof cleaned).toBe('number');
       expect(cleaned).toBeGreaterThanOrEqual(0);
     });

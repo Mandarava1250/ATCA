@@ -34,7 +34,7 @@
             <span class="comment-author">{{ comment.username || '匿名用户' }}</span>
             <span class="comment-time">{{ formatTime(comment.created_at) }}</span>
           </div>
-          <p class="comment-content">{{ comment.content }}</p>
+          <TextClamp :text="comment.content" :max-lines="5" expand-text="展开评论" collapse-text="收起评论" />
           <div class="comment-footer">
             <button class="comment-like-btn" @click="likeComment(comment.comment_id)">
               <svg viewBox="0 0 24 24" width="12" height="12"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
@@ -59,6 +59,7 @@
 import { ref, onMounted, computed } from 'vue';
 import { socialApi } from '@/services/api';
 import { useUserStore } from '@/stores';
+import TextClamp from '@/components/common/TextClamp.vue';
 
 const props = defineProps<{
   targetType: string;

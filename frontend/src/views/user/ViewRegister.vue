@@ -557,43 +557,6 @@ const handleRegister = preventDoubleClick(async () => {
 }
 .auth-back-link:hover { color: var(--gold); }
 
-/* 响应式布局 */
-@media screen and (max-width: 480px) {
-  .auth-center {
-    padding: 16px 12px;
-  }
-  .form-row {
-    grid-template-columns: 1fr;
-  }
-  .auth-card {
-    padding: 24px 20px;
-  }
-  .auth-logo {
-    width: 44px;
-    height: 44px;
-  }
-  .auth-brand {
-    font-size: 0.9375rem;
-  }
-}
-
-@media screen and (max-width: 360px) {
-  .auth-center {
-    padding: 12px 8px;
-  }
-  .auth-card {
-    padding: 20px 16px;
-  }
-  .auth-input {
-    padding: 8px 10px;
-    font-size: 0.8125rem;
-  }
-  .auth-btn {
-    padding: 10px;
-    font-size: 0.875rem;
-  }
-}
-
 /* Safari 特殊处理 */
 @media not all and (min-resolution:.001dpcm) {
   @supports (-webkit-appearance:none) and (stroke-color:transparent) {
