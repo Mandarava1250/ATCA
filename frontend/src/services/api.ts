@@ -450,6 +450,17 @@ export const activityApi = {
   getUserAchievements: () => http.get<{ success: boolean; data: any[] }>('/activities/user-achievements'),
   getDailyTasks: () => http.get<{ success: boolean; data: any[] }>('/activities/daily-tasks'),
   joinActivity: (id: number) => http.post(`/activities/${id}/join`, {}),
+  // 每日打卡API
+  checkin: (data?: { device_type?: string; device_info?: string }) =>
+      http.post<{ success: boolean; message: string; checkin_id?: number; streak_count?: number; points_earned?: number; already_checked?: boolean }>('/activities/checkin', data || {}),
+  getCheckins: (params?: { page?: number; limit?: number }) =>
+      http.get<{ success: boolean; data: { list: any[]; total: number; totalPages: number } }>('/activities/checkin', params),
+  getCheckinStats: () =>
+      http.get<{ success: boolean; data: { total_checkins: number; max_streak: number; total_points: number; last_checkin_date: string | null; weekly_checkins: number; monthly_checkins: number } }>('/activities/checkin/stats'),
+  checkTodayCheckin: () =>
+      http.get<{ success: boolean; data: { checked_today: boolean } }>('/activities/checkin/today'),
+  getCheckinCalendar: (params: { year: number; month: number }) =>
+      http.get<{ success: boolean; data: any[] }>('/activities/checkin/calendar', params),
 };
 
 // 知识库API

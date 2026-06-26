@@ -1410,7 +1410,6 @@ const knowledgeStats = computed(() => {
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* 动画 */
 @keyframes fadeInUp {
   from { opacity: 0; transform: translateY(20px); }
   to { opacity: 1; transform: translateY(0); }
@@ -1434,4 +1433,358 @@ const knowledgeStats = computed(() => {
 .notes-empty svg { margin-bottom: 8px; opacity: 0.4; }
 .notes-empty p { font-size: 0.875rem; margin-bottom: 4px; }
 .notes-hint { font-size: 0.75rem; color: rgba(255,255,255,0.35); }
+
+/* ===== 响应式适配 - 平板端 (1024px - 768px) ===== */
+@media screen and (max-width: 1024px) {
+  .analytics-header {
+    padding: 12px 20px;
+  }
+  .header-title {
+    font-size: 1.125rem;
+  }
+  .back-btn span, .fullscreen-btn span {
+    display: none;
+  }
+  .back-btn, .fullscreen-btn {
+    padding: 8px;
+    min-width: 40px;
+    justify-content: center;
+  }
+  .analytics-body {
+    padding: 20px 20px 40px;
+  }
+  .stats-row {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+  }
+  .stat-card.primary {
+    grid-column: span 2;
+  }
+  .charts-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  .charts-grid.bottom {
+    grid-template-columns: 1fr 1fr;
+  }
+  .chart-panel.wide {
+    grid-column: span 2;
+  }
+  .donut-chart {
+    width: 160px;
+    height: 160px;
+  }
+  .radar-chart {
+    width: 180px;
+    height: 180px;
+  }
+  .stat-value {
+    font-size: 1.5rem;
+  }
+  .review-header {
+    grid-template-columns: 45px 1fr 80px 80px 60px 50px;
+    font-size: 0.6875rem;
+  }
+  .review-main {
+    grid-template-columns: 45px 1fr 80px 80px 60px 50px;
+    font-size: 0.75rem;
+  }
+}
+
+/* ===== 响应式适配 - 移动端 (767px - 480px) ===== */
+@media screen and (max-width: 767px) {
+  .analytics-header {
+    padding: 10px 16px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .header-left, .header-right {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .header-title {
+    font-size: 1rem;
+  }
+  .header-time {
+    display: none;
+  }
+  .analytics-body {
+    padding: 16px 16px 32px;
+  }
+  .stats-row {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+  .stat-card.primary {
+    grid-column: span 2;
+  }
+  .stat-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 1.25rem;
+  }
+  .stat-value {
+    font-size: 1.25rem;
+  }
+  .stat-label {
+    font-size: 0.6875rem;
+  }
+  .stat-ring {
+    width: 70px;
+    height: 70px;
+  }
+  .charts-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .charts-grid.bottom {
+    grid-template-columns: 1fr;
+  }
+  .chart-panel.wide {
+    grid-column: span 1;
+  }
+  .chart-header h3 {
+    font-size: 0.8125rem;
+  }
+  .chart-body {
+    min-height: 180px;
+  }
+  .donut-chart {
+    width: 140px;
+    height: 140px;
+  }
+  .radar-chart {
+    width: 160px;
+    height: 160px;
+  }
+  .trend-chart {
+    height: 160px;
+  }
+  .review-header {
+    grid-template-columns: 40px 1fr 70px;
+  }
+  .review-header .rh-answer:nth-child(3),
+  .review-header .rh-answer:nth-child(4),
+  .review-header .rh-status,
+  .review-header .rh-time {
+    display: none;
+  }
+  .review-main {
+    grid-template-columns: 40px 1fr 70px;
+    gap: 6px;
+    padding: 10px 12px;
+  }
+  .rm-answer, .rm-status, .rm-time {
+    display: none;
+  }
+  .rm-question {
+    gap: 4px;
+  }
+  .question-preview {
+    max-width: calc(100% - 24px);
+  }
+  .expand-hint {
+    width: 18px;
+    height: 18px;
+  }
+  .review-detail .detail-content {
+    padding: 12px 16px 16px 56px;
+  }
+  .detail-question {
+    font-size: 0.875rem;
+    line-height: 1.6;
+  }
+  .option-row {
+    padding: 10px 12px;
+    min-height: 40px;
+  }
+  .opt-key {
+    width: 24px;
+    height: 24px;
+    font-size: 0.75rem;
+  }
+  .opt-text {
+    font-size: 0.8125rem;
+  }
+  .opt-tag {
+    font-size: 0.625rem;
+    padding: 2px 8px;
+  }
+  .notes-panel {
+    padding: 16px;
+  }
+  .session-note-card {
+    padding: 12px;
+  }
+  .session-note-card h4 {
+    font-size: 0.875rem;
+  }
+  .session-note-card p {
+    font-size: 0.75rem;
+  }
+}
+
+/* ===== 响应式适配 - 小屏移动端 (< 480px) ===== */
+@media screen and (max-width: 479px) {
+  .analytics-header {
+    padding: 8px 12px;
+  }
+  .header-title {
+    font-size: 0.875rem;
+    letter-spacing: 0.04em;
+  }
+  .analytics-body {
+    padding: 12px 12px 24px;
+  }
+  .stats-row {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+  .stat-card.primary {
+    grid-column: span 2;
+  }
+  .stat-card {
+    padding: 14px;
+    gap: 10px;
+  }
+  .stat-icon {
+    width: 36px;
+    height: 36px;
+    font-size: 1.125rem;
+  }
+  .stat-value {
+    font-size: 1.125rem;
+  }
+  .stat-label {
+    font-size: 0.625rem;
+  }
+  .stat-ring {
+    width: 60px;
+    height: 60px;
+    right: -8px;
+  }
+  .chart-panel {
+    padding: 14px;
+  }
+  .chart-header {
+    margin-bottom: 10px;
+  }
+  .chart-header h3 {
+    font-size: 0.75rem;
+  }
+  .chart-badge {
+    font-size: 0.625rem;
+    padding: 2px 8px;
+  }
+  .chart-body {
+    min-height: 150px;
+  }
+  .donut-chart {
+    width: 120px;
+    height: 120px;
+  }
+  .radar-chart {
+    width: 140px;
+    height: 140px;
+  }
+  .legend-item {
+    font-size: 0.75rem;
+    gap: 6px;
+  }
+  .legend-dot {
+    width: 8px;
+    height: 8px;
+  }
+  .q-bar-row {
+    gap: 6px;
+  }
+  .q-bar-label {
+    width: 24px;
+    font-size: 0.625rem;
+  }
+  .q-bar-track {
+    height: 14px;
+  }
+  .q-bar-status {
+    width: 18px;
+    font-size: 0.625rem;
+  }
+  .time-bar-row {
+    gap: 4px;
+  }
+  .time-label {
+    width: 22px;
+    font-size: 0.5625rem;
+  }
+  .time-track {
+    height: 12px;
+  }
+  .time-value {
+    width: 26px;
+    font-size: 0.5625rem;
+  }
+  .knowledge-name {
+    font-size: 0.75rem;
+  }
+  .knowledge-percent {
+    font-size: 0.75rem;
+  }
+  .knowledge-track {
+    height: 6px;
+  }
+  .review-header {
+    grid-template-columns: 35px 1fr 60px;
+    padding: 10px 10px;
+    font-size: 0.625rem;
+  }
+  .review-main {
+    grid-template-columns: 35px 1fr 60px;
+    padding: 8px 10px;
+    font-size: 0.75rem;
+  }
+  .rm-num {
+    font-size: 0.75rem;
+  }
+  .review-detail .detail-content {
+    padding: 10px 12px 12px 48px;
+  }
+  .detail-label {
+    font-size: 0.6875rem;
+    margin-bottom: 6px;
+  }
+  .detail-question {
+    font-size: 0.8125rem;
+  }
+  .option-row {
+    padding: 8px 10px;
+    gap: 10px;
+    min-height: 36px;
+  }
+  .opt-key {
+    width: 22px;
+    height: 22px;
+    font-size: 0.75rem;
+  }
+  .opt-text {
+    font-size: 0.75rem;
+  }
+  .detail-explanation {
+    font-size: 0.75rem;
+    line-height: 1.6;
+    padding: 10px 14px;
+  }
+  .notes-panel {
+    padding: 12px;
+  }
+  .notes-empty {
+    padding: 24px 16px;
+  }
+  .notes-empty svg {
+    width: 28px;
+    height: 28px;
+  }
+  .notes-empty p {
+    font-size: 0.75rem;
+  }
+}
 </style>

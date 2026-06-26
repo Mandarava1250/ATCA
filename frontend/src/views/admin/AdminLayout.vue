@@ -20,7 +20,7 @@
         <!-- 入口页 -->
         <router-link to="/admin" class="nav-item" :class="{ active: route.path === '/admin' }">
           <svg viewBox="0 0 24 24" width="18" height="18"><path d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
-          <span v-if="!sidebarCollapsed">{{ $t('admin.dashboard') }}</span>
+          <span v-if="!sidebarCollapsed">{{ $t('admin.dashboard.title') }}</span>
         </router-link>
         
         <!-- 核心业务模块 -->
@@ -123,7 +123,7 @@ const currentLocale = computed(() => locale.value);
 
 const pageTitle = computed(() => {
     const titles: Record<string, string> = {
-      '/admin': t('admin.dashboard'),
+      '/admin': t('admin.dashboard.title'),
       '/admin/users': t('admin.users'),
       '/admin/architectures': t('admin.architectures'),
       '/admin/questions': t('admin.questions'),
@@ -136,7 +136,7 @@ const pageTitle = computed(() => {
       '/admin/translation': t('admin.translation.title'),
       '/admin/monitor': t('admin.monitor'),
     };
-    return titles[route.path] || t('admin.dashboard');
+    return titles[route.path] || t('admin.dashboard.title');
   });
 
 function toggleMobileMenu() {

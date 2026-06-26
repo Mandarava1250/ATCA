@@ -1,9 +1,8 @@
 -- ============================================
--- User Database Initialization Script
--- Compatible with SQL Server 2016+
+-- 华夏营造 - 用户模块数据库
+-- 管理用户信息、认证、积分、收藏和设置
 -- ============================================
 
--- 创建数据库（不存在时）
 IF NOT EXISTS (SELECT name FROM sys.databases WHERE name = N'ATCA_User')
 BEGIN
     CREATE DATABASE [ATCA_User];
@@ -14,333 +13,469 @@ USE [ATCA_User];
 GO
 
 -- ============================================
--- 1. 用户主表
+-- 1. 用户主表 (users)
 -- ============================================
-IF OBJECT_ID('dbo.atca_user', 'U') IS NULL
+IF OBJECT_ID('dbo.users', 'U') IS NULL
 BEGIN
-    CREATE TABLE dbo.atca_user (
+    CREATE TABLE dbo.users (
         [user_id] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
-        [username] VARCHAR(50) NOT NULL,
+        [username] VARCHAR(50) NOT NULL UNIQUE,
         [nickname] VARCHAR(50) NULL,
         [password] VARCHAR(255) NOT NULL,
-        [email] VARCHAR(100) NOT NULL,
+        [email] VARCHAR(100) NOT NULL UNIQUE,
         [avatar] VARCHAR(255) DEFAULT '/images/default-avatar.svg',
         [points] INT DEFAULT 0,
         [level] INT DEFAULT 1,
+        [exp] INT DEFAULT 0,
+        [role] VARCHAR(10) DEFAULT 'user',
         [created_at] DATETIME DEFAULT GETDATE(),
         [updated_at] DATETIME NULL,
         [last_login] DATETIME NULL,
         [is_active] BIT DEFAULT 1,
-        [role] VARCHAR(10) DEFAULT 'user'
+        [is_verified] BIT DEFAULT 0,
+        [verification_token] VARCHAR(255) NULL,
+        [reset_token] VARCHAR(255) NULL,
+        [reset_token_expire] DATETIME NULL,
+        [login_attempts] INT DEFAULT 0,
+        [lockout_until] DATETIME NULL
     );
-
-    ALTER TABLE dbo.atca_user ADD CONSTRAINT CK_user_points CHECK ([points] >= 0);
-    ALTER TABLE dbo.atca_user ADD CONSTRAINT CK_user_level CHECK ([level] >= 1);
-    ALTER TABLE dbo.atca_user ADD CONSTRAINT CK_user_role CHECK ([role] IN ('user', 'admin'));
 END
 GO
 
--- 索引
-IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'uk_username' AND object_id = OBJECT_ID('dbo.atca_user'))
-    CREATE UNIQUE INDEX [uk_username] ON dbo.atca_user([username]);
+-- ============================================
+-- 1.1 用户表约束条件
+-- ============================================
+IF NOT EXISTS (SELECT * FROM sys.check_constraints WHERE name = 'CK_user_points' AND parent_object_id = OBJECT_ID('dbo.users'))
+    ALTER TABLE dbo.users ADD CONSTRAINT CK_user_points CHECK ([points] >= 0);
 GO
 
-IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'uk_email' AND object_id = OBJECT_ID('dbo.atca_user'))
-    CREATE UNIQUE INDEX [uk_email] ON dbo.atca_user([email]);
+IF NOT EXISTS (SELECT * FROM sys.check_constraints WHERE name = 'CK_user_level' AND parent_object_id = OBJECT_ID('dbo.users'))
+    ALTER TABLE dbo.users ADD CONSTRAINT CK_user_level CHECK ([level] >= 1);
 GO
 
-IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'idx_user_active' AND object_id = OBJECT_ID('dbo.atca_user'))
-    CREATE INDEX [idx_user_active] ON dbo.atca_user([is_active]);
+IF NOT EXISTS (SELECT * FROM sys.check_constraints WHERE name = 'CK_user_role' AND parent_object_id = OBJECT_ID('dbo.users'))
+    ALTER TABLE dbo.users ADD CONSTRAINT CK_user_role CHECK ([role] IN ('user', 'admin'));
 GO
 
 -- ============================================
--- 2. 收藏表
+-- 2. 用户收藏表 (user_favorites)
 -- ============================================
-IF OBJECT_ID('dbo.favorite', 'U') IS NULL
+IF OBJECT_ID('dbo.user_favorites', 'U') IS NULL
 BEGIN
-    CREATE TABLE dbo.favorite (
+    CREATE TABLE dbo.user_favorites (
         [favorite_id] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
         [user_id] INT NOT NULL,
-        [external_building_id] INT NOT NULL,
-        [favorited_at] DATETIME DEFAULT GETDATE(),
-        CONSTRAINT FK_favorite_user FOREIGN KEY ([user_id]) REFERENCES dbo.atca_user([user_id]) ON DELETE CASCADE,
-        CONSTRAINT UQ_user_building UNIQUE ([user_id], [external_building_id])
+        [item_id] INT NOT NULL,
+        [item_type] VARCHAR(50) NOT NULL,
+        [created_at] DATETIME DEFAULT GETDATE(),
+        CONSTRAINT FK_user_favorites_user FOREIGN KEY ([user_id]) REFERENCES dbo.users([user_id]) ON DELETE CASCADE,
+        CONSTRAINT UQ_user_favorites UNIQUE ([user_id], [item_id], [item_type])
     );
 END
 GO
 
 -- ============================================
--- 3. 用户设置表
+-- 3. 用户设置表 (user_settings)
 -- ============================================
 IF OBJECT_ID('dbo.user_settings', 'U') IS NULL
 BEGIN
     CREATE TABLE dbo.user_settings (
         [setting_id] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
         [user_id] INT NOT NULL,
-        [setting_key] VARCHAR(50) NOT NULL,
-        [setting_value] VARCHAR(MAX) NULL,
+        [language] VARCHAR(10) DEFAULT 'zh-CN',
+        [theme] VARCHAR(20) DEFAULT 'light',
+        [notifications_enabled] BIT DEFAULT 1,
+        [email_notifications] BIT DEFAULT 1,
+        [push_notifications] BIT DEFAULT 1,
+        [auto_sync] BIT DEFAULT 1,
+        [daily_checkin_reminder] BIT DEFAULT 1,
+        [created_at] DATETIME DEFAULT GETDATE(),
         [updated_at] DATETIME DEFAULT GETDATE(),
-        CONSTRAINT FK_settings_user FOREIGN KEY ([user_id]) REFERENCES dbo.atca_user([user_id]) ON DELETE CASCADE,
-        CONSTRAINT UQ_user_setting UNIQUE ([user_id], [setting_key])
+        CONSTRAINT FK_user_settings_user FOREIGN KEY ([user_id]) REFERENCES dbo.users([user_id]) ON DELETE CASCADE
     );
 END
 GO
 
 -- ============================================
--- 4. 积分交易记录表
+-- 4. 积分交易记录表 (point_transactions)
 -- ============================================
-IF OBJECT_ID('dbo.points_transaction', 'U') IS NULL
+IF OBJECT_ID('dbo.point_transactions', 'U') IS NULL
 BEGIN
-    CREATE TABLE dbo.points_transaction (
-        [transaction_id] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+    CREATE TABLE dbo.point_transactions (
+        [transaction_id] BIGINT IDENTITY(1,1) NOT NULL PRIMARY KEY,
         [user_id] INT NOT NULL,
-        [points_change] INT NOT NULL,
         [transaction_type] VARCHAR(50) NOT NULL,
-        [reference_id] VARCHAR(100) NULL,
-        [description] VARCHAR(255) NULL,
+        [amount] INT NOT NULL,
+        [balance_before] INT NOT NULL,
+        [balance_after] INT NOT NULL,
+        [description] NVARCHAR(500) NULL,
+        [reference_id] INT NULL,
+        [reference_type] VARCHAR(50) NULL,
         [created_at] DATETIME DEFAULT GETDATE(),
-        CONSTRAINT FK_points_user FOREIGN KEY ([user_id]) REFERENCES dbo.atca_user([user_id]) ON DELETE CASCADE
+        CONSTRAINT FK_point_transactions_user FOREIGN KEY ([user_id]) REFERENCES dbo.users([user_id]) ON DELETE CASCADE
     );
 END
 GO
 
-IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'idx_points_transaction_user' AND object_id = OBJECT_ID('dbo.points_transaction'))
-    CREATE INDEX [idx_points_transaction_user] ON dbo.points_transaction([user_id], [created_at]);
+-- ============================================
+-- 5. 创建索引
+-- ============================================
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'uk_username' AND object_id = OBJECT_ID('dbo.users'))
+    CREATE UNIQUE INDEX [uk_username] ON dbo.users([username]);
+GO
+
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'uk_email' AND object_id = OBJECT_ID('dbo.users'))
+    CREATE UNIQUE INDEX [uk_email] ON dbo.users([email]);
+GO
+
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'idx_user_active' AND object_id = OBJECT_ID('dbo.users'))
+    CREATE INDEX [idx_user_active] ON dbo.users([is_active]);
+GO
+
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'idx_users_role' AND object_id = OBJECT_ID('dbo.users'))
+    CREATE NONCLUSTERED INDEX [idx_users_role] ON dbo.users([role]);
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'idx_user_favorites_user' AND object_id = OBJECT_ID('dbo.user_favorites'))
+    CREATE NONCLUSTERED INDEX [idx_user_favorites_user] ON dbo.user_favorites([user_id]);
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'idx_user_favorites_item' AND object_id = OBJECT_ID('dbo.user_favorites'))
+    CREATE NONCLUSTERED INDEX [idx_user_favorites_item] ON dbo.user_favorites([item_type], [item_id]);
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'idx_point_transactions_user' AND object_id = OBJECT_ID('dbo.point_transactions'))
+    CREATE NONCLUSTERED INDEX [idx_point_transactions_user] ON dbo.point_transactions([user_id]);
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'idx_point_transactions_type' AND object_id = OBJECT_ID('dbo.point_transactions'))
+    CREATE NONCLUSTERED INDEX [idx_point_transactions_type] ON dbo.point_transactions([transaction_type]);
 GO
 
 -- ============================================
--- 5. 用户活动参与表
+-- 6. 更新时间触发器
 -- ============================================
-IF OBJECT_ID('dbo.user_activity_participation', 'U') IS NULL
-BEGIN
-    CREATE TABLE dbo.user_activity_participation (
-        [participation_id] INT IDENTITY(1,1) NOT NULL,
-        [external_user_id] INT NOT NULL,
-        [activity_id] INT NOT NULL,
-        [participated_at] DATETIME DEFAULT GETDATE(),
-        [completion_status] VARCHAR(20) DEFAULT 'registered',
-        [points_earned] INT DEFAULT 0,
-        CONSTRAINT PK_user_activity_participation PRIMARY KEY CLUSTERED ([participation_id]),
-        CONSTRAINT UQ_user_activity UNIQUE ([external_user_id], [activity_id])
-    );
-
-    ALTER TABLE dbo.user_activity_participation ADD CONSTRAINT CK_external_user_id CHECK ([external_user_id] > 0);
-    ALTER TABLE dbo.user_activity_participation ADD CONSTRAINT CK_completion_status CHECK ([completion_status] IN ('registered', 'participated', 'completed'));
-    ALTER TABLE dbo.user_activity_participation ADD CONSTRAINT CK_points_earned CHECK ([points_earned] >= 0);
-END
+IF OBJECT_ID('tr_users_updated_at', 'TR') IS NOT NULL
+    DROP TRIGGER tr_users_updated_at;
 GO
 
-IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'idx_completion_status' AND object_id = OBJECT_ID('dbo.user_activity_participation'))
-    CREATE INDEX idx_completion_status ON dbo.user_activity_participation([completion_status]);
-GO
-
--- ============================================
--- 6. 用户成就表
--- ============================================
-IF OBJECT_ID('dbo.user_achievement', 'U') IS NULL
-BEGIN
-    CREATE TABLE dbo.user_achievement (
-        [achievement_record_id] INT IDENTITY(1,1) NOT NULL,
-        [external_user_id] INT NOT NULL,
-        [achievement_id] INT NOT NULL,
-        [obtained_at] DATETIME DEFAULT GETDATE(),
-        CONSTRAINT PK_user_achievement PRIMARY KEY CLUSTERED ([achievement_record_id]),
-        CONSTRAINT UQ_user_achievement UNIQUE ([external_user_id], [achievement_id])
-    );
-
-    ALTER TABLE dbo.user_achievement ADD CONSTRAINT CK_achievement_external_user_id CHECK ([external_user_id] > 0);
-END
-GO
-
-IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'idx_obtained_at' AND object_id = OBJECT_ID('dbo.user_achievement'))
-    CREATE INDEX idx_obtained_at ON dbo.user_achievement([obtained_at]);
-GO
-
--- ============================================
--- 7. 个人资料设置表
--- ============================================
-IF OBJECT_ID('dbo.profile_settings', 'U') IS NULL
-BEGIN
-    CREATE TABLE dbo.profile_settings (
-        [setting_id] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
-        [user_id] INT NOT NULL,
-        [visibility] NVARCHAR(20) NOT NULL DEFAULT 'public',
-        [bio] NVARCHAR(500) NULL,
-        [location] NVARCHAR(100) NULL,
-        [interests] NVARCHAR(MAX) NULL,
-        [social_links] NVARCHAR(MAX) NULL,
-        [notification_preferences] NVARCHAR(MAX) NULL,
-        [created_at] DATETIME DEFAULT GETDATE(),
-        [updated_at] DATETIME DEFAULT GETDATE(),
-        CONSTRAINT FK_profile_user FOREIGN KEY ([user_id]) REFERENCES dbo.atca_user([user_id]) ON DELETE CASCADE
-    );
-
-    ALTER TABLE dbo.profile_settings ADD CONSTRAINT CK_visibility CHECK ([visibility] IN ('public', 'friends', 'private'));
-END
-GO
-
-IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'idx_profile_settings_user' AND object_id = OBJECT_ID('dbo.profile_settings'))
-    CREATE INDEX [idx_profile_settings_user] ON dbo.profile_settings([user_id]);
-GO
-
--- ============================================
--- 8. 管理员账户初始化
--- ============================================
-IF NOT EXISTS (SELECT 1 FROM dbo.atca_user WHERE [username] = 'admin')
-BEGIN
-    INSERT INTO dbo.atca_user ([username], [nickname], [password], [email], [role], [points], [level], [is_active])
-    VALUES (
-        'admin',
-        '管理员',
-        '$2b$10$bH3.WAX5668Ze9tDyj2DQuxf5e6Wb3Po3YqjcYhzQFWHsbtYnUWbS',
-        'admin@example.com',
-        'admin',
-        1000,
-        10,
-        1
-    );
-    PRINT '管理员账户已创建，请通过应用接口重置密码';
-END
-ELSE
-BEGIN
-    PRINT '管理员账户已存在，跳过创建';
-END
-GO
-
--- 执行后检查一下
-SELECT [username], [password] FROM dbo.atca_user WHERE [username] = 'admin';
-
--- ============================================
--- 9. 用户表更新触发器
--- ============================================
-IF OBJECT_ID('dbo.trg_user_updated_at', 'TR') IS NOT NULL
-    DROP TRIGGER dbo.trg_user_updated_at;
-GO
-
-CREATE TRIGGER dbo.trg_user_updated_at
-ON dbo.atca_user
+CREATE TRIGGER tr_users_updated_at
+ON dbo.users
 AFTER UPDATE
 AS
 BEGIN
     SET NOCOUNT ON;
-    UPDATE dbo.atca_user
+    UPDATE dbo.users
     SET [updated_at] = GETDATE()
-    FROM dbo.atca_user u
+    FROM dbo.users u
     INNER JOIN inserted i ON u.[user_id] = i.[user_id];
 END
 GO
 
--- ============================================
--- 10. AI配置表 (ai_config)
--- ============================================
-IF OBJECT_ID('dbo.ai_config', 'U') IS NULL
-BEGIN
-    CREATE TABLE dbo.ai_config (
-        [ai_id] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
-        [name] NVARCHAR(100) NOT NULL,
-        [provider] VARCHAR(50) NOT NULL DEFAULT 'custom',
-        [app_id] NVARCHAR(255) NULL,
-        [api_key] NVARCHAR(500) NULL,
-        [api_secret] NVARCHAR(500) NULL,
-        [version] NVARCHAR(50) NULL,
-        [api_endpoint] NVARCHAR(500) NULL,
-        [model] NVARCHAR(100) NULL,
-        [system_prompt] NVARCHAR(MAX) NULL,
-        [description] NVARCHAR(500) NULL,
-        [is_active] BIT NOT NULL DEFAULT 1,
-        [is_default] BIT NOT NULL DEFAULT 0,
-        [temperature] DECIMAL(3,2) DEFAULT 0.70,
-        [max_tokens] INT DEFAULT 2048,
-        [max_concurrent] INT DEFAULT 3,
-        [max_queue_size] INT DEFAULT 20,
-        [queue_timeout] INT DEFAULT 60,
-        [created_at] DATETIME DEFAULT GETDATE(),
-        [updated_at] DATETIME DEFAULT GETDATE()
-    );
-END
+IF OBJECT_ID('tr_user_settings_updated_at', 'TR') IS NOT NULL
+    DROP TRIGGER tr_user_settings_updated_at;
 GO
 
--- 添加并发设置字段（如果不存在）
-IF NOT EXISTS (SELECT * FROM sys.columns WHERE name = 'max_concurrent' AND object_id = OBJECT_ID('dbo.ai_config'))
-BEGIN
-    ALTER TABLE dbo.ai_config ADD [max_concurrent] INT DEFAULT 3;
-END
-GO
-
-IF NOT EXISTS (SELECT * FROM sys.columns WHERE name = 'max_queue_size' AND object_id = OBJECT_ID('dbo.ai_config'))
-BEGIN
-    ALTER TABLE dbo.ai_config ADD [max_queue_size] INT DEFAULT 20;
-END
-GO
-
-IF NOT EXISTS (SELECT * FROM sys.columns WHERE name = 'queue_timeout' AND object_id = OBJECT_ID('dbo.ai_config'))
-BEGIN
-    ALTER TABLE dbo.ai_config ADD [queue_timeout] INT DEFAULT 60;
-END
-GO
-
--- ai_config 表更新触发器
-IF OBJECT_ID('tr_ai_config_updated_at', 'TR') IS NOT NULL
-    DROP TRIGGER tr_ai_config_updated_at;
-GO
-
-CREATE TRIGGER tr_ai_config_updated_at
-ON dbo.ai_config
+CREATE TRIGGER tr_user_settings_updated_at
+ON dbo.user_settings
 AFTER UPDATE
 AS
 BEGIN
     SET NOCOUNT ON;
-    UPDATE dbo.ai_config
+    UPDATE dbo.user_settings
     SET [updated_at] = GETDATE()
-    FROM dbo.ai_config a
-    INNER JOIN inserted i ON a.[ai_id] = i.[ai_id];
+    FROM dbo.user_settings s
+    INNER JOIN inserted i ON s.[setting_id] = i.[setting_id];
 END
 GO
 
--- 为现有用户创建默认设置
-MERGE INTO dbo.profile_settings AS target
-USING (SELECT [user_id] FROM dbo.atca_user WHERE [user_id] NOT IN (SELECT [user_id] FROM dbo.profile_settings)) AS source
-ON target.[user_id] = source.[user_id]
-WHEN NOT MATCHED THEN
-    INSERT ([user_id], [visibility])
-    VALUES (source.[user_id], 'public');
+-- ============================================
+-- 7. 存储过程
+-- ============================================
+
+-- 用户注册
+IF OBJECT_ID('dbo.sp_user_register', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_user_register;
+GO
+CREATE PROCEDURE dbo.sp_user_register
+    @username VARCHAR(50),
+    @email VARCHAR(100),
+    @password VARCHAR(255),
+    @nickname VARCHAR(50) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+    INSERT INTO dbo.users ([username], [email], [password], [nickname])
+    VALUES (@username, @email, @password, COALESCE(@nickname, @username));
+    SELECT SCOPE_IDENTITY() AS [user_id];
+END
 GO
 
--- 预设AI配置（含讯飞星火Lite，严格按WebSocket文档配置）
--- 讯飞星火文档: https://www.xfyun.cn/doc/spark/Web.html
--- Spark Lite: wss://spark-api.xf-yun.com/v1.1/chat, domain=lite
-MERGE INTO dbo.ai_config AS target
-USING (
-    VALUES
-    (1, N'通用AI助手', 'openai', NULL, NULL, NULL, 'gpt-4o', 'https://api.openai.com/v1/chat/completions', 'gpt-4o', N'你是华夏营造的AI助手，精通中国古代建筑文化。请用专业但易懂的方式回答用户的问题。', N'通用型AI助手，适合解答古建筑知识', 1, 1, 0.70, 2048, 3, 20, 60),
-    (2, N'建筑技术专家', 'openai', NULL, NULL, NULL, 'gpt-4o', 'https://api.openai.com/v1/chat/completions', 'gpt-4o', N'你是一位古建筑技术专家，专注于斗拱、榫卯、营造法式等技术细节。请从技术角度详细解答问题。', N'专注建筑技术细节的专家', 1, 0, 0.50, 2048, 3, 20, 60),
-    (3, N'历史学者', 'openai', NULL, NULL, NULL, 'gpt-4o', 'https://api.openai.com/v1/chat/completions', 'gpt-4o', N'你是一位研究中国古代建筑史的学者，精通各朝代建筑风格和演变。请从历史角度解答问题。', N'专注历史文化的学者', 1, 0, 0.60, 2048, 3, 20, 60),
-    (4, N'讯飞星火Lite', 'spark', NULL, NULL, NULL, 'lite', 'wss://spark-api.xf-yun.com/v1.1/chat', 'lite', N'你是华夏营造的AI助手，精通中国古代建筑文化。请用专业但易懂的方式回答用户的问题。', N'讯飞星火Spark Lite（WebSocket协议）支持自选版本: lite/generalv3/pro-128k/generalv3.5/max-32k/4.0Ultra', 1, 0, 0.50, 2048, 3, 20, 60)
-) AS source ([ai_id], [name], [provider], [app_id], [api_key], [api_secret], [version], [api_endpoint], [model], [system_prompt], [description], [is_active], [is_default], [temperature], [max_tokens], [max_concurrent], [max_queue_size], [queue_timeout])
-ON target.[ai_id] = source.[ai_id]
-WHEN MATCHED THEN
-    UPDATE SET
-        [name] = source.[name],
-        [provider] = source.[provider],
-        [app_id] = source.[app_id],
-        [api_key] = source.[api_key],
-        [api_secret] = source.[api_secret],
-        [version] = source.[version],
-        [api_endpoint] = source.[api_endpoint],
-        [model] = source.[model],
-        [system_prompt] = source.[system_prompt],
-        [description] = source.[description],
-        [is_active] = source.[is_active],
-        [is_default] = source.[is_default],
-        [temperature] = source.[temperature],
-        [max_tokens] = source.[max_tokens],
-        [max_concurrent] = source.[max_concurrent],
-        [max_queue_size] = source.[max_queue_size],
-        [queue_timeout] = source.[queue_timeout]
-WHEN NOT MATCHED THEN
-    INSERT ([name], [provider], [app_id], [api_key], [api_secret], [version], [api_endpoint], [model], [system_prompt], [description], [is_active], [is_default], [temperature], [max_tokens], [max_concurrent], [max_queue_size], [queue_timeout])
-    VALUES (source.[name], source.[provider], source.[app_id], source.[api_key], source.[api_secret], source.[version], source.[api_endpoint], source.[model], source.[system_prompt], source.[description], source.[is_active], source.[is_default], source.[temperature], source.[max_tokens], source.[max_concurrent], source.[max_queue_size], source.[queue_timeout]);
+-- 用户登录
+IF OBJECT_ID('dbo.sp_user_login', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_user_login;
+GO
+CREATE PROCEDURE dbo.sp_user_login
+    @username VARCHAR(50),
+    @password VARCHAR(255)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT [user_id], [username], [email], [nickname], [avatar], [points], [level], [role], [is_active]
+    FROM dbo.users
+    WHERE ([username] = @username OR [email] = @username) AND [password] = @password;
+END
+GO
+
+-- 更新用户信息
+IF OBJECT_ID('dbo.sp_user_update', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_user_update;
+GO
+CREATE PROCEDURE dbo.sp_user_update
+    @user_id INT,
+    @nickname VARCHAR(50) = NULL,
+    @avatar VARCHAR(255) = NULL,
+    @email VARCHAR(100) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+    UPDATE dbo.users
+    SET [nickname] = COALESCE(@nickname, [nickname]),
+        [avatar] = COALESCE(@avatar, [avatar]),
+        [email] = COALESCE(@email, [email])
+    WHERE [user_id] = @user_id;
+END
+GO
+
+-- 更新用户积分
+IF OBJECT_ID('dbo.sp_user_update_points', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_user_update_points;
+GO
+CREATE PROCEDURE dbo.sp_user_update_points
+    @user_id INT,
+    @amount INT,
+    @transaction_type VARCHAR(50),
+    @description NVARCHAR(500) = NULL,
+    @reference_id INT = NULL,
+    @reference_type VARCHAR(50) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DECLARE @balance_before INT;
+    DECLARE @balance_after INT;
+
+    SELECT @balance_before = [points] FROM dbo.users WHERE [user_id] = @user_id;
+    SET @balance_after = @balance_before + @amount;
+
+    UPDATE dbo.users
+    SET [points] = @balance_after
+    WHERE [user_id] = @user_id;
+
+    INSERT INTO dbo.point_transactions ([user_id], [transaction_type], [amount], [balance_before],
+        [balance_after], [description], [reference_id], [reference_type])
+    VALUES (@user_id, @transaction_type, @amount, @balance_before, @balance_after,
+        @description, @reference_id, @reference_type);
+
+    SELECT @balance_after AS [new_balance];
+END
+GO
+
+-- 添加收藏
+IF OBJECT_ID('dbo.sp_user_add_favorite', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_user_add_favorite;
+GO
+CREATE PROCEDURE dbo.sp_user_add_favorite
+    @user_id INT,
+    @item_id INT,
+    @item_type VARCHAR(50)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    IF NOT EXISTS (SELECT 1 FROM dbo.user_favorites WHERE [user_id] = @user_id AND [item_id] = @item_id AND [item_type] = @item_type)
+    BEGIN
+        INSERT INTO dbo.user_favorites ([user_id], [item_id], [item_type])
+        VALUES (@user_id, @item_id, @item_type);
+    END
+END
+GO
+
+-- 删除收藏
+IF OBJECT_ID('dbo.sp_user_remove_favorite', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_user_remove_favorite;
+GO
+CREATE PROCEDURE dbo.sp_user_remove_favorite
+    @user_id INT,
+    @item_id INT,
+    @item_type VARCHAR(50)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DELETE FROM dbo.user_favorites
+    WHERE [user_id] = @user_id AND [item_id] = @item_id AND [item_type] = @item_type;
+END
+GO
+
+-- 获取用户收藏列表
+IF OBJECT_ID('dbo.sp_user_get_favorites', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_user_get_favorites;
+GO
+CREATE PROCEDURE dbo.sp_user_get_favorites
+    @user_id INT,
+    @item_type VARCHAR(50) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT [favorite_id], [item_id], [item_type], [created_at]
+    FROM dbo.user_favorites
+    WHERE [user_id] = @user_id AND (@item_type IS NULL OR [item_type] = @item_type)
+    ORDER BY [created_at] DESC;
+END
+GO
+
+-- 获取用户设置
+IF OBJECT_ID('dbo.sp_user_get_settings', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_user_get_settings;
+GO
+CREATE PROCEDURE dbo.sp_user_get_settings
+    @user_id INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT [language], [theme], [notifications_enabled], [email_notifications],
+           [push_notifications], [auto_sync], [daily_checkin_reminder]
+    FROM dbo.user_settings
+    WHERE [user_id] = @user_id;
+END
+GO
+
+-- 更新用户设置
+IF OBJECT_ID('dbo.sp_user_update_settings', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_user_update_settings;
+GO
+CREATE PROCEDURE dbo.sp_user_update_settings
+    @user_id INT,
+    @language VARCHAR(10) = NULL,
+    @theme VARCHAR(20) = NULL,
+    @notifications_enabled BIT = NULL,
+    @email_notifications BIT = NULL,
+    @push_notifications BIT = NULL,
+    @auto_sync BIT = NULL,
+    @daily_checkin_reminder BIT = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+    IF NOT EXISTS (SELECT 1 FROM dbo.user_settings WHERE [user_id] = @user_id)
+    BEGIN
+        INSERT INTO dbo.user_settings ([user_id]) VALUES (@user_id);
+    END
+
+    UPDATE dbo.user_settings
+    SET [language] = COALESCE(@language, [language]),
+        [theme] = COALESCE(@theme, [theme]),
+        [notifications_enabled] = COALESCE(@notifications_enabled, [notifications_enabled]),
+        [email_notifications] = COALESCE(@email_notifications, [email_notifications]),
+        [push_notifications] = COALESCE(@push_notifications, [push_notifications]),
+        [auto_sync] = COALESCE(@auto_sync, [auto_sync]),
+        [daily_checkin_reminder] = COALESCE(@daily_checkin_reminder, [daily_checkin_reminder])
+    WHERE [user_id] = @user_id;
+END
+GO
+
+-- 获取用户积分交易记录
+IF OBJECT_ID('dbo.sp_user_get_point_transactions', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_user_get_point_transactions;
+GO
+CREATE PROCEDURE dbo.sp_user_get_point_transactions
+    @user_id INT,
+    @page INT = 1,
+    @page_size INT = 20
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DECLARE @offset INT = (@page - 1) * @page_size;
+    SELECT [transaction_id], [transaction_type], [amount], [balance_before], [balance_after],
+           [description], [reference_id], [reference_type], [created_at]
+    FROM dbo.point_transactions
+    WHERE [user_id] = @user_id
+    ORDER BY [created_at] DESC
+    OFFSET @offset ROWS FETCH NEXT @page_size ROWS ONLY;
+END
+GO
+
+-- 获取用户统计信息
+IF OBJECT_ID('dbo.sp_user_get_stats', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_user_get_stats;
+GO
+CREATE PROCEDURE dbo.sp_user_get_stats
+    @user_id INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT
+        u.[user_id], u.[username], u.[nickname], u.[avatar], u.[points], u.[level], u.[exp], u.[role],
+        (SELECT COUNT(*) FROM dbo.user_favorites WHERE [user_id] = u.[user_id]) AS favorite_count,
+        (SELECT COUNT(*) FROM dbo.point_transactions WHERE [user_id] = u.[user_id]) AS transaction_count,
+        u.[created_at], u.[last_login]
+    FROM dbo.users u
+    WHERE u.[user_id] = @user_id;
+END
+GO
+
+-- 获取用户列表
+IF OBJECT_ID('dbo.sp_user_get_list', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_user_get_list;
+GO
+CREATE PROCEDURE dbo.sp_user_get_list
+    @role VARCHAR(10) = NULL,
+    @is_active BIT = NULL,
+    @page INT = 1,
+    @page_size INT = 20
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DECLARE @offset INT = (@page - 1) * @page_size;
+    SELECT [user_id], [username], [nickname], [email], [avatar], [points], [level], [role],
+           [is_active], [created_at], [last_login]
+    FROM dbo.users
+    WHERE (@role IS NULL OR [role] = @role) AND (@is_active IS NULL OR [is_active] = @is_active)
+    ORDER BY [created_at] DESC
+    OFFSET @offset ROWS FETCH NEXT @page_size ROWS ONLY;
+END
+GO
+
+-- 更新用户角色
+IF OBJECT_ID('dbo.sp_user_update_role', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_user_update_role;
+GO
+CREATE PROCEDURE dbo.sp_user_update_role
+    @user_id INT,
+    @role VARCHAR(10)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    UPDATE dbo.users
+    SET [role] = @role
+    WHERE [user_id] = @user_id;
+END
+GO
+
+-- 锁定/解锁用户
+IF OBJECT_ID('dbo.sp_user_toggle_active', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_user_toggle_active;
+GO
+CREATE PROCEDURE dbo.sp_user_toggle_active
+    @user_id INT,
+    @is_active BIT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    UPDATE dbo.users
+    SET [is_active] = @is_active
+    WHERE [user_id] = @user_id;
+END
+GO
+
+-- 记录登录尝试
+IF OBJECT_ID('dbo.sp_user_log_login_attempt', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_user_log_login_attempt;
+GO
+CREATE PROCEDURE dbo.sp_user_log_login_attempt
+    @username VARCHAR(50),
+    @success BIT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    IF @success = 0
+    BEGIN
+        UPDATE dbo.users
+        SET [login_attempts] = [login_attempts] + 1,
+            [lockout_until] = CASE WHEN [login_attempts] >= 5 THEN DATEADD(MINUTE, 15, GETDATE()) ELSE [lockout_until] END
+        WHERE [username] = @username OR [email] = @username;
+    END
+    ELSE
+    BEGIN
+        UPDATE dbo.users
+        SET [login_attempts] = 0, [lockout_until] = NULL, [last_login] = GETDATE()
+        WHERE [username] = @username OR [email] = @username;
+    END
+END
 GO
 
 PRINT 'ATCA_User 数据库初始化完成';
-PRINT 'ai_config 表初始化完成';

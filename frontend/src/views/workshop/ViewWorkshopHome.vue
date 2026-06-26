@@ -599,4 +599,317 @@ onMounted(async () => {
   background: var(--c-red);
   border-radius: 2px;
 }
+
+/* ===== 响应式适配 - 平板端 (1024px - 768px) ===== */
+@media screen and (max-width: 1024px) {
+  .page-content {
+    padding-top: 80px !important;
+    padding-bottom: 32px;
+  }
+  .workshop-header {
+    padding-top: 80px;
+    margin-bottom: 28px;
+    gap: 12px;
+  }
+  .workshop-header .header-text h1 {
+    font-size: 1.5rem;
+  }
+  .workshop-header .header-text p {
+    font-size: 0.875rem;
+  }
+  .btn-enter {
+    padding: 10px 20px;
+    font-size: 0.875rem;
+  }
+  .model-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+  }
+  .model-card {
+    border-radius: var(--r-md);
+  }
+  .model-preview {
+    aspect-ratio: 4/3;
+  }
+  .model-info {
+    padding: 12px;
+  }
+  .model-info h3 {
+    font-size: 0.8125rem;
+  }
+  .model-info p {
+    font-size: 0.7rem;
+    margin-bottom: 8px;
+  }
+  .model-meta {
+    font-size: 0.625rem;
+  }
+  .model-action-btn {
+    padding: 3px 8px;
+    font-size: 0.625rem;
+    gap: 2px;
+  }
+  .model-action-btn svg {
+    width: 10px;
+    height: 10px;
+  }
+}
+
+/* ===== 响应式适配 - 移动端 (767px - 480px) ===== */
+@media screen and (max-width: 767px) {
+  .page-content {
+    padding-top: 70px !important;
+    padding-bottom: 24px;
+  }
+  .workshop-header {
+    padding-top: 70px;
+    margin-bottom: 24px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+  .workshop-header .header-text {
+    width: 100%;
+  }
+  .workshop-header .header-text h1 {
+    font-size: 1.375rem;
+  }
+  .workshop-header .header-text p {
+    font-size: 0.8125rem;
+  }
+  .header-actions {
+    width: 100%;
+    justify-content: flex-start;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .btn-enter {
+    padding: 10px 18px;
+    font-size: 0.8125rem;
+    min-width: 120px;
+  }
+  .section-header {
+    margin-bottom: 12px;
+  }
+  .section-header h2 {
+    font-size: 0.9375rem;
+  }
+  .section-count {
+    font-size: 0.6875rem;
+  }
+  .model-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+  .model-preview {
+    aspect-ratio: 4/3;
+  }
+  .model-badge {
+    font-size: 0.5625rem;
+    padding: 2px 6px;
+  }
+  .model-visibility {
+    font-size: 0.5625rem;
+    padding: 2px 6px;
+  }
+  .model-info {
+    padding: 10px;
+  }
+  .model-info h3 {
+    font-size: 0.75rem;
+    margin-bottom: 3px;
+  }
+  .model-info p {
+    font-size: 0.65rem;
+    margin-bottom: 6px;
+    line-height: 1.4;
+  }
+  .model-meta {
+    flex-direction: column;
+    gap: 4px;
+    align-items: flex-start;
+    font-size: 0.625rem;
+  }
+  .model-link {
+    font-size: 0.6875rem;
+  }
+  .model-actions-row {
+    gap: 4px;
+    flex-wrap: wrap;
+  }
+  .model-action-btn {
+    padding: 3px 8px;
+    font-size: 0.625rem;
+    gap: 2px;
+  }
+  .model-action-btn svg {
+    width: 10px;
+    height: 10px;
+  }
+  .model-action-btn.delete {
+    padding: 3px 4px;
+  }
+  .empty-workshop {
+    padding: 48px 16px;
+  }
+  .empty-workshop svg {
+    width: 48px;
+    height: 48px;
+    margin-bottom: 12px;
+  }
+  .empty-workshop h3 {
+    font-size: 1rem;
+    margin-bottom: 6px;
+  }
+  .empty-workshop p {
+    font-size: 0.8125rem;
+    margin-bottom: 16px;
+  }
+  .modal-card {
+    padding: 20px;
+    max-width: 360px;
+  }
+  .modal-card h3 {
+    font-size: 0.9375rem;
+    margin-bottom: 16px;
+  }
+  .form-group label {
+    font-size: 0.75rem;
+  }
+  .form-group .atca-input {
+    padding: 8px 12px;
+    font-size: 0.8125rem;
+  }
+  .vis-btn {
+    padding: 8px;
+    font-size: 0.75rem;
+  }
+}
+
+/* ===== 响应式适配 - 小屏移动端 (< 480px) ===== */
+@media screen and (max-width: 479px) {
+  .page-content {
+    padding-top: 65px !important;
+  }
+  .workshop-header {
+    padding-top: 65px;
+    margin-bottom: 20px;
+  }
+  .workshop-header .header-text h1 {
+    font-size: 1.25rem;
+  }
+  .workshop-header .header-text p {
+    font-size: 0.75rem;
+  }
+  .header-actions {
+    flex-direction: column;
+  }
+  .btn-enter {
+    width: 100%;
+    justify-content: center;
+    padding: 10px 16px;
+    font-size: 0.8125rem;
+  }
+  .section-header h2 {
+    font-size: 0.875rem;
+    gap: 6px;
+  }
+  .section-header h2 svg {
+    width: 16px;
+    height: 16px;
+  }
+  .section-count {
+    font-size: 0.625rem;
+  }
+  .model-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  .model-preview {
+    aspect-ratio: 16/10;
+  }
+  .model-badge {
+    font-size: 0.5rem;
+    padding: 2px 5px;
+  }
+  .model-visibility {
+    font-size: 0.5rem;
+    padding: 2px 5px;
+  }
+  .model-info {
+    padding: 10px;
+  }
+  .model-info h3 {
+    font-size: 0.8125rem;
+    margin-bottom: 4px;
+  }
+  .model-info p {
+    font-size: 0.7rem;
+    margin-bottom: 8px;
+  }
+  .model-meta {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .model-actions-row {
+    flex-wrap: nowrap;
+  }
+  .model-action-btn {
+    padding: 2px 6px;
+    font-size: 0.5625rem;
+    border-radius: 4px;
+  }
+  .model-action-btn.delete {
+    padding: 2px 4px;
+  }
+  .empty-workshop {
+    padding: 32px 12px;
+  }
+  .empty-workshop svg {
+    width: 40px;
+    height: 40px;
+  }
+  .empty-workshop h3 {
+    font-size: 0.9375rem;
+  }
+  .empty-workshop p {
+    font-size: 0.75rem;
+  }
+  .modal-overlay {
+    padding: 16px;
+  }
+  .modal-card {
+    padding: 16px;
+    max-width: 320px;
+  }
+  .modal-card h3 {
+    font-size: 0.875rem;
+    margin-bottom: 14px;
+  }
+  .form-group {
+    margin-bottom: 12px;
+  }
+  .form-group label {
+    font-size: 0.75rem;
+    margin-bottom: 4px;
+  }
+  .form-group .atca-input {
+    padding: 8px 10px;
+    font-size: 0.75rem;
+  }
+  .vis-btn {
+    padding: 6px;
+    font-size: 0.7rem;
+    gap: 4px;
+  }
+  .vis-btn svg {
+    width: 12px;
+    height: 12px;
+  }
+  .modal-actions {
+    gap: 8px;
+    margin-top: 16px;
+  }
+}
 </style>

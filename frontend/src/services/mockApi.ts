@@ -1343,6 +1343,82 @@ export const mockActivityApi = {
     await delay();
     return { success: true, data: { joined: true, activity_id: id } };
   },
+
+  checkin: async (data?: { device_type?: string; device_info?: string }) => {
+    await delay();
+    return {
+      success: true,
+      message: '打卡成功！',
+      checkin_id: Date.now(),
+      streak_count: 7,
+      points_earned: 10,
+      already_checked: false,
+    };
+  },
+
+  getCheckins: async (params?: { page?: number; limit?: number }) => {
+    await delay();
+    const page = params?.page || 1;
+    const limit = params?.limit || 10;
+    return {
+      success: true,
+      data: {
+        list: Array.from({ length: Math.min(limit, 20) }, (_, i) => ({
+          checkin_id: (page - 1) * limit + i + 1,
+          user_id: 1,
+          checkin_date: new Date(Date.now() - i * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+          checkin_time: new Date(Date.now() - i * 24 * 60 * 60 * 1000).toISOString(),
+          streak_count: 7 - i,
+          points_earned: 10,
+          device_type: 'mobile',
+          created_at: new Date(Date.now() - i * 24 * 60 * 60 * 1000).toISOString(),
+        })),
+        total: 20,
+        totalPages: 2,
+      },
+    };
+  },
+
+  getCheckinStats: async () => {
+    await delay();
+    return {
+      success: true,
+      data: {
+        total_checkins: 45,
+        max_streak: 15,
+        total_points: 450,
+        last_checkin_date: new Date().toISOString().split('T')[0],
+        weekly_checkins: 7,
+        monthly_checkins: 22,
+      },
+    };
+  },
+
+  checkTodayCheckin: async () => {
+    await delay();
+    return {
+      success: true,
+      data: {
+        checked_today: false,
+      },
+    };
+  },
+
+  getCheckinCalendar: async (params: { year: number; month: number }) => {
+    await delay();
+    const { year, month } = params;
+    const days = new Date(year, month, 0).getDate();
+    const checkinDays = [1, 2, 3, 5, 6, 7, 8, 10, 11, 12, 14, 15, 16, 18, 19, 20, 22, 23, 24, 25];
+    return {
+      success: true,
+      data: checkinDays.map(day => ({
+        checkin_date: `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`,
+        checked: true,
+        streak_count: 5,
+        points_earned: 10,
+      })),
+    };
+  },
 };
 
 // 知识库API Mock
