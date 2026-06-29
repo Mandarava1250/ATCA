@@ -66,9 +66,14 @@ BEGIN
         [updated_at] DATETIME DEFAULT GETDATE(),
         CONSTRAINT FK_topics_board FOREIGN KEY ([board_id]) REFERENCES dbo.forum_boards([board_id]) ON DELETE CASCADE
     );
-    CREATE INDEX [idx_topics_board] ON dbo.forum_topics([board_id], [is_pinned] DESC, [last_reply_at] DESC);
-    CREATE INDEX [idx_topics_user] ON dbo.forum_topics([user_id]);
 END
+GO
+
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'idx_topics_board' AND object_id = OBJECT_ID('dbo.forum_topics'))
+    CREATE INDEX [idx_topics_board] ON dbo.forum_topics([board_id], [is_pinned] DESC, [last_reply_at] DESC);
+GO
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'idx_topics_user' AND object_id = OBJECT_ID('dbo.forum_topics'))
+    CREATE INDEX [idx_topics_user] ON dbo.forum_topics([user_id]);
 GO
 
 -- ============================================
@@ -87,8 +92,11 @@ BEGIN
         [created_at] DATETIME DEFAULT GETDATE(),
         CONSTRAINT FK_replies_topic FOREIGN KEY ([topic_id]) REFERENCES dbo.forum_topics([topic_id]) ON DELETE CASCADE
     );
-    CREATE INDEX [idx_replies_topic] ON dbo.forum_replies([topic_id], [floor_number]);
 END
+GO
+
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'idx_replies_topic' AND object_id = OBJECT_ID('dbo.forum_replies'))
+    CREATE INDEX [idx_replies_topic] ON dbo.forum_replies([topic_id], [floor_number]);
 GO
 
 -- ============================================
@@ -116,10 +124,17 @@ BEGIN
         [created_at] DATETIME DEFAULT GETDATE(),
         [updated_at] DATETIME DEFAULT GETDATE()
     );
-    CREATE INDEX [idx_shares_featured] ON dbo.building_shares([is_featured] DESC, [created_at] DESC);
-    CREATE INDEX [idx_shares_user] ON dbo.building_shares([user_id]);
-    CREATE INDEX [idx_shares_search] ON dbo.building_shares([title], [building_type], [era]);
 END
+GO
+
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'idx_shares_featured' AND object_id = OBJECT_ID('dbo.building_shares'))
+    CREATE INDEX [idx_shares_featured] ON dbo.building_shares([is_featured] DESC, [created_at] DESC);
+GO
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'idx_shares_user' AND object_id = OBJECT_ID('dbo.building_shares'))
+    CREATE INDEX [idx_shares_user] ON dbo.building_shares([user_id]);
+GO
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'idx_shares_search' AND object_id = OBJECT_ID('dbo.building_shares'))
+    CREATE INDEX [idx_shares_search] ON dbo.building_shares([title], [building_type], [era]);
 GO
 
 -- ============================================
@@ -141,9 +156,14 @@ BEGIN
         [updated_at] DATETIME DEFAULT GETDATE(),
         CONSTRAINT FK_comments_parent FOREIGN KEY ([parent_id]) REFERENCES dbo.comments([comment_id])
     );
-    CREATE INDEX [idx_comments_target] ON dbo.comments([target_type], [target_id], [is_deleted], [created_at] DESC);
-    CREATE INDEX [idx_comments_user] ON dbo.comments([user_id], [is_deleted]);
 END
+GO
+
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'idx_comments_target' AND object_id = OBJECT_ID('dbo.comments'))
+    CREATE INDEX [idx_comments_target] ON dbo.comments([target_type], [target_id], [is_deleted], [created_at] DESC);
+GO
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'idx_comments_user' AND object_id = OBJECT_ID('dbo.comments'))
+    CREATE INDEX [idx_comments_user] ON dbo.comments([user_id], [is_deleted]);
 GO
 
 -- ============================================
@@ -159,8 +179,11 @@ BEGIN
         [created_at] DATETIME DEFAULT GETDATE(),
         CONSTRAINT UQ_likes UNIQUE ([user_id], [target_type], [target_id])
     );
-    CREATE INDEX [idx_likes_target] ON dbo.likes([target_type], [target_id]);
 END
+GO
+
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'idx_likes_target' AND object_id = OBJECT_ID('dbo.likes'))
+    CREATE INDEX [idx_likes_target] ON dbo.likes([target_type], [target_id]);
 GO
 
 -- ============================================

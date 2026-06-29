@@ -4,6 +4,7 @@
  * 实现 IService 接口以纳入统一服务注册体系
  */
 
+import sql from 'mssql';
 import { query, execute, isMockMode } from '../config/database';
 import { logger, ErrorType } from '../utils/logger';
 import { IService, ServiceState } from '../core';
@@ -77,6 +78,37 @@ export interface AuditLog {
   targetId: string | null;
   details: string;
   createdAt: string;
+}
+
+export interface Topic {
+  topic_id: number;
+  topic_key: string;
+  topic_name: string;
+  category: string;
+  content_zh: string;
+  content_en: string | null;
+  source: string;
+  confidence: number;
+  verified: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PathResult {
+  path_id: number;
+  path: string;
+  path_names: string;
+  path_types: string;
+  hop_count: number;
+}
+
+export interface Neighbor {
+  relation_id: number;
+  neighbor_id: number;
+  neighbor_name: string;
+  neighbor_category: string;
+  relation_type: string;
+  relation_description: string | null;
 }
 
 // ============ 服务类 ============
@@ -1077,6 +1109,200 @@ class KnowledgeGraphService implements IService {
       totalImports: (importCount[0] as any)?.cnt || 0,
       lastImportDate: (importCount[0] as any)?.lastDate,
     };
+  }
+
+  /**
+   * 查询知识主题列表（支持分页和分类过滤）
+   */
+  async getTopics(params: {
+    category?: string;
+    page: number;
+    pageSize: number;
+  }): Promise<{ data: Topic[]; total: number }> {
+    if (isMockMode()) {
+      const mockTopics: Topic[] = [
+        { topic_id: 1, topic_key: 'tailiang', topic_name: '抬梁式结构', category: 'structure', content_zh: '抬梁式是中国古建筑最主要的木结构形式...', content_en: 'Tailiang is the primary structural form...', source: '华夏营造知识库', confidence: 0.98, verified: true, created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-01T00:00:00Z' },
+        { topic_id: 2, topic_key: 'chuandou', topic_name: '穿斗式结构', category: 'structure', content_zh: '穿斗式是南方常见木结构形式...', content_en: 'Chuandou style is common in southern China...', source: '华夏营造知识库', confidence: 0.98, verified: true, created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-01T00:00:00Z' },
+        { topic_id: 3, topic_key: 'wudian', topic_name: '庑殿顶', category: 'structure', content_zh: '庑殿顶是中国古建筑最高等级的屋顶形制...', content_en: 'Wudian roof is the highest-ranking roof style...', source: '华夏营造知识库', confidence: 0.99, verified: true, created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-01T00:00:00Z' },
+        { topic_id: 5, topic_key: 'dougong', topic_name: '斗拱', category: 'component', content_zh: '斗拱是中国古建筑特有的结构构件...', content_en: 'Dougong is a unique structural component...', source: '华夏营造知识库', confidence: 0.99, verified: true, created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-01T00:00:00Z' },
+        { topic_id: 8, topic_key: 'foguangsi', topic_name: '佛光寺东大殿', category: 'famous', content_zh: '佛光寺东大殿是中国现存最早的木构建筑...', content_en: 'Foguang Temple East Hall is the earliest existing wooden structure...', source: '华夏营造知识库', confidence: 0.99, verified: true, created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-01T00:00:00Z' },
+        { topic_id: 10, topic_key: 'yingxian', topic_name: '应县木塔', category: 'famous', content_zh: '应县木塔是世界现存最高最古的木塔...', content_en: 'Yingxian Wooden Pagoda is the tallest and oldest existing wooden pagoda...', source: '华夏营造知识库', confidence: 0.99, verified: true, created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-01T00:00:00Z' },
+      ];
+      
+      let filtered = mockTopics;
+      if (params.category) {
+        filtered = filtered.filter(t => t.category === params.category);
+      }
+      
+      const start = (params.page - 1) * params.pageSize;
+      const end = start + params.pageSize;
+      
+      return {
+        data: filtered.slice(start, end),
+        total: filtered.length,
+      };
+    }
+
+    // 使用 execute 获取多结果集（存储过程返回两个结果集：分页数据和总数）
+    const result = await execute('architecture',
+      'EXEC dbo.sp_kg_get_topics @category = @category, @page = @page, @page_size = @pageSize',
+      { category: params.category || null, page: params.page, pageSize: params.pageSize }
+    );
+
+    // recordsets 是数组类型，[0] 是分页数据，[1] 是总数统计
+    const recordsets = result.recordsets as sql.IRecordSet<any>[];
+    const topics = recordsets[0] as Topic[];
+    const total = recordsets[1] && recordsets[1].length > 0
+      ? (recordsets[1][0] as any).total
+      : 0;
+
+    return { data: topics, total };
+  }
+
+  /**
+   * 根据ID查询单个主题
+   */
+  async getTopicById(id: number): Promise<Topic | null> {
+    if (isMockMode()) {
+      const mockTopics: Topic[] = [
+        { topic_id: 1, topic_key: 'tailiang', topic_name: '抬梁式结构', category: 'structure', content_zh: '抬梁式（叠梁式）是中国古建筑最主要的木结构形式。特点：柱上承梁，梁上抬梁，逐层缩短，最上层立脊瓜柱承脊檩。适用于宫殿、庙宇等大型建筑。代表：北京故宫太和殿。', content_en: 'Tailiang (post-and-beam) is the primary structural form of traditional Chinese architecture...', source: '华夏营造知识库', confidence: 0.98, verified: true, created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-01T00:00:00Z' },
+        { topic_id: 5, topic_key: 'dougong', topic_name: '斗拱', category: 'component', content_zh: '斗拱是中国古建筑特有的结构构件，位于柱头与梁架之间，由斗、拱、昂等构件组成。功能：承托屋檐重量、传递荷载、增加出檐深度。清代称斗科。斗口为模数单位。', content_en: 'Dougong (bracket sets) is a unique structural component of Chinese architecture...', source: '华夏营造知识库', confidence: 0.99, verified: true, created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-01T00:00:00Z' },
+        { topic_id: 8, topic_key: 'foguangsi', topic_name: '佛光寺东大殿', category: 'famous', content_zh: '佛光寺东大殿（857年）位于山西五台山，是中国现存最早的木构建筑。面阔七间，进深八架椽，单檐庑殿顶。殿内有唐代彩塑、壁画和题记。梁思成、林徽因于1937年发现。', content_en: 'Foguang Temple East Hall (857 AD) at Mount Wutai, Shanxi, is the earliest existing wooden structure...', source: '华夏营造知识库', confidence: 0.99, verified: true, created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-01T00:00:00Z' },
+      ];
+      return mockTopics.find(t => t.topic_id === id) || null;
+    }
+
+    const result = await query('architecture',
+      'SELECT * FROM dbo.kg_topics WHERE topic_id = @id',
+      { id }
+    );
+
+    return result.length > 0 ? (result[0] as Topic) : null;
+  }
+
+  /**
+   * 根据ID批量查询多个主题（优化N+1查询问题）
+   */
+  async getTopicsByIds(ids: number[]): Promise<Topic[]> {
+    if (ids.length === 0) return [];
+
+    if (isMockMode()) {
+      const mockTopics: Topic[] = [
+        { topic_id: 1, topic_key: 'tailiang', topic_name: '抬梁式结构', category: 'structure', content_zh: '抬梁式（叠梁式）是中国古建筑最主要的木结构形式。特点：柱上承梁，梁上抬梁，逐层缩短，最上层立脊瓜柱承脊檩。适用于宫殿、庙宇等大型建筑。代表：北京故宫太和殿。', content_en: 'Tailiang (post-and-beam) is the primary structural form of traditional Chinese architecture...', source: '华夏营造知识库', confidence: 0.98, verified: true, created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-01T00:00:00Z' },
+        { topic_id: 2, topic_key: 'chuandou', topic_name: '穿斗式结构', category: 'structure', content_zh: '穿斗式（立贴式）是南方常见木结构形式...', content_en: 'Chuandou style...', source: '华夏营造知识库', confidence: 0.98, verified: true, created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-01T00:00:00Z' },
+        { topic_id: 5, topic_key: 'dougong', topic_name: '斗拱', category: 'component', content_zh: '斗拱是中国古建筑特有的结构构件...', content_en: 'Dougong is a unique structural component...', source: '华夏营造知识库', confidence: 0.99, verified: true, created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-01T00:00:00Z' },
+        { topic_id: 7, topic_key: 'tang_architecture', topic_name: '唐代建筑特征', category: 'period', content_zh: '唐代建筑特征...', content_en: 'Tang Dynasty architecture...', source: '华夏营造知识库', confidence: 0.99, verified: true, created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-01T00:00:00Z' },
+        { topic_id: 8, topic_key: 'foguangsi', topic_name: '佛光寺东大殿', category: 'famous', content_zh: '佛光寺东大殿（857年）...', content_en: 'Foguang Temple East Hall...', source: '华夏营造知识库', confidence: 0.99, verified: true, created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-01T00:00:00Z' },
+        { topic_id: 10, topic_key: 'yingxian', topic_name: '应县木塔', category: 'famous', content_zh: '应县木塔是世界现存最高最古的木塔...', content_en: 'Yingxian Wooden Pagoda...', source: '华夏营造知识库', confidence: 0.99, verified: true, created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-01T00:00:00Z' },
+      ];
+      return mockTopics.filter(t => ids.includes(t.topic_id));
+    }
+
+    // 使用参数化查询避免SQL注入风险
+    const params: Record<string, number> = {};
+    ids.forEach((id, idx) => {
+      params[`id${idx}`] = id;
+    });
+    const placeholders = ids.map((_, idx) => `@id${idx}`).join(', ');
+    const result = await query('architecture',
+      `SELECT * FROM dbo.kg_topics WHERE topic_id IN (${placeholders})`,
+      params
+    );
+
+    return result as Topic[];
+  }
+
+  /**
+   * 根据名称搜索主题
+   */
+  async searchTopics(name: string): Promise<Topic[]> {
+    if (isMockMode()) {
+      const mockTopics: Topic[] = [
+        { topic_id: 1, topic_key: 'tailiang', topic_name: '抬梁式结构', category: 'structure', content_zh: '抬梁式结构...', content_en: 'Tailiang...', source: '华夏营造知识库', confidence: 0.98, verified: true, created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-01T00:00:00Z' },
+        { topic_id: 5, topic_key: 'dougong', topic_name: '斗拱', category: 'component', content_zh: '斗拱...', content_en: 'Dougong...', source: '华夏营造知识库', confidence: 0.99, verified: true, created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-01T00:00:00Z' },
+      ];
+      return mockTopics.filter(t => 
+        t.topic_name.includes(name) || t.topic_key.includes(name)
+      );
+    }
+
+    const result = await query('architecture',
+      'EXEC dbo.sp_kg_find_topic @topic_name = @name',
+      { name }
+    );
+
+    return result as Topic[];
+  }
+
+  /**
+   * 查询实体的直接邻居（关系查询）
+   */
+  async getNeighbors(topicId: number, relationType?: string): Promise<Neighbor[]> {
+    if (isMockMode()) {
+      const mockNeighbors: Neighbor[] = [
+        { relation_id: 1, neighbor_id: 5, neighbor_name: '斗拱', neighbor_category: 'component', relation_type: 'related_to', relation_description: '抬梁式结构使用斗拱' },
+        { relation_id: 8, neighbor_id: 9, neighbor_name: '榫卯', neighbor_category: 'component', relation_type: 'related_to', relation_description: '榫卯用于抬梁式结构' },
+        { relation_id: 7, neighbor_id: 6, neighbor_name: '材分制', neighbor_category: 'philosophy', relation_type: 'related_to', relation_description: '材分制以斗口为基本模数' },
+      ];
+      if (relationType) {
+        return mockNeighbors.filter(n => n.relation_type === relationType);
+      }
+      return mockNeighbors;
+    }
+
+    const result = await query('architecture',
+      'EXEC dbo.sp_kg_get_neighbors @topic_id = @topicId, @relation_type = @relationType',
+      { topicId, relationType: relationType || null }
+    );
+
+    return result as Neighbor[];
+  }
+
+  /**
+   * 路径查询：查找两个主题之间的所有路径
+   */
+  async findPaths(fromTopicId: number, toTopicId: number, maxHops: number = 3): Promise<PathResult[]> {
+    if (isMockMode()) {
+      if (fromTopicId === 8 && toTopicId === 5) {
+        return [
+          { path_id: 1, path: '8->5', path_names: '佛光寺东大殿->斗拱', path_types: 'related_to', hop_count: 1 },
+        ];
+      }
+      if (fromTopicId === 1 && toTopicId === 6) {
+        return [
+          { path_id: 1, path: '1->5->6', path_names: '抬梁式结构->斗拱->材分制', path_types: 'related_to->related_to', hop_count: 2 },
+        ];
+      }
+      return [];
+    }
+
+    const result = await query('architecture',
+      'EXEC dbo.sp_kg_find_paths @from_topic_id = @fromTopicId, @to_topic_id = @toTopicId, @max_hops = @maxHops',
+      { fromTopicId, toTopicId, maxHops }
+    );
+
+    return result as PathResult[];
+  }
+
+  /**
+   * 获取所有分类
+   */
+  async getCategories(): Promise<Array<{ name: string; count: number }>> {
+    if (isMockMode()) {
+      return [
+        { name: 'structure', count: 4 },
+        { name: 'component', count: 2 },
+        { name: 'philosophy', count: 1 },
+        { name: 'period', count: 1 },
+        { name: 'famous', count: 2 },
+      ];
+    }
+
+    const result = await query('architecture',
+      'SELECT category, COUNT(*) as count FROM dbo.kg_topics GROUP BY category ORDER BY count DESC'
+    );
+
+    return result as Array<{ name: string; count: number }>;
   }
 }
 

@@ -1,5 +1,5 @@
 // ============================================
-// 华夏营造 - API服务封装 (Axios)
+// 华夏营�?- API服务封装 (Axios)
 // ============================================
 
 import axios from 'axios';
@@ -17,8 +17,7 @@ const apiClient = axios.create({
   },
 });
 
-// 请求拦截器
-apiClient.interceptors.request.use(
+// 请求拦截�?apiClient.interceptors.request.use(
     (config) => {
       const token = localStorage.getItem('atca_access_token');
       if (token) {
@@ -36,14 +35,12 @@ apiClient.interceptors.request.use(
 // 防止重复跳转登录页的标志
 let isRedirecting = false;
 
-// 响应拦截器
-apiClient.interceptors.response.use(
+// 响应拦截�?apiClient.interceptors.response.use(
     (response) => response.data,
     async (error) => {
       const originalRequest = error.config;
 
-      // Token过期，尝试刷新
-      if (error.response?.status === 401 && !originalRequest._retry) {
+      // Token过期，尝试刷�?      if (error.response?.status === 401 && !originalRequest._retry) {
         originalRequest._retry = true;
         const refreshToken = localStorage.getItem('atca_refresh_token');
 
@@ -56,13 +53,11 @@ apiClient.interceptors.response.use(
             originalRequest.headers.Authorization = `Bearer ${accessToken}`;
             return apiClient(originalRequest);
           } catch {
-            // 防止重复调用 logout 和跳转
-            if (!isRedirecting) {
+            // 防止重复调用 logout 和跳�?            if (!isRedirecting) {
               isRedirecting = true;
               const userStore = useUserStore();
               userStore.logout();
-              // 使用 setTimeout 确保其他 pending 请求有机会完成
-              setTimeout(() => {
+              // 使用 setTimeout 确保其他 pending 请求有机会完�?              setTimeout(() => {
                 if (!window.location.href.includes('/login')) {
                   window.location.href = '/login';
                 }
@@ -101,8 +96,7 @@ export const http = {
   ) => {
     const { cache = false, cacheTTL = 5 * 60 * 1000, retry: shouldRetry = true, maxRetries = 3 } = options || {};
     
-    // 如果启用缓存，先检查缓存
-    if (cache) {
+    // 如果启用缓存，先检查缓�?    if (cache) {
       const cacheKey = generateCacheKey(url, params);
       const cached = apiCache.get<T>(cacheKey);
       if (cached) {
@@ -110,14 +104,12 @@ export const http = {
       }
     }
     
-    // 发送请求
-    const request = () => apiClient.get<T>(url, { params }) as Promise<T>;
+    // 发送请�?    const request = () => apiClient.get<T>(url, { params }) as Promise<T>;
     
     // 根据是否需要重试来执行请求
     const promise = shouldRetry ? retry(request, maxRetries) : request();
     
-    // 如果启用缓存，缓存响应
-    if (cache) {
+    // 如果启用缓存，缓存响�?    if (cache) {
       return promise.then(response => {
         const cacheKey = generateCacheKey(url, params);
         apiCache.set(cacheKey, response, cacheTTL);
@@ -267,8 +259,7 @@ export const model3dApi = {
 
 // 社交功能API - 社区活动
 export const socialApi = {
-  // 禁言状态查询
-  getMuteStatus: () => http.get<{ success: boolean; data: { is_muted: boolean; mute_reason: string } }>('/social/mute-status'),
+  // 禁言状态查�?  getMuteStatus: () => http.get<{ success: boolean; data: { is_muted: boolean; mute_reason: string } }>('/social/mute-status'),
   // 评论
   getComments: (targetType: string, targetId: number, page = 1, limit = 20) =>
       http.get<{ success: boolean; data: any[]; meta?: any }>('/social/comments', { target_type: targetType, target_id: targetId, page, limit }),
@@ -290,18 +281,15 @@ export const socialApi = {
       http.post<{ success: boolean }>('/social/building-shares', data),
   syncPublicModels: () =>
       http.post<{ success: boolean; data: { synced: number } }>('/social/sync-public-models'),
-  // 论坛管理（管理员）
-  getAllTopics: () =>
+  // 论坛管理（管理员�?  getAllTopics: () =>
       http.get<{ success: boolean; data: any[] }>('/social/admin/forum/topics'),
   deleteTopicAdmin: (id: number) =>
       http.delete<{ success: boolean }>(`/social/admin/forum/topics/${id}`),
   deleteReplyAdmin: (id: number) =>
       http.delete<{ success: boolean }>(`/social/admin/forum/replies/${id}`),
-  // 我的内容（论题+评论）
-  getMyContent: () =>
+  // 我的内容（论�?评论�?  getMyContent: () =>
       http.get<{ success: boolean; data: { topics: any[]; replies: any[] } }>('/social/my-content'),
-  // 分享管理（兼容旧API调用）
-  createShare: (data: { target_type: string; target_id: number; target_title: string; platform?: string; share_url?: string; share_message?: string }) =>
+  // 分享管理（兼容旧API调用�?  createShare: (data: { target_type: string; target_id: number; target_title: string; platform?: string; share_url?: string; share_message?: string }) =>
       http.post<{ success: boolean }>('/social/shares', data),
   deleteShare: (id: number) =>
       http.delete<{ success: boolean }>(`/social/building-shares/${id}`),
@@ -327,7 +315,7 @@ export const socialApi = {
       http.post<{ success: boolean }>('/social/forum/replies', data),
 };
 
-// 国际化/翻译API
+// 国际�?翻译API
 export const i18nApi = {
   getLanguages: (activeOnly = true) =>
       http.get<{ success: boolean; data: any[] }>('/i18n/languages', { active_only: activeOnly }),
@@ -478,3 +466,37 @@ export const knowledgeApi = {
   initialize: () =>
       http.post<{ success: boolean; data: any }>('/knowledge/init'),
 };
+
+export const knowledgeGraphApi = {
+  getTopics: (params?: { page?: number; pageSize?: number; category?: string }) =>
+      http.get<{ success: boolean; data: any[]; meta?: { total: number; page: number; pageSize: number } }>('/knowledge-graph/topics', params),
+  getTopicById: (id: number) =>
+      http.get<{ success: boolean; data: any }>(`/knowledge-graph/topics/${id}`),
+  searchTopics: (query: string) =>
+      http.get<{ success: boolean; data: any[] }>('/knowledge-graph/search', { q: query }),
+  getCategories: () =>
+      http.get<{ success: boolean; data: { name: string; count: number }[] }>('/knowledge-graph/categories'),
+  getNeighbors: (id: number, relationType?: string) =>
+      http.get<{ success: boolean; data: any[] }>(`/knowledge-graph/topics/${id}/neighbors`, { relationType }),
+  findPaths: (from: number, to: number, maxHops?: number) =>
+      http.get<{ success: boolean; data: any[] }>('/knowledge-graph/paths', { from, to, maxHops }),
+  getStats: () =>
+      http.get<{ success: boolean; data: any }>('/knowledge-graph/stats'),
+};
+
+export const knowledgeEnhancedApi = {
+  inference: (data: { query: string; injectionDepth?: number }) =>
+      http.post<{ success: boolean; data: any }>('/knowledge-enhanced/inference', data),
+  pathReasoning: (data: { fromTopicId: number; toTopicId: number; maxHops?: number }) =>
+      http.post<{ success: boolean; data: any[] }>('/knowledge-enhanced/path-reasoning', data),
+  generateTrainingData: (data: { topicId: number; sampleCount?: number }) =>
+      http.post<{ success: boolean; data: any }>('/knowledge-enhanced/generate-training-data', data),
+  createTrainingTask: (data: { name: string; description?: string; trainingDataId?: number }) =>
+      http.post<{ success: boolean; data: any }>('/knowledge-enhanced/training-tasks', data),
+  getTrainingTasks: (params?: { status?: string; page?: number; pageSize?: number }) =>
+      http.get<{ success: boolean; data: any[]; meta?: { total: number; page: number; pageSize: number } }>('/knowledge-enhanced/training-tasks', params),
+  getTrainingTaskById: (id: number) =>
+      http.get<{ success: boolean; data: any }>(`/knowledge-enhanced/training-tasks/${id}`),
+  cancelTrainingTask: (id: number) =>
+      http.delete<{ success: boolean; data: any }>(`/knowledge-enhanced/training-tasks/${id}`),
+};\n

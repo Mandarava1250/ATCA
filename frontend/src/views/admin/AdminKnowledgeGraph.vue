@@ -229,6 +229,161 @@
         </div>
       </div>
 
+      <!-- 知识推理区域 -->
+      <div v-if="activeTab === 'reasoning'" class="reasoning-panel">
+        <div class="panel-header">
+          <h3>{{ $t('admin.knowledgeGraph.reasoning.title') }}</h3>
+        </div>
+        
+        <!-- 路径推理 -->
+        <div class="reasoning-section">
+          <h4>{{ $t('admin.knowledgeGraph.reasoning.pathReasoning') }}</h4>
+          <div class="reasoning-form">
+            <div class="form-row">
+              <div class="form-group">
+                <label>{{ $t('admin.knowledgeGraph.reasoning.fromEntity') }} *</label>
+                <select v-model="pathReasoningForm.fromEntity" class="form-select">
+                  <option value="">{{ $t('admin.knowledgeGraph.reasoning.selectEntity') }}</option>
+                  <option v-for="entity in entities" :key="entity.id" :value="entity.id">{{ entity.name }}</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>{{ $t('admin.knowledgeGraph.reasoning.toEntity') }} *</label>
+                <select v-model="pathReasoningForm.toEntity" class="form-select">
+                  <option value="">{{ $t('admin.knowledgeGraph.reasoning.selectEntity') }}</option>
+                  <option v-for="entity in entities" :key="entity.id" :value="entity.id">{{ entity.name }}</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>{{ $t('admin.knowledgeGraph.reasoning.maxHops') }}</label>
+                <select v-model.number="pathReasoningForm.maxHops" class="form-select">
+                  <option :value="1">1 {{ $t('admin.knowledgeGraph.reasoning.hop') }}</option>
+                  <option :value="2">2 {{ $t('admin.knowledgeGraph.reasoning.hops') }}</option>
+                  <option :value="3">3 {{ $t('admin.knowledgeGraph.reasoning.hops') }}</option>
+                  <option :value="4">4 {{ $t('admin.knowledgeGraph.reasoning.hops') }}</option>
+                  <option :value="5">5 {{ $t('admin.knowledgeGraph.reasoning.hops') }}</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-actions">
+              <button class="btn btn-primary" @click="executePathReasoning" :disabled="pathReasoningLoading">
+                <svg v-if="pathReasoningLoading" viewBox="0 0 24 24" width="16" height="16" class="spinner">
+                  <circle cx="12" cy="12" r="10" stroke="currentColor" fill="none" stroke-width="2" stroke-dasharray="18 6"/>
+                </svg>
+                {{ pathReasoningLoading ? $t('admin.knowledgeGraph.reasoning.searching') : $t('admin.knowledgeGraph.reasoning.searchPaths') }}
+              </button>
+              <button class="btn btn-secondary" @click="resetPathReasoning">{{ $t('common.reset') }}</button>
+            </div>
+          </div>
+          
+          <!-- 路径推理结果 -->
+          <div v-if="pathResults.length > 0" class="reasoning-results">
+            <h5>{{ $t('admin.knowledgeGraph.reasoning.results') }} ({{ pathResults.length }})</h5>
+            <div class="path-list">
+              <div v-for="(path, index) in pathResults" :key="path.path_id" class="path-card">
+                <div class="path-header">
+                  <span class="path-number">{{ $t('admin.knowledgeGraph.reasoning.path') }} {{ index + 1 }}</span>
+                  <span class="path-hops">{{ path.hop_count }} {{ path.hop_count === 1 ? $t('admin.knowledgeGraph.reasoning.hop') : $t('admin.knowledgeGraph.reasoning.hops') }}</span>
+                </div>
+                <div class="path-visual">
+                  <div class="path-nodes">
+                    <template v-for="(node, idx) in path.path_names.split('->')" :key="idx">
+                      <span class="path-node">{{ node }}</span>
+                      <svg v-if="idx < path.path_names.split('->').length - 1" viewBox="0 0 24 24" width="16" height="16" class="path-arrow">
+                        <path d="M5 12h14M12 5l7 7-7 7" stroke="var(--gold)" fill="none" stroke-width="2"/>
+                      </svg>
+                    </template>
+                  </div>
+                </div>
+                <div class="path-relations">
+                  <span class="relation-label">{{ $t('admin.knowledgeGraph.reasoning.relations') }}:</span>
+                  <span class="relation-values">{{ path.path_types }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 知识注入推理 -->
+        <div class="reasoning-section">
+          <h4>{{ $t('admin.knowledgeGraph.reasoning.knowledgeInjection') }}</h4>
+          <div class="reasoning-form">
+            <div class="form-group">
+              <label>{{ $t('admin.knowledgeGraph.reasoning.query') }} *</label>
+              <textarea 
+                v-model="knowledgeInjectionForm.query" 
+                class="form-textarea" 
+                rows="3"
+                :placeholder="$t('admin.knowledgeGraph.reasoning.queryPlaceholder')"
+              ></textarea>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>{{ $t('admin.knowledgeGraph.reasoning.injectionDepth') }}</label>
+                <select v-model.number="knowledgeInjectionForm.injectionDepth" class="form-select">
+                  <option :value="1">1 {{ $t('admin.knowledgeGraph.reasoning.depth') }}</option>
+                  <option :value="2">2 {{ $t('admin.knowledgeGraph.reasoning.depth') }}</option>
+                  <option :value="3">3 {{ $t('admin.knowledgeGraph.reasoning.depth') }}</option>
+                  <option :value="4">4 {{ $t('admin.knowledgeGraph.reasoning.depth') }}</option>
+                  <option :value="5">5 {{ $t('admin.knowledgeGraph.reasoning.depth') }}</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-actions">
+              <button class="btn btn-primary" @click="executeKnowledgeInjection" :disabled="knowledgeInjectionLoading">
+                <svg v-if="knowledgeInjectionLoading" viewBox="0 0 24 24" width="16" height="16" class="spinner">
+                  <circle cx="12" cy="12" r="10" stroke="currentColor" fill="none" stroke-width="2" stroke-dasharray="18 6"/>
+                </svg>
+                {{ knowledgeInjectionLoading ? $t('admin.knowledgeGraph.reasoning.inferring') : $t('admin.knowledgeGraph.reasoning.infer') }}
+              </button>
+              <button class="btn btn-secondary" @click="resetKnowledgeInjection">{{ $t('common.reset') }}</button>
+            </div>
+          </div>
+          
+          <!-- 知识注入推理结果 -->
+          <div v-if="knowledgeInjectionResult" class="reasoning-results">
+            <h5>{{ $t('admin.knowledgeGraph.reasoning.inferenceResult') }}</h5>
+            <div class="inference-card">
+              <div class="inference-response">
+                <pre>{{ knowledgeInjectionResult.response }}</pre>
+              </div>
+              <div class="inference-meta">
+                <div class="meta-item">
+                  <span class="meta-label">{{ $t('admin.knowledgeGraph.reasoning.confidence') }}</span>
+                  <span class="meta-value" :style="{ color: knowledgeInjectionResult.confidence >= 0.8 ? '#5AD8A6' : knowledgeInjectionResult.confidence >= 0.5 ? '#F6BD16' : '#FF6B6B' }">
+                    {{ (knowledgeInjectionResult.confidence * 100).toFixed(0) }}%
+                  </span>
+                </div>
+                <div class="meta-item">
+                  <span class="meta-label">{{ $t('admin.knowledgeGraph.reasoning.processingTime') }}</span>
+                  <span class="meta-value">{{ knowledgeInjectionResult.metadata?.processingTime }}ms</span>
+                </div>
+                <div class="meta-item">
+                  <span class="meta-label">{{ $t('admin.knowledgeGraph.reasoning.knowledgeUsed') }}</span>
+                  <span class="meta-value">{{ knowledgeInjectionResult.metadata?.knowledgeUsed }}</span>
+                </div>
+              </div>
+              <div v-if="knowledgeInjectionResult.knowledgeSources?.length > 0" class="inference-sources">
+                <h6>{{ $t('admin.knowledgeGraph.reasoning.knowledgeSources') }}</h6>
+                <div class="sources-list">
+                  <div v-for="source in knowledgeInjectionResult.knowledgeSources" :key="source.topicId" class="source-item">
+                    <span class="source-name">{{ source.topicName }}</span>
+                    <span class="source-category">{{ source.category }}</span>
+                    <span class="source-relevance">{{ (source.relevance * 100).toFixed(0) }}%</span>
+                  </div>
+                </div>
+              </div>
+              <div v-if="knowledgeInjectionResult.reasoningPath?.length > 0" class="inference-reasoning">
+                <h6>{{ $t('admin.knowledgeGraph.reasoning.reasoningPath') }}</h6>
+                <ul class="reasoning-list">
+                  <li v-for="(step, idx) in knowledgeInjectionResult.reasoningPath" :key="idx">{{ step }}</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- 导入历史区域 -->
       <div v-if="activeTab === 'history'" class="history-panel">
         <div class="panel-header">
@@ -521,6 +676,7 @@ const tabs = computed(() => [
   { id: 'visualize', label: t('admin.knowledgeGraph.tabs.visualize'), icon: '0 0 24 24', iconPath: 'M13.5 20.5C13.5 21.88 12.38 23 11 23s-2.5-1.12-2.5-2.5c0-.69.28-1.32.74-1.76l-3.54-3.54c-.78.72-1.79 1.19-2.9 1.19C3.58 16 1 13.42 1 10c0-1.11.47-2.12 1.29-2.9L8.76 8.74c.44.46 1.07.74 1.74.74h.5c.28 0 .5-.22.5-.5V4.5c0-.28.22-.5.5-.5h3c.28 0 .5.22.5.5v8.75c0 .67.28 1.3.74 1.76l3.54-3.54c.82.78 1.29 1.79 1.29 2.9 0 3.42-2.58 6-6 6z' },
   { id: 'entities', label: t('admin.knowledgeGraph.tabs.entities'), icon: '0 0 24 24', iconPath: 'M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z', count: entities.value.length },
   { id: 'relations', label: t('admin.knowledgeGraph.tabs.relations'), icon: '0 0 24 24', iconPath: 'M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1', count: relations.value.length },
+  { id: 'reasoning', label: t('admin.knowledgeGraph.tabs.reasoning'), icon: '0 0 24 24', iconPath: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z' },
   { id: 'history', label: t('admin.knowledgeGraph.tabs.history'), icon: '0 0 24 24', iconPath: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' },
 ]);
 
@@ -587,12 +743,29 @@ function showToast(type: 'success' | 'error', message: string) {
   }, 3000);
 }
 
+// 知识推理状态
+const pathReasoningForm = reactive({
+  fromEntity: '',
+  toEntity: '',
+  maxHops: 3,
+});
+
+const knowledgeInjectionForm = reactive({
+  query: '',
+  injectionDepth: 2,
+});
+
+const pathResults = ref<any[]>([]);
+const pathReasoningLoading = ref(false);
+const knowledgeInjectionResult = ref<any>(null);
+const knowledgeInjectionLoading = ref(false);
+
 // 模拟数据
 const entities = ref([
   { id: 1, name: '故宫', type: 'architecture', description: '北京故宫是中国明清两代的皇家宫殿', attributes: { location: '北京', year: 1420 }, relationCount: 5 },
   { id: 2, name: '梁思成', type: 'person', description: '中国著名建筑学家', attributes: { birthYear: 1901, deathYear: 1972 }, relationCount: 3 },
   { id: 3, name: '斗拱', type: 'concept', description: '中国传统建筑中的重要构件', attributes: { category: '建筑结构' }, relationCount: 8 },
-  { id: 4, name: '苏州', type: 'location', description: '江南水乡名城', attributes: { province: '江苏' }, relationCount: 4 },
+  { id: 4, name: '北京', type: 'location', description: '中国首都', attributes: { province: '北京' }, relationCount: 4 },
   { id: 5, name: '天坛', type: 'architecture', description: '明清两代皇帝祭天的场所', attributes: { location: '北京', year: 1420 }, relationCount: 3 },
 ]);
 
@@ -797,6 +970,78 @@ function viewReport(record: any) {
 
 function retryImport(record: any) {
   showToast('success', t('admin.knowledgeGraph.history.retrying') + record.importId);
+}
+
+// 知识推理操作
+async function executePathReasoning() {
+  if (!pathReasoningForm.fromEntity || !pathReasoningForm.toEntity) {
+    showToast('error', t('admin.knowledgeGraph.reasoning.selectEntities'));
+    return;
+  }
+
+  pathReasoningLoading.value = true;
+  pathResults.value = [];
+
+  try {
+    const result = await api.knowledgeGraph.findPaths(
+      Number(pathReasoningForm.fromEntity),
+      Number(pathReasoningForm.toEntity),
+      pathReasoningForm.maxHops
+    );
+
+    if (result.success) {
+      pathResults.value = result.data;
+      if (result.data.length === 0) {
+        showToast('success', t('admin.knowledgeGraph.reasoning.noPathsFound'));
+      }
+    } else {
+      showToast('error', result.error?.message || t('admin.knowledgeGraph.reasoning.error'));
+    }
+  } catch (error) {
+    showToast('error', t('admin.knowledgeGraph.reasoning.error'));
+  } finally {
+    pathReasoningLoading.value = false;
+  }
+}
+
+async function executeKnowledgeInjection() {
+  if (!knowledgeInjectionForm.query.trim()) {
+    showToast('error', t('admin.knowledgeGraph.reasoning.queryRequired'));
+    return;
+  }
+
+  knowledgeInjectionLoading.value = true;
+  knowledgeInjectionResult.value = null;
+
+  try {
+    const result = await api.knowledgeEnhanced.inference({
+      query: knowledgeInjectionForm.query,
+      injectionDepth: knowledgeInjectionForm.injectionDepth,
+    });
+
+    if (result.success) {
+      knowledgeInjectionResult.value = result.data;
+    } else {
+      showToast('error', result.error?.message || t('admin.knowledgeGraph.reasoning.error'));
+    }
+  } catch (error) {
+    showToast('error', t('admin.knowledgeGraph.reasoning.error'));
+  } finally {
+    knowledgeInjectionLoading.value = false;
+  }
+}
+
+function resetPathReasoning() {
+  pathReasoningForm.fromEntity = '';
+  pathReasoningForm.toEntity = '';
+  pathReasoningForm.maxHops = 3;
+  pathResults.value = [];
+}
+
+function resetKnowledgeInjection() {
+  knowledgeInjectionForm.query = '';
+  knowledgeInjectionForm.injectionDepth = 2;
+  knowledgeInjectionResult.value = null;
 }
 </script>
 

@@ -23,23 +23,27 @@ interface ApiServices {
   admin: typeof realApi.adminApi;
   activity: typeof realApi.activityApi;
   knowledge: typeof realApi.knowledgeApi;
+  knowledgeGraph: typeof realApi.knowledgeGraphApi;
+  knowledgeEnhanced: typeof realApi.knowledgeEnhancedApi;
 }
 
 // 创建API服务实例
-export const api: ApiServices = {
+export const api = {
   auth: useMock ? mockApi.mockAuthApi : realApi.authApi,
   architecture: useMock ? mockApi.mockArchitectureApi : realApi.architectureApi,
   quiz: useMock ? mockApi.mockQuizApi : realApi.quizApi,
   assistant: useMock ? mockApi.mockAssistantApi : realApi.assistantApi,
   model3d: useMock ? mockApi.mockModel3dApi : realApi.model3dApi,
-  social: useMock ? mockApi.mockSocialApi : realApi.socialApi,
+  social: (useMock ? mockApi.mockSocialApi : realApi.socialApi) as typeof realApi.socialApi,
   i18n: useMock ? mockApi.mockI18nApi : realApi.i18nApi,
   profile: useMock ? mockApi.mockProfileApi : realApi.profileApi,
   index: useMock ? mockApi.mockIndexApi : realApi.indexApi,
   admin: useMock ? mockApi.mockAdminApi : realApi.adminApi,
   activity: useMock ? mockApi.mockActivityApi : realApi.activityApi,
   knowledge: useMock ? mockApi.mockKnowledgeApi : realApi.knowledgeApi,
-};
+  knowledgeGraph: useMock ? mockApi.mockKnowledgeGraphApi : realApi.knowledgeGraphApi,
+  knowledgeEnhanced: useMock ? mockApi.mockKnowledgeEnhancedApi : realApi.knowledgeEnhancedApi,
+} as ApiServices;
 
 // 导出HTTP工具函数
 export { http, API_BASE, API_HOST } from './api';

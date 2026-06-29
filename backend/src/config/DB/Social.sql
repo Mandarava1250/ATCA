@@ -23,10 +23,17 @@ BEGIN
         [updated_at] DATETIME DEFAULT GETDATE(),
         CONSTRAINT FK_comments_parent FOREIGN KEY ([parent_id]) REFERENCES dbo.comments([comment_id])
     );
-    CREATE INDEX [idx_comments_target] ON dbo.comments([target_type], [target_id]);
-    CREATE INDEX [idx_comments_user] ON dbo.comments([user_id]);
-    CREATE INDEX [idx_comments_parent] ON dbo.comments([parent_id]);
 END
+GO
+
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'idx_comments_target' AND object_id = OBJECT_ID('dbo.comments'))
+    CREATE INDEX [idx_comments_target] ON dbo.comments([target_type], [target_id]);
+GO
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'idx_comments_user' AND object_id = OBJECT_ID('dbo.comments'))
+    CREATE INDEX [idx_comments_user] ON dbo.comments([user_id]);
+GO
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'idx_comments_parent' AND object_id = OBJECT_ID('dbo.comments'))
+    CREATE INDEX [idx_comments_parent] ON dbo.comments([parent_id]);
 GO
 
 -- 分享记录表
@@ -45,9 +52,14 @@ BEGIN
         [view_count] INT DEFAULT 0,                     -- 被查看次数
         [created_at] DATETIME DEFAULT GETDATE()
     );
-    CREATE INDEX [idx_shares_target] ON dbo.shares([target_type], [target_id]);
-    CREATE INDEX [idx_shares_user] ON dbo.shares([user_id]);
 END
+GO
+
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'idx_shares_target' AND object_id = OBJECT_ID('dbo.shares'))
+    CREATE INDEX [idx_shares_target] ON dbo.shares([target_type], [target_id]);
+GO
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'idx_shares_user' AND object_id = OBJECT_ID('dbo.shares'))
+    CREATE INDEX [idx_shares_user] ON dbo.shares([user_id]);
 GO
 
 -- 作品展示表（用户上传的作品，可点赞评论）
@@ -71,10 +83,17 @@ BEGIN
         [created_at] DATETIME DEFAULT GETDATE(),
         [updated_at] DATETIME DEFAULT GETDATE()
     );
-    CREATE INDEX [idx_showcases_featured] ON dbo.showcases([is_featured], [created_at] DESC);
-    CREATE INDEX [idx_showcases_user] ON dbo.showcases([user_id]);
-    CREATE INDEX [idx_showcases_status] ON dbo.showcases([status]);
 END
+GO
+
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'idx_showcases_featured' AND object_id = OBJECT_ID('dbo.showcases'))
+    CREATE INDEX [idx_showcases_featured] ON dbo.showcases([is_featured], [created_at] DESC);
+GO
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'idx_showcases_user' AND object_id = OBJECT_ID('dbo.showcases'))
+    CREATE INDEX [idx_showcases_user] ON dbo.showcases([user_id]);
+GO
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'idx_showcases_status' AND object_id = OBJECT_ID('dbo.showcases'))
+    CREATE INDEX [idx_showcases_status] ON dbo.showcases([status]);
 GO
 
 -- 点赞记录表
@@ -88,8 +107,11 @@ BEGIN
         [created_at] DATETIME DEFAULT GETDATE(),
         CONSTRAINT UQ_likes UNIQUE ([user_id], [target_type], [target_id])
     );
-    CREATE INDEX [idx_likes_target] ON dbo.likes([target_type], [target_id]);
 END
+GO
+
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'idx_likes_target' AND object_id = OBJECT_ID('dbo.likes'))
+    CREATE INDEX [idx_likes_target] ON dbo.likes([target_type], [target_id]);
 GO
 
 -- ============================================

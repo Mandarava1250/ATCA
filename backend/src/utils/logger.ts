@@ -274,6 +274,7 @@ class Logger {
       reasoning?: string;
       confidence?: number;
       metadata?: Record<string, any>;
+      [key: string]: any;
     }
   ): void {
     const reasoningLog: AIReasoningLog = {
@@ -383,6 +384,71 @@ export const logger = {
    */
   debug: (_message: string, _context?: LogContext): void => {
     // 不输出DEBUG级别日志
+  },
+
+  /**
+   * 记录AI推理步骤日志（专用方法）
+   */
+  aiReasoning: (
+    step: AIReasoningStep,
+    stepName: string,
+    data: {
+      input?: any;
+      output?: any;
+      duration?: number;
+      decision?: string;
+      reasoning?: string;
+      confidence?: number;
+      metadata?: Record<string, any>;
+      [key: string]: any;
+    }
+  ): void => {
+    const reasoningLog: AIReasoningLog = {
+      step,
+      stepName,
+      ...data
+    };
+    
+    const timestamp = new Date().toISOString();
+    const lines: string[] = [];
+    lines.push(`[${timestamp}] [TRACE] [AI] [GLOBAL] - AI推理: ${stepName}`);
+    lines.push(`  ┌─────────────────────────────────────────────────────────┐`);
+    lines.push(`  │ 🤖 AI推理步骤: ${stepName.padEnd(30)} │`);
+    lines.push(`  ├─────────────────────────────────────────────────────────┤`);
+    
+    if (reasoningLog.input) {
+      const inputStr = typeof reasoningLog.input === 'string' 
+        ? reasoningLog.input 
+        : JSON.stringify(reasoningLog.input);
+      lines.push(`  │ 📥 输入: ${inputStr.substring(0, 45).padEnd(45)} │`);
+    }
+    
+    if (reasoningLog.decision) {
+      lines.push(`  │ 🎯 决策: ${reasoningLog.decision.substring(0, 45).padEnd(45)} │`);
+    }
+    
+    if (reasoningLog.reasoning) {
+      lines.push(`  │ 💭 推理: ${reasoningLog.reasoning.substring(0, 45).padEnd(45)} │`);
+    }
+    
+    if (reasoningLog.confidence !== undefined) {
+      lines.push(`  │ 📊 置信度: ${(reasoningLog.confidence * 100).toFixed(1)}%`.padEnd(57) + ' │');
+    }
+    
+    if (reasoningLog.duration !== undefined) {
+      lines.push(`  │ ⏱️ 耗时: ${reasoningLog.duration}ms`.padEnd(57) + ' │');
+    }
+    
+    if (reasoningLog.output) {
+      const outputStr = typeof reasoningLog.output === 'string' 
+        ? reasoningLog.output 
+        : JSON.stringify(reasoningLog.output);
+      lines.push(`  │ 📤 输出: ${outputStr.substring(0, 45).padEnd(45)} │`);
+    }
+    
+    lines.push(`  └─────────────────────────────────────────────────────────┘`);
+    
+    console.log(lines.join('\n'));
   },
 };
 

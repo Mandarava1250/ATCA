@@ -60,7 +60,10 @@ import i18nRouter from './modules/i18n/I18nIndex';
 import socialRouter from './modules/social/SocialIndex';
 import knowledgeRouter from './modules/knowledgebase/KnowledgeBaseIndex';
 import knowledgeGraphRouter from './modules/knowledge-graph/KnowledgeGraphIndex';
+import userKnowledgeGraphRouter from './modules/knowledge-graph/UserKnowledgeGraphIndex';
+import knowledgeEnhancedTrainingRouter from './modules/knowledge-graph/KnowledgeEnhancedTrainingIndex';
 import performanceRouter from './modules/admin/performance/PerformanceIndex';
+import syncRouter from './modules/sync/SyncIndex';
 
 // 控制器模式路由（新架构）
 import { RouteManager } from './routes/RouteManager';
@@ -298,6 +301,15 @@ app.use(`${apiPrefix}/social`, socialRouter);
 
 // 知识库API - 启用条件性输出（浏览状态检测）
 app.use(`${apiPrefix}/knowledge`, conditionalOutput, knowledgeRouter);
+
+// 知识图谱用户检索API - 启用条件性输出（浏览状态检测）
+app.use(`${apiPrefix}/knowledge-graph`, conditionalOutput, userKnowledgeGraphRouter);
+
+// 知识增强训练API
+app.use(`${apiPrefix}/knowledge-enhanced`, knowledgeEnhancedTrainingRouter);
+
+// 数据同步API
+app.use(`${apiPrefix}/sync`, syncRouter);
 
 // 5. 前端静态文件服务（生产环境）— 放在API路由之后
 const frontendDistPath = path.resolve(__dirname, '../../frontend/dist');

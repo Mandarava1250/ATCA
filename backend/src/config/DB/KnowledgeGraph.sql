@@ -141,6 +141,141 @@ BEGIN
 END
 GO
 
+-- 路径查询：查找两个主题之间的所有路径
+IF OBJECT_ID('dbo.sp_kg_find_paths', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_kg_find_paths;
+GO
+CREATE PROCEDURE dbo.sp_kg_find_paths
+    @from_topic_id INT,
+    @to_topic_id INT,
+    @max_hops INT = 3
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @paths TABLE (
+        path_id INT IDENTITY(1,1),
+        path NVARCHAR(MAX),
+        path_names NVARCHAR(MAX),
+        path_types NVARCHAR(MAX),
+        hop_count INT
+    );
+
+    DECLARE @visited TABLE (topic_id INT);
+
+    ;WITH RECURSIVE path_cte AS (
+        SELECT 
+            from_topic_id AS current_topic,
+            to_topic_id AS target_topic,
+            CAST(from_topic_id AS NVARCHAR(MAX)) AS path,
+            CAST(t1.topic_name AS NVARCHAR(MAX)) AS path_names,
+            CAST('' AS NVARCHAR(MAX)) AS path_types,
+            0 AS hops,
+            CAST('' AS NVARCHAR(MAX)) AS visited_topics
+        FROM dbo.kg_topics t1
+        WHERE t1.topic_id = @from_topic_id
+
+        UNION ALL
+
+        SELECT 
+            r.to_topic_id AS current_topic,
+            @to_topic_id AS target_topic,
+            p.path + '->' + CAST(r.to_topic_id AS NVARCHAR(MAX)) AS path,
+            p.path_names + '->' + t2.topic_name AS path_names,
+            p.path_types + (CASE WHEN p.path_types = '' THEN '' ELSE '->' END) + r.relation_type AS path_types,
+            p.hops + 1 AS hops,
+            p.visited_topics + ',' + CAST(r.to_topic_id AS NVARCHAR(MAX)) AS visited_topics
+        FROM path_cte p
+        INNER JOIN dbo.kg_relations r ON p.current_topic = r.from_topic_id
+        INNER JOIN dbo.kg_topics t2 ON r.to_topic_id = t2.topic_id
+        WHERE p.hops < @max_hops
+            AND CHARINDEX(',' + CAST(r.to_topic_id AS NVARCHAR(MAX)) + ',', ',' + p.visited_topics + ',') = 0
+    )
+    INSERT INTO @paths (path, path_names, path_types, hop_count)
+    SELECT 
+        path,
+        path_names,
+        path_types,
+        hop_count
+    FROM path_cte
+    WHERE current_topic = @to_topic_id
+    ORDER BY hop_count ASC;
+
+    SELECT * FROM @paths ORDER BY hop_count ASC;
+END
+GO
+
+-- 查询实体的直接邻居（关系查询）
+IF OBJECT_ID('dbo.sp_kg_get_neighbors', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_kg_get_neighbors;
+GO
+CREATE PROCEDURE dbo.sp_kg_get_neighbors
+    @topic_id INT,
+    @relation_type NVARCHAR(50) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT 
+        r.relation_id,
+        r.to_topic_id AS neighbor_id,
+        t.topic_name AS neighbor_name,
+        t.category AS neighbor_category,
+        r.relation_type,
+        r.description AS relation_description
+    FROM dbo.kg_relations r
+    INNER JOIN dbo.kg_topics t ON r.to_topic_id = t.topic_id
+    WHERE r.from_topic_id = @topic_id
+        AND (@relation_type IS NULL OR r.relation_type = @relation_type)
+    UNION ALL
+    SELECT 
+        r.relation_id,
+        r.from_topic_id AS neighbor_id,
+        t.topic_name AS neighbor_name,
+        t.category AS neighbor_category,
+        r.relation_type,
+        r.description AS relation_description
+    FROM dbo.kg_relations r
+    INNER JOIN dbo.kg_topics t ON r.from_topic_id = t.topic_id
+    WHERE r.to_topic_id = @topic_id
+        AND (@relation_type IS NULL OR r.relation_type = @relation_type);
+END
+GO
+
+-- 根据主题名称查询主题ID
+IF OBJECT_ID('dbo.sp_kg_find_topic', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_kg_find_topic;
+GO
+CREATE PROCEDURE dbo.sp_kg_find_topic
+    @topic_name NVARCHAR(200)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT * FROM dbo.kg_topics 
+    WHERE topic_name LIKE '%' + @topic_name + '%' OR topic_key LIKE '%' + @topic_name + '%';
+END
+GO
+
+-- 查询所有实体（支持分页和过滤）
+IF OBJECT_ID('dbo.sp_kg_get_topics', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_kg_get_topics;
+GO
+CREATE PROCEDURE dbo.sp_kg_get_topics
+    @category NVARCHAR(50) = NULL,
+    @page INT = 1,
+    @page_size INT = 20
+AS
+BEGIN
+    SET NOCOUNT ON;
+    
+    DECLARE @offset INT = (@page - 1) * @page_size;
+    
+    SELECT * FROM dbo.kg_topics
+    WHERE (@category IS NULL OR category = @category)
+    ORDER BY topic_id
+    OFFSET @offset ROWS FETCH NEXT @page_size ROWS ONLY;
+
+    SELECT COUNT(*) AS total FROM dbo.kg_topics
+    WHERE (@category IS NULL OR category = @category);
+END
+GO
+
 -- ============================================
 -- 初始化数据 - 核心古建筑知识
 -- ============================================

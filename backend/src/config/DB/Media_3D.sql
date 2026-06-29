@@ -28,11 +28,13 @@ IF OBJECT_ID('dbo.user_models', 'U') IS NULL
 GO
 
 IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'idx_user_models_user_id' AND object_id = OBJECT_ID('dbo.user_models'))
-CREATE INDEX idx_user_models_user_id ON dbo.user_models([user_id]);
+    CREATE INDEX [idx_user_models_user_id] ON dbo.user_models([user_id]);
+GO
 IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'idx_user_models_is_public' AND object_id = OBJECT_ID('dbo.user_models'))
-CREATE INDEX idx_user_models_is_public ON dbo.user_models([is_public]);
+    CREATE INDEX [idx_user_models_is_public] ON dbo.user_models([is_public]);
+GO
 IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'idx_user_models_created_at' AND object_id = OBJECT_ID('dbo.user_models'))
-CREATE INDEX idx_user_models_created_at ON dbo.user_models([created_at]);
+    CREATE INDEX [idx_user_models_created_at] ON dbo.user_models([created_at]);
 GO
 
 IF OBJECT_ID('dbo.tr_user_models_updated_at', 'TR') IS NOT NULL
@@ -75,9 +77,10 @@ IF OBJECT_ID('dbo.model_component_definitions', 'U') IS NULL
 GO
 
 IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'idx_component_defs_category' AND object_id = OBJECT_ID('dbo.model_component_definitions'))
-CREATE INDEX idx_component_defs_category ON dbo.model_component_definitions([category]);
+    CREATE INDEX [idx_component_defs_category] ON dbo.model_component_definitions([category]);
+GO
 IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'idx_component_defs_type' AND object_id = OBJECT_ID('dbo.model_component_definitions'))
-CREATE INDEX idx_component_defs_type ON dbo.model_component_definitions([type]);
+    CREATE INDEX [idx_component_defs_type] ON dbo.model_component_definitions([type]);
 GO
 
 -- ============================================
@@ -104,9 +107,10 @@ IF OBJECT_ID('dbo.model_component_instances', 'U') IS NULL
 GO
 
 IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'idx_instances_model_id' AND object_id = OBJECT_ID('dbo.model_component_instances'))
-CREATE INDEX idx_instances_model_id ON dbo.model_component_instances([model_id]);
+    CREATE INDEX [idx_instances_model_id] ON dbo.model_component_instances([model_id]);
+GO
 IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'idx_instances_instance_uuid' AND object_id = OBJECT_ID('dbo.model_component_instances'))
-CREATE INDEX idx_instances_instance_uuid ON dbo.model_component_instances([instance_uuid]);
+    CREATE INDEX [idx_instances_instance_uuid] ON dbo.model_component_instances([instance_uuid]);
 GO
 
 IF OBJECT_ID('dbo.tr_component_instances_updated_at', 'TR') IS NOT NULL

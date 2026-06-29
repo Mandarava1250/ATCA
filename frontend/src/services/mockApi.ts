@@ -1491,6 +1491,249 @@ export const mockKnowledgeApi = {
   },
 };
 
+const mockKgTopics = [
+  { topic_id: 1, topic_key: 'tailiang', topic_name: '抬梁式结构', category: 'structure', content_zh: '抬梁式是中国古建筑最主要的木结构形式...', content_en: 'Tailiang is the primary structural form...', source: '华夏营造知识库', confidence: 0.98, verified: true, created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-01T00:00:00Z' },
+  { topic_id: 2, topic_key: 'chuandou', topic_name: '穿斗式结构', category: 'structure', content_zh: '穿斗式是南方常见木结构形式...', content_en: 'Chuandou style is common in southern China...', source: '华夏营造知识库', confidence: 0.98, verified: true, created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-01T00:00:00Z' },
+  { topic_id: 3, topic_key: 'wudian', topic_name: '庑殿顶', category: 'structure', content_zh: '庑殿顶是中国古建筑最高等级的屋顶形制...', content_en: 'Wudian roof is the highest-ranking roof style...', source: '华夏营造知识库', confidence: 0.99, verified: true, created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-01T00:00:00Z' },
+  { topic_id: 5, topic_key: 'dougong', topic_name: '斗拱', category: 'component', content_zh: '斗拱是中国古建筑特有的结构构件...', content_en: 'Dougong is a unique structural component...', source: '华夏营造知识库', confidence: 0.99, verified: true, created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-01T00:00:00Z' },
+  { topic_id: 8, topic_key: 'foguangsi', topic_name: '佛光寺东大殿', category: 'famous', content_zh: '佛光寺东大殿是中国现存最早的木构建筑...', content_en: 'Foguang Temple East Hall is the earliest existing wooden structure...', source: '华夏营造知识库', confidence: 0.99, verified: true, created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-01T00:00:00Z' },
+  { topic_id: 10, topic_key: 'yingxian', topic_name: '应县木塔', category: 'famous', content_zh: '应县木塔是世界现存最高最古的木塔...', content_en: 'Yingxian Wooden Pagoda is the tallest and oldest existing wooden pagoda...', source: '华夏营造知识库', confidence: 0.99, verified: true, created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-01T00:00:00Z' },
+];
+
+export const mockKnowledgeGraphApi = {
+  getTopics: async (params?: { page?: number; pageSize?: number; category?: string }) => {
+    await delay();
+    let data = mockKgTopics;
+    if (params?.category) {
+      data = data.filter(t => t.category === params.category);
+    }
+    const page = params?.page || 1;
+    const pageSize = params?.pageSize || 20;
+    const start = (page - 1) * pageSize;
+    const end = start + pageSize;
+    return {
+      success: true,
+      data: data.slice(start, end),
+      meta: { total: data.length, page, pageSize },
+    };
+  },
+
+  getTopicById: async (id: number) => {
+    await delay();
+    const topic = mockKgTopics.find(t => t.topic_id === id);
+    if (!topic) {
+      return { success: false, data: null, error: { message: '主题不存在' } };
+    }
+    return { success: true, data: topic };
+  },
+
+  searchTopics: async (query: string) => {
+    await delay();
+    const data = mockKgTopics.filter(t => t.topic_name.includes(query) || t.topic_key.includes(query));
+    return { success: true, data };
+  },
+
+  getCategories: async () => {
+    await delay();
+    return {
+      success: true,
+      data: [
+        { name: 'structure', count: 3 },
+        { name: 'component', count: 1 },
+        { name: 'famous', count: 2 },
+      ],
+    };
+  },
+
+  getNeighbors: async (id: number, relationType?: string) => {
+    await delay();
+    const neighborsMap: Record<number, any[]> = {
+      1: [
+        { relation_id: 1, neighbor_id: 5, neighbor_name: '斗拱', neighbor_category: 'component', relation_type: 'related_to', relation_description: '抬梁式结构使用斗拱' },
+        { relation_id: 8, neighbor_id: 9, neighbor_name: '榫卯', neighbor_category: 'component', relation_type: 'related_to', relation_description: '榫卯用于抬梁式结构' },
+      ],
+      5: [
+        { relation_id: 2, neighbor_id: 1, neighbor_name: '抬梁式结构', neighbor_category: 'structure', relation_type: 'related_to', relation_description: '斗拱是抬梁式结构的组成部分' },
+        { relation_id: 7, neighbor_id: 6, neighbor_name: '材分制', neighbor_category: 'philosophy', relation_type: 'related_to', relation_description: '材分制以斗口为基本模数' },
+      ],
+      8: [
+        { relation_id: 3, neighbor_id: 5, neighbor_name: '斗拱', neighbor_category: 'component', relation_type: 'related_to', relation_description: '佛光寺东大殿保留唐代斗拱' },
+        { relation_id: 4, neighbor_id: 3, neighbor_name: '庑殿顶', neighbor_category: 'structure', relation_type: 'related_to', relation_description: '佛光寺东大殿采用庑殿顶' },
+      ],
+    };
+    let data = neighborsMap[id] || [];
+    if (relationType) {
+      data = data.filter(n => n.relation_type === relationType);
+    }
+    return { success: true, data };
+  },
+
+  findPaths: async (from: number, to: number, maxHops?: number) => {
+    await delay();
+    const pathsMap: Record<string, any[]> = {
+      '8->5': [{ path_id: 1, path: '8->5', path_names: '佛光寺东大殿->斗拱', path_types: 'related_to', hop_count: 1 }],
+      '1->6': [{ path_id: 1, path: '1->5->6', path_names: '抬梁式结构->斗拱->材分制', path_types: 'related_to->related_to', hop_count: 2 }],
+      '1->5': [{ path_id: 1, path: '1->5', path_names: '抬梁式结构->斗拱', path_types: 'related_to', hop_count: 1 }],
+    };
+    const key = `${from}->${to}`;
+    return { success: true, data: pathsMap[key] || [] };
+  },
+
+  getStats: async () => {
+    await delay();
+    return {
+      success: true,
+      data: {
+        totalEntities: 5000,
+        totalRelations: 12000,
+        entityTypes: [
+          { name: 'Architecture', count: 500 },
+          { name: 'Person', count: 200 },
+          { name: 'Dynasty', count: 50 },
+          { name: 'Location', count: 300 },
+          { name: 'Technique', count: 150 },
+          { name: 'Material', count: 100 },
+        ],
+        relationTypes: 25,
+        totalImports: 45,
+      },
+    };
+  },
+};
+
+export const mockKnowledgeEnhancedApi = {
+  inference: async (data: { query: string; injectionDepth?: number }) => {
+    await delay();
+    const injectionDepth = data.injectionDepth || 2;
+    return {
+      success: true,
+      data: {
+        response: `根据华夏营造知识图谱，关于"${data.query}"的详细信息如下：\n\n【古建筑知识】\n中国古建筑以木构架为主要结构方式，具有独特的建筑美学特征。\n\n📚 相关知识（知识注入深度：${injectionDepth}）：\n1. 斗拱（建筑结构）\n   - 关系：related_to\n   - 说明：斗拱是中国传统建筑中的重要构件\n\n2. 抬梁式结构（建筑结构）\n   - 关系：related_to\n   - 说明：抬梁式结构是中国古建筑的主要结构形式之一\n\n---\n📖 数据来源：华夏营造知识图谱（置信度：95%）`,
+        confidence: 0.9,
+        knowledgeSources: [
+          { topicId: 1, topicName: '古建筑', category: 'architecture', relevance: 1 },
+          { topicId: 3, topicName: '斗拱', category: 'concept', relevance: 0.8 },
+        ],
+        reasoningPath: ['找到核心实体: 古建筑', '关联实体: 斗拱 (关系: related_to)'],
+        metadata: {
+          processingTime: 156,
+          knowledgeUsed: 2,
+          injectionDepth,
+        },
+      },
+    };
+  },
+
+  pathReasoning: async (data: { fromTopicId: number; toTopicId: number; maxHops?: number }) => {
+    await delay();
+    const maxHops = data.maxHops || 3;
+    if (data.fromTopicId === data.toTopicId) {
+      return { success: true, data: [] };
+    }
+    return {
+      success: true,
+      data: [
+        {
+          path_id: 1,
+          path: `${data.fromTopicId}->5->${data.toTopicId}`,
+          path_names: '起点实体->斗拱->终点实体',
+          path_types: 'related_to->related_to',
+          hop_count: 2,
+        },
+      ],
+    };
+  },
+
+  generateTrainingData: async (data: { topicId: number; sampleCount?: number }) => {
+    await delay();
+    const sampleCount = data.sampleCount || 100;
+    return {
+      success: true,
+      data: {
+        trainingDataId: Date.now(),
+        topicId: data.topicId,
+        sampleCount,
+        generatedCount: sampleCount,
+        status: 'completed',
+        createdAt: new Date().toISOString(),
+      },
+    };
+  },
+
+  createTrainingTask: async (data: { name: string; description?: string; trainingDataId?: number }) => {
+    await delay();
+    return {
+      success: true,
+      data: {
+        taskId: Date.now(),
+        name: data.name,
+        description: data.description || '',
+        status: 'pending',
+        progress: 0,
+        createdAt: new Date().toISOString(),
+      },
+    };
+  },
+
+  getTrainingTasks: async (params?: { status?: string; page?: number; pageSize?: number }) => {
+    await delay();
+    const page = params?.page || 1;
+    const pageSize = params?.pageSize || 20;
+    return {
+      success: true,
+      data: [
+        {
+          taskId: 1,
+          name: '古建筑知识增强训练',
+          description: '基于知识图谱的古建筑知识增强训练',
+          status: 'completed',
+          progress: 100,
+          createdAt: '2024-01-15T10:00:00Z',
+          completedAt: '2024-01-15T12:30:00Z',
+        },
+        {
+          taskId: 2,
+          name: '斗拱知识训练',
+          description: '斗拱相关知识的专项训练',
+          status: 'running',
+          progress: 65,
+          createdAt: '2024-01-16T09:00:00Z',
+        },
+      ],
+      meta: { total: 2, page, pageSize },
+    };
+  },
+
+  getTrainingTaskById: async (id: number) => {
+    await delay();
+    return {
+      success: true,
+      data: {
+        taskId: id,
+        name: '古建筑知识增强训练',
+        description: '基于知识图谱的古建筑知识增强训练',
+        status: 'completed',
+        progress: 100,
+        metrics: {
+          accuracy: 0.89,
+          f1Score: 0.87,
+          epochCount: 50,
+        },
+        createdAt: '2024-01-15T10:00:00Z',
+        completedAt: '2024-01-15T12:30:00Z',
+      },
+    };
+  },
+
+  cancelTrainingTask: async (id: number) => {
+    await delay();
+    return {
+      success: true,
+      data: { taskId: id, status: 'cancelled' },
+    };
+  },
+};
+
 // 国际化API Mock
 export const mockI18nApi = {
   getLanguages: async () => {

@@ -76,10 +76,10 @@ END
 GO
 
 IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'idx_difficulty' AND object_id = OBJECT_ID('dbo.question'))
-    CREATE INDEX [idx_difficulty] ON [question]([difficulty]);
+    CREATE INDEX [idx_difficulty] ON dbo.[question]([difficulty]);
 GO
 IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'idx_category' AND object_id = OBJECT_ID('dbo.question'))
-    CREATE INDEX [idx_category] ON [question]([category]);
+    CREATE INDEX [idx_category] ON dbo.[question]([category]);
 GO
 
 -- ============================================
@@ -138,16 +138,16 @@ END
 GO
 
 IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'idx_user_question' AND object_id = OBJECT_ID('dbo.user_answer_history'))
-    CREATE INDEX [idx_user_question] ON [user_answer_history]([external_user_id], [question_id]);
+    CREATE INDEX [idx_user_question] ON dbo.[user_answer_history]([external_user_id], [question_id]);
 GO
 IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'idx_user_time' AND object_id = OBJECT_ID('dbo.user_answer_history'))
-    CREATE INDEX [idx_user_time] ON [user_answer_history]([external_user_id], [answered_at]);
+    CREATE INDEX [idx_user_time] ON dbo.[user_answer_history]([external_user_id], [answered_at]);
 GO
 IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'idx_question' AND object_id = OBJECT_ID('dbo.user_answer_history'))
-    CREATE INDEX [idx_question] ON [user_answer_history]([question_id]);
+    CREATE INDEX [idx_question] ON dbo.[user_answer_history]([question_id]);
 GO
 IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'idx_difficulty_level' AND object_id = OBJECT_ID('dbo.user_answer_history'))
-    CREATE INDEX [idx_difficulty_level] ON [user_answer_history]([difficulty_level]);
+    CREATE INDEX [idx_difficulty_level] ON dbo.[user_answer_history]([difficulty_level]);
 GO
 
 -- ============================================
@@ -186,7 +186,7 @@ END
 GO
 
 IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'idx_user_points' AND object_id = OBJECT_ID('dbo.user_competition_points'))
-    CREATE INDEX [idx_user_points] ON [user_competition_points]([external_user_id], [total_points]);
+    CREATE INDEX [idx_user_points] ON dbo.[user_competition_points]([external_user_id], [total_points]);
 GO
 
 -- ============================================
@@ -211,10 +211,10 @@ END
 GO
 
 IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'idx_user_transaction' AND object_id = OBJECT_ID('dbo.points_transaction'))
-    CREATE INDEX [idx_user_transaction] ON [points_transaction]([external_user_id], [created_at]);
+    CREATE INDEX [idx_user_transaction] ON dbo.[points_transaction]([external_user_id], [created_at]);
 GO
 IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'idx_transaction_type' AND object_id = OBJECT_ID('dbo.points_transaction'))
-    CREATE INDEX [idx_transaction_type] ON [points_transaction]([transaction_type]);
+    CREATE INDEX [idx_transaction_type] ON dbo.[points_transaction]([transaction_type]);
 GO
 
 -- ============================================
