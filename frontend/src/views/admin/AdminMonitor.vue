@@ -149,7 +149,9 @@ import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useAIConcurrencyStore } from '@/stores/aiConcurrency';
 import { performanceMonitor, getPerformanceAdvice } from '@/utils/performanceMonitor';
+import { useMemoryTrack } from '@/composables/useMemoryTrack';
 
+const memTrack = useMemoryTrack('AdminMonitor');
 const { t } = useI18n();
 const concurrencyStore = useAIConcurrencyStore();
 
@@ -298,16 +300,18 @@ function clearAllCache() {
 onMounted(() => {
   // 初始加载
   refreshData();
-  
+
   // 每5秒刷新一次
   refreshInterval = window.setInterval(refreshData, 5000);
-  
+  memTrack.trackTimer('refreshInterval', refreshInterval, 5000);
+
   // 开始FPS测量
   requestAnimationFrame(measureFPS);
 });
 
 onUnmounted(() => {
   if (refreshInterval) {
+    memTrack.untrackTimer('refreshInterval');
     clearInterval(refreshInterval);
     refreshInterval = null;
   }

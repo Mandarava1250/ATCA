@@ -213,6 +213,9 @@ import { useKnowledgeDetector } from './KnowledgeBaseDetector';
 import { ConflictReport } from './KnowledgeBaseDetector';
 import EnhancedCheckToggle from './EnhancedCheckToggle.vue';
 import ConflictReportCard from './ConflictReportCard.vue';
+import { useMemoryTrack } from '@/composables/useMemoryTrack';
+
+const memTrack = useMemoryTrack('AiAIChatModal');
 
 const aiStore = useAIStore();
 const { t } = useI18n();
@@ -380,10 +383,12 @@ async function sendMessageWithLocalAI(text: string) {
         localAIReasoning.value = null;
       }
     }, 100);
+    memTrack.trackTimer('ai-chat-progress', progressWatcher as unknown as number, 100);
 
     // 执行本地AI查询
     const result = await localAIManager.query(text);
-    
+
+    memTrack.untrackTimer('ai-chat-progress');
     clearInterval(progressWatcher);
     localAIReasoning.value = null;
 
@@ -437,12 +442,14 @@ async function debouncedSendMessage() {
         resolve();
       }
     }, DEBOUNCE_DELAY);
+    memTrack.trackTimer('ai-chat-debounce', debounceTimer as unknown as number, DEBOUNCE_DELAY);
   });
 }
 
 // 取消防抖
 function cancelDebounce() {
   if (debounceTimer) {
+    memTrack.untrackTimer('ai-chat-debounce');
     clearTimeout(debounceTimer);
     debounceTimer = null;
     isDebouncing.value = false;
@@ -488,9 +495,10 @@ async function sendMessageInternal(text: string) {
         try {
           const res = await Promise.race([
             assistantApi.chat(promptToSend, Number(ai.ai_id) || 1),
-            new Promise<never>((_, reject) =>
-                setTimeout(() => reject(new Error('AI响应超时')), 35000)
-            ),
+            new Promise<never>((_, reject) => {
+              const handle = setTimeout(() => reject(new Error('AI响应超时')), 35000);
+              memTrack.trackTimer('ai-chat-timeout', handle as unknown as number, 35000);
+            }),
           ]);
           if ((res as any).success) {
             const content = (res as any).data?.response || (res as any).data?.message || '...';

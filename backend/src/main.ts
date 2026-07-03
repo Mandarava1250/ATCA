@@ -46,6 +46,8 @@ import {
   recordRequestActivity 
 } from './services/serverKeepAlive';
 import { initSyncService, getSyncStats } from './services/SyncService';
+import { startMemoryMonitor, getMemoryStats, stopMemoryMonitor } from './services/MemoryMonitor';
+import { getLifecycleStats, getHighRiskEntries } from './utils/memoryLifecycle';
 
 // 模块路由（过程式风格）
 import architectureRouter from './modules/architecture/ArchitectureIndex';
@@ -267,11 +269,35 @@ app.get('/health', (_req, res) => {
 // 3. 性能监控端点
 app.get('/api/monitor/performance', performanceEndpoint);
 
-// 4. 同步服务监控端点
+// 同步服务监控端点
 app.get('/api/monitor/sync', (_req, res) => {
   res.json({
     success: true,
     data: getSyncStats(),
+  });
+});
+
+// 内存监控端点
+app.get('/api/monitor/memory', (_req, res) => {
+  res.json({
+    success: true,
+    data: getMemoryStats(),
+  });
+});
+
+// 内存生命周期日志端点
+app.get('/api/monitor/memory/lifecycle', (_req, res) => {
+  res.json({
+    success: true,
+    data: getLifecycleStats(),
+  });
+});
+
+// 内存生命周期高风险条目端点
+app.get('/api/monitor/memory/lifecycle/high-risk', (_req, res) => {
+  res.json({
+    success: true,
+    data: getHighRiskEntries(),
   });
 });
 
@@ -343,6 +369,9 @@ app.use(errorHandler);
 const PORT = config.port;
 
 async function startServer() {
+  // 启动内存监控
+  startMemoryMonitor();
+
   // 初始化浏览状态存储（默认内存模式，适合 2核2G 服务器）
   // 如需 Redis 存储，可传入配置: initBrowseStateStore({ type: 'redis', redis: {...} })
   initBrowseStateStore({ type: 'memory' });
@@ -413,6 +442,9 @@ async function startServer() {
     
     // 停止保活服务
     stopKeepAliveService();
+    
+    // 停止内存监控
+    stopMemoryMonitor();
     
     // 销毁所有服务
     await disposeServices();

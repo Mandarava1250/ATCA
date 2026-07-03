@@ -98,6 +98,9 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
+import { useMemoryTrack } from '@/composables/useMemoryTrack';
+
+const memTrack = useMemoryTrack('MobileNavMenu');
 
 /**
  * 移动端导航菜单组件
@@ -392,6 +395,7 @@ watch(() => props.modelValue, (newValue) => {
 
 onMounted(() => {
   window.addEventListener('resize', handleResize, { passive: true });
+  memTrack.trackListener('resize', 'window');
   handleResize();
 
   if (props.modelValue && window.innerWidth < props.responsiveBreakpoint) {
@@ -400,6 +404,7 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+  memTrack.untrackListener('resize', 'window');
   window.removeEventListener('resize', handleResize);
   document.body.style.overflow = '';
   document.body.style.touchAction = '';

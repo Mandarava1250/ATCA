@@ -7,10 +7,11 @@ import { Server as SocketIOServer, Socket } from 'socket.io';
 import { Server as HTTPServer } from 'http';
 import jwt from 'jsonwebtoken';
 import { config } from '../config/app';
+import { logInit, logDispose, logListenerAdd, logListenerRemove, logResourceAlloc, logResourceRelease } from '../utils/memoryLifecycle';
 
 // 同步数据类型定义
 interface SyncMessage {
-  type: 'user_action' | 'favorite_change' | 'note_change' | 'quiz_progress' | 'translation_update' | 'settings_change';
+  type: 'user_action' | 'favorite_change' | 'note_change' | 'quiz_progress' | 'translation_update' | 'settings_change' | 'checkin_update';
   payload: any;
   timestamp: number;
   deviceId: string;
@@ -87,8 +88,10 @@ export function initSyncService(httpServer: HTTPServer): SocketIOServer {
   io.on('connection', (socket: Socket) => {
     handleConnection(socket);
   });
+  logListenerAdd('SyncService', 'connection', 'io');
 
   console.log('[SyncService] WebSocket 同步服务已启动');
+  logInit('SyncService', 'WebSocket 同步服务已启动');
   return io;
 }
 
@@ -114,6 +117,7 @@ function handleConnection(socket: Socket) {
 
   const session = userSessions.get(userId)!;
   session.devices.set(deviceId, socket);
+  logResourceAlloc('SyncService', `device:${userId}:${deviceId}`);
 
   console.log(`[SyncService] 用户 ${userId} 设备 ${deviceId} 已连接 (${session.devices.size} 个设备在线)`);
 
@@ -157,6 +161,11 @@ function handleConnection(socket: Socket) {
   // 设置变更同步
   socket.on('sync:settings_change', (data: SyncMessage) => {
     handleSyncMessage(socket, 'settings_change', data);
+  });
+
+  // 打卡变更同步
+  socket.on('sync:checkin_update', (data: SyncMessage) => {
+    handleSyncMessage(socket, 'checkin_update', data);
   });
 
   // 请求同步状态
@@ -230,6 +239,7 @@ function handleDisconnect(socket: Socket, reason: string) {
   const session = userSessions.get(userId);
   if (session) {
     session.devices.delete(deviceId);
+    logResourceRelease('SyncService', `device:${userId}:${deviceId}`);
     
     // 通知其他设备有设备离线
     broadcastToUserDevices(userId, 'sync:device_offline', { deviceId, reason });
@@ -237,6 +247,7 @@ function handleDisconnect(socket: Socket, reason: string) {
     // 如果没有设备在线，清理会话
     if (session.devices.size === 0) {
       userSessions.delete(userId);
+      logResourceRelease('SyncService', `session:${userId}`);
       console.log(`[SyncService] 用户 ${userId} 所有设备已离线`);
     } else {
       console.log(`[SyncService] 用户 ${userId} 设备 ${deviceId} 已断开 (${session.devices.size} 个设备在线)`);

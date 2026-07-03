@@ -4,6 +4,7 @@
 // ============================================
 
 import { createLogger } from '../utils/logger';
+import { logListenerAdd } from '../utils/memoryLifecycle';
 
 const logger = createLogger('ClientStateStore');
 
@@ -202,18 +203,22 @@ export function initClientStateStore(config: StoreConfig): IClientStateStore {
       redisClient.on('connect', () => {
         logger.info('Redis 客户端状态存储已连接');
       });
+      logListenerAdd('ClientStateStore', 'connect', 'redisClient');
 
       redisClient.on('error', (err: Error) => {
         logger.error('Redis 连接错误', { error: err.message });
       });
+      logListenerAdd('ClientStateStore', 'error', 'redisClient');
 
       redisClient.on('reconnecting', () => {
         logger.info('Redis 正在重连...');
       });
+      logListenerAdd('ClientStateStore', 'reconnecting', 'redisClient');
 
       redisClient.on('ready', () => {
         logger.info('Redis 连接已恢复，客户端状态同步完成');
       });
+      logListenerAdd('ClientStateStore', 'ready', 'redisClient');
 
       storeInstance = new RedisClientStateStore(redisClient, {
         keyPrefix: config.redis.keyPrefix,

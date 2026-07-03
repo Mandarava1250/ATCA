@@ -132,9 +132,10 @@ import { useRoute, useRouter } from 'vue-router';
 import Navbar from '@/components/common/CommonNavbar.vue';
 import Footer from '@/components/common/CommonFooter.vue';
 import { useQuizStore } from '@/stores';
-import { quizApi } from '@/services/api';
+import { quizApi, activityApi } from '@/services/api';
 import { noteManager } from '@/utils/noteManager';
 import { createLogger } from '@/utils/logger';
+import { logMount, logUnmount, logTimerStart, logTimerStop } from '@/utils/memoryLifecycle';
 
 const logger = createLogger('ViewQuizPlay');
 const perfLogger = logger.child('Performance');
@@ -381,34 +382,69 @@ async function submitQuiz() {
   }
 }
 
-/* ========== 每日打卡：交卷后才算打卡 ========== */
-function doCheckinAfterSubmit() {
+/* ========== 每日打卡：完成答题交卷后才算打卡 ========== */
+async function doCheckinAfterSubmit() {
   const fromCheckin = sessionStorage.getItem('quiz_from_checkin');
-  if (!fromCheckin) return; // 不是从打卡入口进入的，不打卡
+  if (!fromCheckin) return;
 
   sessionStorage.removeItem('quiz_from_checkin');
 
-  const today = new Date().toDateString();
-  let checkin: any = {};
-  try { checkin = JSON.parse(localStorage.getItem('atca_checkin') || '{}'); } catch { /* ignore */ }
+  const today = new Date().toISOString().split('T')[0];
+  let localCheckin: any = {};
+  try { localCheckin = JSON.parse(localStorage.getItem('atca_checkin') || '{}'); } catch { /* ignore */ }
 
-  if (checkin.lastCheckin === today) return; // 今天已打卡
+  if (localCheckin.lastCheckin === today) return;
 
-  if (checkin.lastCheckin) {
-    const last = new Date(checkin.lastCheckin);
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    if (last.toDateString() === yesterday.toDateString()) {
-      checkin.streak = (checkin.streak || 0) + 1;
+  try {
+    const deviceInfo = {
+      device_type: getDeviceType(),
+      device_info: navigator.userAgent.substring(0, 200),
+    };
+
+    const res = await activityApi.checkin(deviceInfo);
+    if (res.success) {
+      const newCheckin = {
+        todayChecked: true,
+        streak: res.streak_count || 1,
+        lastCheckin: today,
+        pointsEarned: res.points_earned || 0,
+      };
+      localStorage.setItem('atca_checkin', JSON.stringify(newCheckin));
+      localStorage.setItem('atca_checkin_sync_time', Date.now().toString());
+      window.dispatchEvent(new StorageEvent('storage', {
+        key: 'atca_checkin',
+        newValue: JSON.stringify(newCheckin),
+      }));
+      logger.info('打卡成功', { result: res });
+    } else if (res.already_checked) {
+      localCheckin.todayChecked = true;
+      localStorage.setItem('atca_checkin', JSON.stringify(localCheckin));
+      logger.info('今日已打卡，无需重复打卡');
     } else {
-      checkin.streak = 1;
+      logger.error('打卡失败', { error: res.message });
     }
-  } else {
-    checkin.streak = 1;
+  } catch (e: any) {
+    logger.error('打卡网络异常，将在下次同步时重试', {
+      error: e.message,
+    });
+    const pendingCheckins = JSON.parse(localStorage.getItem('atca_pending_checkins') || '[]');
+    if (!pendingCheckins.includes(today)) {
+      pendingCheckins.push(today);
+      localStorage.setItem('atca_pending_checkins', JSON.stringify(pendingCheckins));
+    }
+    localCheckin.todayChecked = true;
+    localCheckin.lastCheckin = today;
+    localStorage.setItem('atca_checkin', JSON.stringify(localCheckin));
   }
-  checkin.lastCheckin = today;
-  checkin.todayChecked = true;
-  localStorage.setItem('atca_checkin', JSON.stringify(checkin));
+}
+
+function getDeviceType(): string {
+  if (/Mobile|Android|iPhone|iPad|iPod/.test(navigator.userAgent)) {
+    return 'mobile';
+  } else if (/Tablet|iPad/.test(navigator.userAgent)) {
+    return 'tablet';
+  }
+  return 'desktop';
 }
 
 function saveQuizHistory(submitResult: any, correctCount: number, detailList: any[]) {
@@ -489,6 +525,7 @@ onBeforeMount(() => {
 });
 
 onMounted(async () => {
+  logMount('ViewQuizPlay');
   const mountedTime = Date.now();
   perfLogger.perf('测验页面挂载完成', {
     duration: mountedTime - mountStartTime,
@@ -581,7 +618,12 @@ onUnmounted(() => {
   logger.info('测验页面已卸载', {
     timestamp: Date.now(),
   });
-  if (timer) { clearInterval(timer); timer = null; }
+  if (timer) {
+    clearInterval(timer);
+    logTimerStop('ViewQuizPlay', 'quiz-timer');
+    timer = null;
+  }
+  logUnmount('ViewQuizPlay');
 });
 </script>
 

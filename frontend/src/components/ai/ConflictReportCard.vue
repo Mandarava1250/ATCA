@@ -130,6 +130,9 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import { ConflictReport, ConflictSeverity } from './KnowledgeBaseDetector';
+import { useMemoryTrack } from '@/composables/useMemoryTrack';
+
+const memTrack = useMemoryTrack('ConflictReportCard');
 
 interface Props {
   report: ConflictReport;

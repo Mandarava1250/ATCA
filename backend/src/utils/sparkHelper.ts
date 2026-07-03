@@ -7,6 +7,7 @@
 import * as crypto from 'crypto';
 import * as https from 'https';
 import * as net from 'net';
+import { logListenerAdd } from './memoryLifecycle';
 
 // ============================================================
 // 版本映射
@@ -281,15 +282,19 @@ export async function callSparkWebSocket(
       }
 
       socket.on('data', processWsData);
+      logListenerAdd('SparkHelper', 'data', 'socket');
       socket.on('error', (err) => { console.error(`[Spark WS] socket错误: ${err.message}`); safeReject(err); });
+      logListenerAdd('SparkHelper', 'error', 'socket');
       socket.on('close', (hadError) => {
         console.log(`[Spark WS] socket关闭 hadError=${hadError} 累计=${fullText.length}字符`);
         if (!isDone) safeResolve(fullText);
       });
+      logListenerAdd('SparkHelper', 'close', 'socket');
       socket.on('end', () => {
         console.log(`[Spark WS] socket end 累计=${fullText.length}字符`);
         if (!isDone) safeResolve(fullText);
       });
+      logListenerAdd('SparkHelper', 'end', 'socket');
 
       // 发送请求
       try {
@@ -300,22 +305,29 @@ export async function callSparkWebSocket(
         safeReject(new Error(`发送失败: ${err.message}`));
       }
     });
+    logListenerAdd('SparkHelper', 'upgrade', 'req');
 
     // ===== response 事件（非 upgrade 时触发）=====
     req.on('response', (res) => {
       console.log(`[Spark WS] HTTP ${res.statusCode} 响应(非upgrade)`);
       let body = '';
       res.on('data', (c) => { body += c; });
+      logListenerAdd('SparkHelper', 'data', 'res');
       res.on('end', () => {
         safeReject(new Error(`WebSocket握手失败: HTTP ${res.statusCode} - ${body || '(无body)'}`));
       });
+      logListenerAdd('SparkHelper', 'end', 'res');
       res.on('aborted', () => {
         safeReject(new Error(`WebSocket响应被中断: HTTP ${res.statusCode}`));
       });
+      logListenerAdd('SparkHelper', 'aborted', 'res');
     });
+    logListenerAdd('SparkHelper', 'response', 'req');
 
     req.on('error', (err) => safeReject(new Error(`HTTP请求错误: ${err.message}`)));
+    logListenerAdd('SparkHelper', 'error', 'req');
     req.on('timeout', () => { req.destroy(); safeReject(new Error('HTTP握手超时(15s)')); });
+    logListenerAdd('SparkHelper', 'timeout', 'req');
 
     req.end();
   });

@@ -113,10 +113,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { activityApi } from '@/services/api';
 import { useToast } from '@/composables/useToast';
+import { logMount, logUnmount, logListenerAdd, logListenerRemove } from '@/utils/memoryLifecycle';
 
 const { t } = useI18n();
 const { toast, success, error } = useToast();
@@ -256,6 +257,19 @@ async function handleCheckin() {
       await loadStats();
       await loadCalendar();
       
+      const newCheckin = {
+        todayChecked: true,
+        streak: res.streak_count || stats.value.max_streak,
+        lastCheckin: new Date().toISOString().split('T')[0],
+        calendarUpdated: true,
+      };
+      localStorage.setItem('atca_checkin', JSON.stringify(newCheckin));
+      localStorage.setItem('atca_checkin_sync_time', Date.now().toString());
+      window.dispatchEvent(new StorageEvent('storage', {
+        key: 'atca_checkin',
+        newValue: JSON.stringify(newCheckin),
+      }));
+      
       if (res.points_earned) {
         success(`${t('checkin.success')} +${res.points_earned} ${t('checkin.points')}`);
       }
@@ -289,10 +303,38 @@ function getDeviceInfo() {
   };
 }
 
+function handleStorageSync(e: StorageEvent) {
+  if (e.key === 'atca_checkin' && e.newValue) {
+    try {
+      const newCheckin = JSON.parse(e.newValue);
+      if (newCheckin.calendarUpdated) {
+        loadStats();
+        loadCalendar();
+        if (newCheckin.todayChecked !== undefined && newCheckin.todayChecked !== checkedToday.value) {
+          checkedToday.value = newCheckin.todayChecked;
+        }
+      } else if (newCheckin.todayChecked !== undefined && newCheckin.todayChecked !== checkedToday.value) {
+        checkedToday.value = newCheckin.todayChecked;
+        loadStats();
+        loadCalendar();
+      }
+    } catch { /* ignore */ }
+  }
+}
+
 onMounted(async () => {
+  logMount('DailyCheckin');
   await loadTodayStatus();
   await loadStats();
   await loadCalendar();
+  window.addEventListener('storage', handleStorageSync);
+  logListenerAdd('DailyCheckin', 'storage', 'window');
+});
+
+onUnmounted(() => {
+  window.removeEventListener('storage', handleStorageSync);
+  logListenerRemove('DailyCheckin', 'storage', 'window');
+  logUnmount('DailyCheckin');
 });
 </script>
 

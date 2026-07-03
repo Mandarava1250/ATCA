@@ -26,6 +26,9 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, nextTick } from 'vue';
+import { useMemoryTrack } from '@/composables/useMemoryTrack';
+
+const memTrack = useMemoryTrack('TextClamp');
 
 interface Props {
   text: string;

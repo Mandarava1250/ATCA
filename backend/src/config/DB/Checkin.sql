@@ -58,22 +58,22 @@ BEGIN
     CREATE PROCEDURE [dbo].[sp_user_checkin]
         @user_id INT,
         @device_type VARCHAR(20) = NULL,
-        @device_info NVARCHAR(255) = NULL
+        @device_info NVARCHAR(255) = NULL,
+        @checkin_date DATE = NULL
     AS
     BEGIN
         SET NOCOUNT ON;
         
-        DECLARE @today DATE = CAST(GETDATE() AS DATE);
-        DECLARE @yesterday DATE = DATEADD(DAY, -1, @today);
+        DECLARE @target_date DATE = COALESCE(@checkin_date, CAST(GETDATE() AS DATE));
+        DECLARE @yesterday DATE = DATEADD(DAY, -1, @target_date);
         DECLARE @streak INT = 1;
         DECLARE @points INT = 10;
         
-        -- 检查今天是否已打卡
-        IF EXISTS (SELECT 1 FROM [daily_checkin] WHERE [user_id] = @user_id AND [checkin_date] = @today)
+        IF EXISTS (SELECT 1 FROM [daily_checkin] WHERE [user_id] = @user_id AND [checkin_date] = @target_date)
         BEGIN
             SELECT 
                 CAST(0 AS BIT) AS [success],
-                N'今日已打卡' AS [message],
+                N'该日期已打卡' AS [message],
                 NULL AS [checkin_id],
                 NULL AS [streak_count],
                 0 AS [points_earned],
@@ -81,24 +81,21 @@ BEGIN
             RETURN;
         END
         
-        -- 检查连续打卡
         SELECT @streak = [streak_count] + 1 
         FROM [daily_checkin] 
         WHERE [user_id] = @user_id AND [checkin_date] = @yesterday;
         
         IF @streak IS NULL OR @streak = 0 SET @streak = 1;
         
-        -- 根据连续天数增加奖励
         IF @streak >= 7 SET @points = 50;
         ELSE IF @streak >= 5 SET @points = 30;
         ELSE IF @streak >= 3 SET @points = 20;
         
-        -- 插入打卡记录
         INSERT INTO [daily_checkin] (
             [user_id], [checkin_date], [checkin_time], 
             [streak_count], [points_earned], [device_type], [device_info]
         ) VALUES (
-            @user_id, @today, GETDATE(), @streak, @points, @device_type, @device_info
+            @user_id, @target_date, GETDATE(), @streak, @points, @device_type, @device_info
         );
         
         SELECT 

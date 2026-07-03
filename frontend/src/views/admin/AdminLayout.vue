@@ -111,7 +111,9 @@ import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { setupStorageCleanup } from '@/utils/storageCleanup';
 import { useUserStore } from '@/stores';
+import { useMemoryTrack } from '@/composables/useMemoryTrack';
 
+const memTrack = useMemoryTrack('AdminLayout');
 const route = useRoute();
 const router = useRouter();
 const userStore = useUserStore();

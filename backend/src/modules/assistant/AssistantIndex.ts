@@ -5,6 +5,7 @@ import { authMiddleware } from '../../middleware/auth';
 import { asyncHandler } from '../../middleware/errorHandler';
 import { buildSparkAuthUrl, callSparkWebSocket, getSparkEndpoint } from '../../utils/sparkHelper';
 import { localAIService } from '../../utils/LocalAIService';
+import { logListenerAdd } from '../../utils/memoryLifecycle';
 
 const router = Router();
 
@@ -625,6 +626,7 @@ router.post('/chat-stream', authMiddleware, asyncHandler(async (req: any, res) =
         }
       }
     });
+    logListenerAdd('AssistantIndex', 'data', 'responseStream');
 
     response.data.on('end', () => {
       res.write('data: [DONE]\n\n');
@@ -641,12 +643,14 @@ router.post('/chat-stream', authMiddleware, asyncHandler(async (req: any, res) =
         res.end();
       }
     });
+    logListenerAdd('AssistantIndex', 'end', 'responseStream');
 
     response.data.on('error', (err: any) => {
       console.error('Stream error:', err.message);
       res.write(`data: ${JSON.stringify({ error: '流式传输中断' }) }\n\n`);
       res.end();
     });
+    logListenerAdd('AssistantIndex', 'error', 'responseStream');
   } catch (error: any) {
     console.error('SSE AI error:', error.message);
     res.write(`data: ${JSON.stringify({ error: 'AI服务调用失败: ' + error.message }) }\n\n`);

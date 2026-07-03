@@ -15,14 +15,14 @@ import type {
  * 获取所有成就列表（管理员）
  */
 export const getAchievements = async (): Promise<{ success: boolean; data: Achievement[] }> => {
-  return http.get('/achievements');
+  return http.get('/activities/achievements');
 };
 
 /**
  * 获取单个成就详情
  */
 export const getAchievementById = async (id: number): Promise<{ success: boolean; data: Achievement }> => {
-  return http.get(`/achievements/${id}`);
+  return http.get(`/activities/achievements/${id}`);
 };
 
 /**
@@ -31,7 +31,7 @@ export const getAchievementById = async (id: number): Promise<{ success: boolean
 export const createAchievement = async (
   data: CreateAchievementRequest
 ): Promise<{ success: boolean; data: Achievement }> => {
-  return http.post('/achievements', data);
+  return http.post('/activities/achievements', data);
 };
 
 /**
@@ -41,35 +41,35 @@ export const updateAchievement = async (
   id: number,
   data: UpdateAchievementRequest
 ): Promise<{ success: boolean; data: Achievement }> => {
-  return http.put(`/achievements/${id}`, data);
+  return http.put(`/activities/achievements/${id}`, data);
 };
 
 /**
  * 删除成就（管理员）
  */
 export const deleteAchievement = async (id: number): Promise<{ success: boolean; message: string }> => {
-  return http.delete(`/achievements/${id}`);
+  return http.delete(`/activities/achievements/${id}`);
 };
 
 /**
  * 获取当前用户的成就列表
  */
 export const getUserAchievements = async (): Promise<{ success: boolean; data: UserAchievement[] }> => {
-  return http.get('/achievements/user');
+  return http.get('/activities/user-achievements');
 };
 
 /**
  * 获取用户成就进度
  */
 export const getUserAchievementProgress = async (): Promise<{ success: boolean; data: any[] }> => {
-  return http.get('/achievements/user/progress');
+  return http.get('/activities/user-achievements/progress');
 };
 
 /**
  * 获取成就统计数据
  */
 export const getAchievementStats = async (): Promise<{ success: boolean; data: AchievementStats }> => {
-  return http.get('/achievements/stats');
+  return http.get('/activities/achievements/stats');
 };
 
 /**
@@ -78,7 +78,7 @@ export const getAchievementStats = async (): Promise<{ success: boolean; data: A
 export const unlockAchievement = async (
   achievementId: number
 ): Promise<{ success: boolean; data: UserAchievement }> => {
-  return http.post(`/achievements/${achievementId}/unlock`);
+  return http.post(`/activities/achievements/${achievementId}/unlock`);
 };
 
 /**
@@ -87,7 +87,7 @@ export const unlockAchievement = async (
 export const importAchievements = async (
   data: CreateAchievementRequest[]
 ): Promise<{ success: boolean; data: Achievement[]; failed?: string[] }> => {
-  return http.post('/achievements/import', data);
+  return http.post('/activities/achievements/import', data);
 };
 
 export const achievementApi = {

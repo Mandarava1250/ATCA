@@ -119,7 +119,9 @@ import Navbar from '@/components/common/CommonNavbar.vue';
 import PageBackground from '@/components/common/PageBackground.vue';
 import { architectureApi, activityApi } from '@/services/api';
 import { createLogger } from '@/utils/logger';
+import { useMemoryTrack } from '@/composables/useMemoryTrack';
 
+const memTrack = useMemoryTrack('ViewHome');
 const logger = createLogger('ViewHome');
 const perfLogger = logger.child('Performance');
 
@@ -161,9 +163,11 @@ function startAutoCarousel() {
   autoCarouselTimer = setInterval(() => {
     currentPage.value = (currentPage.value + 1) % totalPages.value;
   }, AUTO_CAROUSEL_INTERVAL);
+  memTrack.trackTimer('autoCarousel', autoCarouselTimer as unknown as number, AUTO_CAROUSEL_INTERVAL);
 }
 function stopAutoCarousel() {
   if (autoCarouselTimer) {
+    memTrack.untrackTimer('autoCarousel');
     clearInterval(autoCarouselTimer);
     autoCarouselTimer = null;
   }

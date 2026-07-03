@@ -49,6 +49,9 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
+import { useMemoryTrack } from '@/composables/useMemoryTrack';
+
+const memTrack = useMemoryTrack('EnhancedCheckToggle');
 
 // Props定义
 interface Props {
@@ -164,8 +167,14 @@ onMounted(() => {
 
 // 清理定时器
 onUnmounted(() => {
-  if (showTimeout) clearTimeout(showTimeout);
-  if (hideTimeout) clearTimeout(hideTimeout);
+  if (showTimeout) {
+    memTrack.untrackTimer('enhanced-check-show');
+    clearTimeout(showTimeout);
+  }
+  if (hideTimeout) {
+    memTrack.untrackTimer('enhanced-check-hide');
+    clearTimeout(hideTimeout);
+  }
 });
 </script>
 

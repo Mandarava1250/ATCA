@@ -4,7 +4,7 @@
  */
 import { Router, Response, Request, NextFunction } from 'express';
 import { query, execute, isMockMode } from '../../config/database';
-import { authMiddleware, optionalAuthMiddleware, checkMuteMiddleware } from '../../middleware/auth';
+import { authMiddleware, optionalAuthMiddleware, checkMuteMiddleware, adminMiddleware } from '../../middleware/auth';
 import { validateBody } from '../../middleware/validation';
 import { z } from 'zod';
 import { createLogger } from '../../utils/logger';
@@ -513,16 +513,14 @@ router.get('/mute-status', authMiddleware, asyncHandler(async (req: any, res: Re
 
 // ==================== 社区管理（管理员）====================
 
-router.get('/admin/forum/topics', authMiddleware, asyncHandler(async (req: any, res: Response) => {
-  const isAdmin = req.user?.role === 'admin' || req.user?.role === 'moderator';
-  if (!isAdmin) { res.status(403).json({ success: false, error: { message: '权限不足' } }); return; }
+router.get('/admin/forum/topics', authMiddleware, adminMiddleware, asyncHandler(async (req: any, res: Response) => {
   try {
     const data = await query('social', 'SELECT t.*, b.board_name FROM dbo.forum_topics t LEFT JOIN dbo.forum_boards b ON t.board_id = b.board_id ORDER BY t.created_at DESC');
     res.json({ success: true, data: data || [] });
   } catch { res.json({ success: true, data: [] }); }
 }));
 
-router.delete('/admin/forum/topics/:id', authMiddleware, asyncHandler(async (req: any, res: Response) => {
+router.delete('/admin/forum/topics/:id', authMiddleware, adminMiddleware, asyncHandler(async (req: any, res: Response) => {
   const { id } = req.params;
   try {
     await execute('social', 'DELETE FROM dbo.forum_replies WHERE [topic_id] = @tid', { tid: parseInt(id) });
@@ -531,7 +529,7 @@ router.delete('/admin/forum/topics/:id', authMiddleware, asyncHandler(async (req
   } catch (err: any) { res.status(500).json({ success: false, error: { message: err.message } }); }
 }));
 
-router.delete('/admin/forum/replies/:id', authMiddleware, asyncHandler(async (req: any, res: Response) => {
+router.delete('/admin/forum/replies/:id', authMiddleware, adminMiddleware, asyncHandler(async (req: any, res: Response) => {
   const { id } = req.params;
   try {
     await execute('social', 'DELETE FROM dbo.forum_replies WHERE [reply_id] = @id', { id: parseInt(id) });

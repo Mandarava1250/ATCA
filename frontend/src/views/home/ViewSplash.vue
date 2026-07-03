@@ -67,7 +67,9 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router';
 import { onMounted, onUnmounted } from 'vue';
+import { useMemoryTrack } from '@/composables/useMemoryTrack';
 
+const memTrack = useMemoryTrack('ViewSplash');
 const router = useRouter();
 
 /* ========== 键盘支持：Enter / Space 快捷进入 ========== */
@@ -80,9 +82,11 @@ function onKeydown(e: KeyboardEvent) {
 
 onMounted(() => {
   window.addEventListener('keydown', onKeydown);
+  memTrack.trackListener('keydown', 'window');
 });
 
 onUnmounted(() => {
+  memTrack.untrackListener('keydown', 'window');
   window.removeEventListener('keydown', onKeydown);
 });
 

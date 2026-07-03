@@ -5,6 +5,7 @@
 
 import { createLogger } from '../utils/logger';
 import { query as dbQuery } from '../config/database';
+import { logCacheCleanup } from '../utils/memoryLifecycle';
 
 const logger = createLogger('QueryCache');
 
@@ -158,6 +159,7 @@ class QueryCache {
     }
 
     if (deleted > 0) {
+      logCacheCleanup('QueryCache', deleted, this.cache.size);
       logger.debug(`缓存清理: 删除 ${deleted} 条过期记录`);
     }
   }

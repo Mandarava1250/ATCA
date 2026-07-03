@@ -298,7 +298,9 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { MATERIAL_PRESETS, type ComponentDefinition, DEFAULT_COMPONENTS } from '@/components/threejs/ThreejsArchitectureComponents';
 import type { SnapPoint } from '@/components/threejs/ThreejsMortiseTenonSnapEngine';
 import { generateUUID } from '@/utils/uuid';
+import { useMemoryTrack } from '@/composables/useMemoryTrack';
 
+const memTrack = useMemoryTrack('ComponentBuilder');
 const route = useRoute();
 const router = useRouter();
 
@@ -796,10 +798,12 @@ function loadComponentFromRoute() {
 onMounted(() => {
   initScene();
   window.addEventListener('resize', onResize);
+  memTrack.trackListener('resize', 'window');
   loadComponentFromRoute();
 });
 
 onUnmounted(() => {
+  memTrack.untrackListener('resize', 'window');
   window.removeEventListener('resize', onResize);
   if (renderer) {
     renderer.dispose();

@@ -60,6 +60,9 @@ import { ref, onMounted, computed } from 'vue';
 import { socialApi } from '@/services/api';
 import { useUserStore } from '@/stores';
 import TextClamp from '@/components/common/TextClamp.vue';
+import { useMemoryTrack } from '@/composables/useMemoryTrack';
+
+const memTrack = useMemoryTrack('CommentSection');
 
 const props = defineProps<{
   targetType: string;

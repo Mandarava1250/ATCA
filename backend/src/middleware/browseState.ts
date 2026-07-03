@@ -5,14 +5,15 @@
 
 import { Request, Response, NextFunction } from 'express';
 import { createLogger } from '../utils/logger';
-import { 
-  getClientStateStore, 
+import {
+  getClientStateStore,
   initClientStateStore,
-  ClientState, 
+  ClientState,
   RequestRecord,
   BrowseState,
-  StoreConfig 
+  StoreConfig
 } from './clientStateStore';
+import { logInit, logDispose, logTimerStart, logTimerStop, logListenerAdd, logCacheCleanup } from '../utils/memoryLifecycle';
 
 // 重新导出 BrowseState 以保持向后兼容
 export { BrowseState } from './clientStateStore';
@@ -55,6 +56,7 @@ export function initBrowseStateStore(config?: StoreConfig): void {
     initClientStateStore({ type: 'memory' });
   }
   storeInitialized = true;
+  logInit('BrowseState', `浏览状态存储已初始化 (${config?.type || 'memory'})`);
 }
 
 // 确保存储已初始化
@@ -235,7 +237,8 @@ async function cleanupExpiredStates(): Promise<number> {
   if (cleanedCount > 0) {
     logger.info(`客户端状态清理完成: 清理 ${cleanedCount} 条，当前总数 ${await store.size()}`);
   }
-  
+
+  logCacheCleanup('BrowseState', cleanedCount, await store.size());
   return cleanedCount;
 }
 
@@ -246,13 +249,17 @@ cleanupExpiredStates().catch(err => logger.error('启动清理失败', { error: 
 const cleanupTimer = setInterval(() => {
   cleanupExpiredStates().catch(err => logger.error('定时清理失败', { error: err }));
 }, CONFIG.CLEANUP_INTERVAL);
+logTimerStart('BrowseState', 'cleanup-timer', CONFIG.CLEANUP_INTERVAL);
 
 // 优雅关闭时清理
 process.on('SIGTERM', async () => {
+  logListenerAdd('BrowseState', 'SIGTERM', 'process');
+  logTimerStop('BrowseState', 'cleanup-timer');
   clearInterval(cleanupTimer);
   const store = getClientStateStore();
   await store.clear();
   logger.info('浏览状态中间件已清理');
+  logDispose('BrowseState', '浏览状态中间件已清理');
 });
 
 // 获取客户端状态统计信息（用于监控）

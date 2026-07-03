@@ -16,7 +16,7 @@ interface SyncConfig {
 
 // 同步消息类型
 interface SyncMessage {
-  type: 'user_action' | 'favorite_change' | 'note_change' | 'quiz_progress' | 'translation_update' | 'settings_change';
+  type: 'user_action' | 'favorite_change' | 'note_change' | 'quiz_progress' | 'translation_update' | 'settings_change' | 'checkin_update';
   payload: any;
   timestamp: number;
   deviceId: string;
@@ -139,6 +139,10 @@ export class SyncService {
         this.handleSyncMessage('settings_change', data);
       });
 
+      this.socket.on('sync:checkin_update', (data: SyncMessage) => {
+        this.handleSyncMessage('checkin_update', data);
+      });
+
       // 同步确认
       this.socket.on('sync:ack', (data: any) => {
         this.syncLatency = Date.now() - data.timestamp;
@@ -245,6 +249,10 @@ export class SyncService {
    */
   syncSettings(settings: any): Promise<boolean> {
     return this.sync('settings_change', settings);
+  }
+
+  syncCheckin(checkinData: any): Promise<boolean> {
+    return this.sync('checkin_update', checkinData);
   }
 
   /**

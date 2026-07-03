@@ -227,7 +227,9 @@
 import { ref, computed, onMounted } from 'vue';
 import type { Achievement, CreateAchievementRequest, UpdateAchievementRequest, AchievementStats, AchievementConditionType } from '@/types/achievements';
 import { achievementApi } from '@/services/achievementApi';
+import { useMemoryTrack } from '@/composables/useMemoryTrack';
 
+const memTrack = useMemoryTrack('AdminAchievements');
 // 响应式数据
 const achievements = ref<Achievement[]>([]);
 const stats = ref<AchievementStats>({

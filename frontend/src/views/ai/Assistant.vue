@@ -62,6 +62,9 @@ import { useI18n } from 'vue-i18n';
 import Navbar from '@/components/common/CommonNavbar.vue';
 import Footer from '@/components/common/CommonFooter.vue';
 import { assistantApi } from '@/services/api';
+import { useMemoryTrack } from '@/composables/useMemoryTrack';
+
+const memTrack = useMemoryTrack('Assistant');
 
 interface Message {
   id: string;

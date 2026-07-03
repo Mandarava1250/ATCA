@@ -8,6 +8,7 @@
 import { logger, AIReasoningStep } from '../utils/logger';
 import { knowledgeGraphService, Neighbor } from './KnowledgeGraphService';
 import { localAIService } from '../utils/LocalAIService';
+import { logInit, logDispose, logResourceAlloc, logResourceRelease } from '../utils/memoryLifecycle';
 import { IService, ServiceState } from '../core';
 
 // 训练任务状态枚举
@@ -107,9 +108,12 @@ class KnowledgeEnhancedTrainingService implements IService {
 
   async initialize(): Promise<void> {
     this.state = ServiceState.INITIALIZING;
+    logInit('KnowledgeEnhancedTrainingService', '知识增强训练服务初始化');
     logger.info('知识增强训练服务初始化...');
     
     this.state = ServiceState.READY;
+    logResourceAlloc('KnowledgeEnhancedTrainingService', 'trainingTasks');
+    logResourceAlloc('KnowledgeEnhancedTrainingService', 'modelCache');
     logger.info('知识增强训练服务初始化完成');
   }
 
@@ -124,6 +128,8 @@ class KnowledgeEnhancedTrainingService implements IService {
   async dispose(): Promise<void> {
     this.trainingTasks.clear();
     this.modelCache.clear();
+    logResourceRelease('KnowledgeEnhancedTrainingService', 'trainingTasks');
+    logResourceRelease('KnowledgeEnhancedTrainingService', 'modelCache');
     this.state = ServiceState.DISPOSED;
     logger.info('知识增强训练服务已销毁');
   }

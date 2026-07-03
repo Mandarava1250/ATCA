@@ -28,7 +28,7 @@
             <div class="stat-value" :style="{ color: accuracyColor }">{{ resultData.accuracy }}%</div>
             <div class="stat-label">正确率</div>
           </div>
-          <svg class="stat-ring" viewBox="0 0 100 100">
+          <svg class="stat-ring" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet">
             <circle class="ring-bg" cx="50" cy="50" r="42"/>
             <circle class="ring-fill" cx="50" cy="50" r="42" :style="ringStyle"/>
           </svg>
@@ -66,13 +66,13 @@
       <!-- 中间主图表区 -->
       <div class="charts-grid">
         <!-- 左侧：答题正确率分布（环形图） -->
-        <div class="chart-panel">
+        <div class="chart-panel donut-panel">
           <div class="chart-header">
             <h3>答题结果分布</h3>
             <span class="chart-badge">本次</span>
           </div>
           <div class="chart-body center">
-            <svg class="donut-chart" viewBox="0 0 200 200">
+            <svg class="donut-chart" viewBox="0 0 200 200" preserveAspectRatio="xMidYMid meet">
               <!-- 背景圆环 -->
               <circle cx="100" cy="100" r="70" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="24"/>
               <!-- 正确部分 -->
@@ -95,7 +95,7 @@
         </div>
 
         <!-- 中间：逐题分析（横向柱状图） -->
-        <div class="chart-panel wide">
+        <div class="chart-panel bars-panel">
           <div class="chart-header">
             <h3>逐题正确性分析</h3>
             <span class="chart-badge">详细</span>
@@ -114,13 +114,13 @@
         </div>
 
         <!-- 右侧：能力雷达图 -->
-        <div class="chart-panel">
+        <div class="chart-panel radar-panel">
           <div class="chart-header">
             <h3>能力维度评估</h3>
             <span class="chart-badge">综合</span>
           </div>
           <div class="chart-body center">
-            <svg class="radar-chart" viewBox="0 0 220 220">
+            <svg class="radar-chart" viewBox="0 0 220 220" preserveAspectRatio="xMidYMid meet">
               <!-- 背景网格 -->
               <g v-for="n in 5" :key="n">
                 <polygon :points="getRadarPoints(n / 5)" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
@@ -144,7 +144,7 @@
       <!-- 底部图表区 -->
       <div class="charts-grid bottom">
         <!-- 用时分析 -->
-        <div class="chart-panel">
+        <div class="chart-panel time-panel">
           <div class="chart-header">
             <h3>每题用时分析</h3>
             <span class="chart-badge">效率</span>
@@ -163,13 +163,13 @@
         </div>
 
         <!-- 历史趋势 -->
-        <div class="chart-panel wide">
+        <div class="chart-panel trend-panel">
           <div class="chart-header">
             <h3>历史答题趋势</h3>
             <span class="chart-badge">趋势</span>
           </div>
           <div class="chart-body">
-            <svg class="trend-chart" viewBox="0 0 700 200" preserveAspectRatio="none">
+            <svg class="trend-chart" viewBox="0 0 700 200" preserveAspectRatio="xMidYMid meet">
               <!-- 网格线 -->
               <line x1="50" y1="30" x2="680" y2="30" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
               <line x1="50" y1="80" x2="680" y2="80" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
@@ -192,7 +192,7 @@
         </div>
 
         <!-- 知识点掌握 -->
-        <div class="chart-panel">
+        <div class="chart-panel knowledge-panel">
           <div class="chart-header">
             <h3>知识点掌握</h3>
             <span class="chart-badge">强弱</span>
@@ -271,6 +271,18 @@
                 <span class="status-badge" :class="{ correct: d.isCorrect, wrong: !d.isCorrect }">{{ d.isCorrect ? '正确' : '错误' }}</span>
               </span>
               <span class="rm-time">{{ timePerQuestion[index]?.seconds || '-' }}s</span>
+              
+              <!-- 移动端紧凑信息 -->
+              <div class="mobile-summary">
+                <div class="mobile-answers">
+                  <span class="mobile-label">你的答案</span>
+                  <span class="mobile-value" :class="{ wrong: !d.isCorrect }">{{ formatUserAnswer(d) }}</span>
+                </div>
+                <div class="mobile-answers">
+                  <span class="mobile-label">正确答案</span>
+                  <span class="mobile-value correct">{{ formatCorrectAnswer(d) }}</span>
+                </div>
+              </div>
             </div>
             <div v-if="expandedRows.has(index)" class="review-detail">
               <div class="detail-content">
@@ -324,11 +336,15 @@ import { useRouter, useRoute } from 'vue-router';
 import { useQuizStore } from '@/stores';
 import { noteManager } from '@/utils/noteManager';
 import type { Note } from '@/utils/noteManager';
+import { useBreakpoints } from '@/utils/breakpoints';
+import { useMemoryTrack } from '@/composables/useMemoryTrack';
 
+const memTrack = useMemoryTrack('ViewQuizAnalytics');
 const router = useRouter();
 const route = useRoute();
 const quizStore = useQuizStore();
 const pageRef = ref<HTMLElement | null>(null);
+const { isMobile, isTablet, isDesktop } = useBreakpoints();
 
 // 当前时间
 const currentTime = ref('');
@@ -518,11 +534,15 @@ const quizHistory = computed(() => rawHistory.value);
 onMounted(() => {
   updateTime();
   timeTimer = setInterval(updateTime, 1000);
+  memTrack.trackTimer('timeTimer', timeTimer as unknown as number, 1000);
   loadAllData();
 });
 
 onUnmounted(() => {
-  if (timeTimer) clearInterval(timeTimer);
+  if (timeTimer) {
+    memTrack.untrackTimer('timeTimer');
+    clearInterval(timeTimer);
+  }
 });
 
 // 正确率颜色
@@ -842,26 +862,44 @@ const knowledgeStats = computed(() => {
 
 /* 顶部统计卡片行 */
 .stats-row {
+  display: -ms-grid;
   display: grid;
-  grid-template-columns: 1.2fr 1fr 1fr 1fr 1fr;
-  gap: 16px;
-  margin-bottom: 24px;
+  -ms-grid-columns: repeat(auto-fit, minmax(140px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  -ms-grid-column-gap: 12px;
+  -ms-grid-row-gap: 12px;
+  gap: 12px;
+  margin-bottom: 20px;
 }
 .stat-card {
   position: relative;
+  display: -webkit-flex;
+  display: -ms-flex;
   display: flex;
+  -webkit-align-items: center;
+  -ms-align-items: center;
   align-items: center;
   gap: 14px;
   padding: 20px;
+  -webkit-border-radius: 16px;
+  -moz-border-radius: 16px;
   border-radius: 16px;
   background: linear-gradient(135deg, rgba(201, 169, 110, 0.06) 0%, rgba(255,255,255,0.02) 100%);
   border: 1px solid rgba(201, 169, 110, 0.1);
   overflow: hidden;
+  -webkit-transition: all 0.3s ease;
+  -moz-transition: all 0.3s ease;
+  -ms-transition: all 0.3s ease;
   transition: all 0.3s ease;
 }
 .stat-card:hover {
   border-color: rgba(201, 169, 110, 0.25);
+  -webkit-transform: translateY(-2px);
+  -moz-transform: translateY(-2px);
+  -ms-transform: translateY(-2px);
   transform: translateY(-2px);
+  -webkit-box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+  -moz-box-shadow: 0 8px 24px rgba(0,0,0,0.3);
   box-shadow: 0 8px 24px rgba(0,0,0,0.3);
 }
 .stat-card.primary {
@@ -923,32 +961,104 @@ const knowledgeStats = computed(() => {
 
 /* 图表网格 */
 .charts-grid {
+  display: -ms-grid;
   display: grid;
-  grid-template-columns: 280px 1fr 280px;
-  gap: 20px;
-  margin-bottom: 20px;
+  -ms-grid-columns: 1fr;
+  grid-template-columns: 1fr;
+  grid-template-areas:
+    "donut"
+    "bars"
+    "radar";
+  -ms-grid-column-gap: 16px;
+  -ms-grid-row-gap: 16px;
+  gap: 16px;
+  margin-bottom: 16px;
 }
+
+@media (min-width: 641px) {
+  .charts-grid {
+    -ms-grid-columns: 1fr 1fr;
+    grid-template-columns: 1fr 1fr;
+    grid-template-areas:
+      "donut bars"
+      "radar bars";
+  }
+}
+
+@media (min-width: 1025px) {
+  .charts-grid {
+    -ms-grid-columns: 280px 1fr 280px;
+    grid-template-columns: 280px 1fr 280px;
+    grid-template-areas:
+      "donut bars radar";
+    -ms-grid-column-gap: 20px;
+    -ms-grid-row-gap: 20px;
+    gap: 20px;
+    margin-bottom: 20px;
+  }
+}
+
 .charts-grid.bottom {
-  grid-template-columns: 300px 1fr 300px;
+  grid-template-areas:
+    "time"
+    "trend"
+    "knowledge";
+}
+
+@media (min-width: 641px) {
+  .charts-grid.bottom {
+    -ms-grid-columns: 1fr 1fr;
+    grid-template-columns: 1fr 1fr;
+    grid-template-areas:
+      "time trend"
+      "knowledge trend";
+  }
+}
+
+@media (min-width: 1025px) {
+  .charts-grid.bottom {
+    -ms-grid-columns: 300px 1fr 300px;
+    grid-template-areas:
+      "time trend knowledge";
+  }
 }
 
 .chart-panel {
   background: linear-gradient(135deg, rgba(201, 169, 110, 0.04) 0%, rgba(255,255,255,0.015) 100%);
   border: 1px solid rgba(201, 169, 110, 0.08);
+  -webkit-border-radius: 16px;
+  -moz-border-radius: 16px;
   border-radius: 16px;
-  padding: 20px;
+  padding: 16px;
+  -webkit-transition: all 0.3s ease;
+  -moz-transition: all 0.3s ease;
+  -ms-transition: all 0.3s ease;
   transition: all 0.3s ease;
 }
+.chart-panel.donut-panel { grid-area: donut; }
+.chart-panel.bars-panel { grid-area: bars; }
+.chart-panel.radar-panel { grid-area: radar; }
+.chart-panel.time-panel { grid-area: time; }
+.chart-panel.trend-panel { grid-area: trend; }
+.chart-panel.knowledge-panel { grid-area: knowledge; }
 .chart-panel:hover {
   border-color: rgba(201, 169, 110, 0.18);
+  -webkit-box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+  -moz-box-shadow: 0 8px 32px rgba(0,0,0,0.25);
   box-shadow: 0 8px 32px rgba(0,0,0,0.25);
 }
 .chart-panel.wide {
   grid-column: span 1;
 }
 .chart-header {
+  display: -webkit-flex;
+  display: -ms-flex;
   display: flex;
+  -webkit-align-items: center;
+  -ms-align-items: center;
   align-items: center;
+  -webkit-justify-content: space-between;
+  -ms-justify-content: space-between;
   justify-content: space-between;
   margin-bottom: 16px;
 }
@@ -1138,13 +1248,13 @@ const knowledgeStats = computed(() => {
   background: linear-gradient(135deg, rgba(201, 169, 110, 0.04) 0%, rgba(255,255,255,0.015) 100%);
   border: 1px solid rgba(201, 169, 110, 0.08);
   border-radius: 16px;
-  padding: 20px;
-  margin-top: 20px;
+  padding: 16px;
+  margin-top: 16px;
 }
 .review-list {
   display: flex;
   flex-direction: column;
-  gap: 0;
+  gap: 8px;
 }
 .review-header {
   display: grid;
@@ -1163,6 +1273,8 @@ const knowledgeStats = computed(() => {
 .review-card {
   border-bottom: 1px solid rgba(255,255,255,0.04);
   transition: all 0.2s ease;
+  border-radius: 10px;
+  overflow: hidden;
 }
 .review-card.correct {
   border-left: 2px solid #7CB342;
@@ -1172,7 +1284,6 @@ const knowledgeStats = computed(() => {
 }
 .review-card:last-child {
   border-bottom: none;
-  border-radius: 0 0 10px 10px;
 }
 .review-main {
   display: grid;
@@ -1184,6 +1295,7 @@ const knowledgeStats = computed(() => {
   color: rgba(255,255,255,0.75);
   font-size: 0.8125rem;
   transition: background 0.2s ease;
+  touch-action: manipulation;
 }
 .review-main:hover {
   background: rgba(201, 169, 110, 0.05);
@@ -1229,6 +1341,9 @@ const knowledgeStats = computed(() => {
 .rm-status {
   display: flex;
   justify-content: center;
+}
+.mobile-summary {
+  display: none;
 }
 .status-badge {
   display: inline-block;
@@ -1576,6 +1691,34 @@ const knowledgeStats = computed(() => {
   }
   .rm-answer, .rm-status, .rm-time {
     display: none;
+  }
+  .mobile-summary {
+    display: flex;
+    gap: 12px;
+    padding-top: 8px;
+    margin-top: 8px;
+    border-top: 1px solid rgba(255,255,255,0.04);
+    font-size: 0.75rem;
+  }
+  .mobile-answers {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .mobile-label {
+    font-size: 0.625rem;
+    color: rgba(255,255,255,0.4);
+  }
+  .mobile-value {
+    font-size: 0.75rem;
+    color: rgba(255,255,255,0.8);
+    font-weight: 500;
+  }
+  .mobile-value.correct {
+    color: #7CB342;
+  }
+  .mobile-value.wrong {
+    color: #C75C3A;
   }
   .rm-question {
     gap: 4px;

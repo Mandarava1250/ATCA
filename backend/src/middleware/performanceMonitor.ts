@@ -4,6 +4,7 @@
 // ============================================
 
 import express from 'express';
+import { logTimerStart } from '../utils/memoryLifecycle';
 
 interface PerformanceStats {
   memoryUsage: {
@@ -182,4 +183,5 @@ export function startPeriodicCheck(): void {
     
     detectMemoryLeak();
   }, 60000); // 每分钟检查一次
+  logTimerStart('PerformanceMonitor', 'periodic-check', 60000);
 }

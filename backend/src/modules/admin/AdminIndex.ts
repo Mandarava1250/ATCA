@@ -11,6 +11,13 @@ import { buildSparkAuthUrl, callSparkWebSocket, getSparkEndpoint } from '../../u
 const router = Router();
 router.use(authMiddleware as any, adminMiddleware as any);
 
+// 批量操作配置
+const BATCH_CONFIG = {
+  MAX_BATCH_SIZE: 100,      // 最大批量操作数量
+  BATCH_TIMEOUT_MS: 60000,   // 批量操作超时时间（毫秒）
+  BATCH_DELAY_MS: 10,        // 每个操作之间的延迟（毫秒）
+};
+
 // 用户数据缓存（用于提升查询性能）
 const userCache = {
   data: [] as any[],
@@ -1115,63 +1122,205 @@ router.post('/daily-challenges/batch', validateBody(dailyChallengeSchema), async
 router.post('/daily-challenges/batch-delete', asyncHandler(async (req, res) => {
   const { ids } = req.body;
   if (!Array.isArray(ids) || ids.length === 0) { res.status(400).json({ success: false, error: { message: '缺少id列表' } }); return; }
-  for (const id of ids) { await execute('competition', 'DELETE FROM [daily_challenge] WHERE [challenge_id] = @id', { id }); }
-  res.json({ success: true, data: { deleted: ids.length } });
+  
+  // 限制批量操作数量
+  const safeIds = ids.slice(0, BATCH_CONFIG.MAX_BATCH_SIZE);
+  const wasTruncated = ids.length > BATCH_CONFIG.MAX_BATCH_SIZE;
+  
+  const startTime = Date.now();
+  let deleted = 0;
+  const errors: { id: number; message: string }[] = [];
+  
+  for (const id of safeIds) {
+    if (Date.now() - startTime > BATCH_CONFIG.BATCH_TIMEOUT_MS) {
+      errors.push({ id, message: '操作超时' });
+      continue;
+    }
+    try {
+      await execute('competition', 'DELETE FROM [daily_challenge] WHERE [challenge_id] = @id', { id });
+      await new Promise(resolve => setTimeout(resolve, BATCH_CONFIG.BATCH_DELAY_MS));
+      deleted++;
+    } catch (e: any) {
+      errors.push({ id, message: e.message || '删除失败' });
+    }
+  }
+  
+  res.json({ 
+    success: true, 
+    data: { 
+      deleted, 
+      totalRequested: ids.length,
+      truncated: wasTruncated,
+      duration: Date.now() - startTime
+    },
+    errors: errors.length > 0 ? errors : undefined
+  });
 }));
+
 // ============ 批量操作 ============
 
 /** 批量删除古建筑 */
 router.post('/architectures/batch-delete', adminMiddleware, asyncHandler(async (req, res) => {
   const ids = req.body.ids;
   if (!Array.isArray(ids) || ids.length === 0) { res.status(400).json({ success: false, error: { message: '缺少id列表' } }); return; }
-  for (const id of ids) { await execute('architecture', 'DELETE FROM [ancient_architecture] WHERE [architecture_id] = @id', { id }); }
-  res.json({ success: true, data: { deleted: ids.length } });
+  
+  // 限制批量操作数量
+  const safeIds = ids.slice(0, BATCH_CONFIG.MAX_BATCH_SIZE);
+  const wasTruncated = ids.length > BATCH_CONFIG.MAX_BATCH_SIZE;
+  
+  const startTime = Date.now();
+  let deleted = 0;
+  const errors: { id: number; message: string }[] = [];
+  
+  for (const id of safeIds) {
+    if (Date.now() - startTime > BATCH_CONFIG.BATCH_TIMEOUT_MS) {
+      errors.push({ id, message: '操作超时' });
+      continue;
+    }
+    try {
+      await execute('architecture', 'DELETE FROM [ancient_architecture] WHERE [architecture_id] = @id', { id });
+      await new Promise(resolve => setTimeout(resolve, BATCH_CONFIG.BATCH_DELAY_MS));
+      deleted++;
+    } catch (e: any) {
+      errors.push({ id, message: e.message || '删除失败' });
+    }
+  }
+  
+  res.json({ 
+    success: true, 
+    data: { 
+      deleted, 
+      totalRequested: ids.length,
+      truncated: wasTruncated,
+      duration: Date.now() - startTime
+    },
+    errors: errors.length > 0 ? errors : undefined
+  });
 }));
 
 /** 批量删除题目 */
 router.post('/questions/batch-delete', adminMiddleware, asyncHandler(async (req, res) => {
   const ids = req.body.ids;
   if (!Array.isArray(ids) || ids.length === 0) { res.status(400).json({ success: false, error: { message: '缺少id列表' } }); return; }
-  for (const id of ids) { await execute('competition', 'DELETE FROM [question] WHERE [question_id] = @id', { id }); }
-  res.json({ success: true, data: { deleted: ids.length } });
+  
+  // 限制批量操作数量
+  const safeIds = ids.slice(0, BATCH_CONFIG.MAX_BATCH_SIZE);
+  const wasTruncated = ids.length > BATCH_CONFIG.MAX_BATCH_SIZE;
+  
+  const startTime = Date.now();
+  let deleted = 0;
+  const errors: { id: number; message: string }[] = [];
+  
+  for (const id of safeIds) {
+    if (Date.now() - startTime > BATCH_CONFIG.BATCH_TIMEOUT_MS) {
+      errors.push({ id, message: '操作超时' });
+      continue;
+    }
+    try {
+      await execute('competition', 'DELETE FROM [question] WHERE [question_id] = @id', { id });
+      await new Promise(resolve => setTimeout(resolve, BATCH_CONFIG.BATCH_DELAY_MS));
+      deleted++;
+    } catch (e: any) {
+      errors.push({ id, message: e.message || '删除失败' });
+    }
+  }
+  
+  res.json({ 
+    success: true, 
+    data: { 
+      deleted, 
+      totalRequested: ids.length,
+      truncated: wasTruncated,
+      duration: Date.now() - startTime
+    },
+    errors: errors.length > 0 ? errors : undefined
+  });
 }));
 
 /** 批量删除3D模型 */
 router.post('/models/batch-delete', adminMiddleware, asyncHandler(async (req, res) => {
   const ids = req.body.ids;
   if (!Array.isArray(ids) || ids.length === 0) { res.status(400).json({ success: false, error: { message: '缺少id列表' } }); return; }
-  for (const id of ids) { await execute('media3d', 'DELETE FROM [user_models] WHERE [model_id] = @id', { id }); }
-  res.json({ success: true, data: { deleted: ids.length } });
+  
+  // 限制批量操作数量
+  const safeIds = ids.slice(0, BATCH_CONFIG.MAX_BATCH_SIZE);
+  const wasTruncated = ids.length > BATCH_CONFIG.MAX_BATCH_SIZE;
+  
+  const startTime = Date.now();
+  let deleted = 0;
+  const errors: { id: number; message: string }[] = [];
+  
+  for (const id of safeIds) {
+    if (Date.now() - startTime > BATCH_CONFIG.BATCH_TIMEOUT_MS) {
+      errors.push({ id, message: '操作超时' });
+      continue;
+    }
+    try {
+      await execute('media3d', 'DELETE FROM [user_models] WHERE [model_id] = @id', { id });
+      await new Promise(resolve => setTimeout(resolve, BATCH_CONFIG.BATCH_DELAY_MS));
+      deleted++;
+    } catch (e: any) {
+      errors.push({ id, message: e.message || '删除失败' });
+    }
+  }
+  
+  res.json({ 
+    success: true, 
+    data: { 
+      deleted, 
+      totalRequested: ids.length,
+      truncated: wasTruncated,
+      duration: Date.now() - startTime
+    },
+    errors: errors.length > 0 ? errors : undefined
+  });
 }));
 
 router.post('/users/batch-delete', asyncHandler(async (req, res) => {
   const { ids } = req.body;
   if (!Array.isArray(ids) || ids.length === 0) { res.status(400).json({ success: false, error: { message: '缺少id列表' } }); return; }
   
+  // 限制批量操作数量
+  const safeIds = ids.slice(0, BATCH_CONFIG.MAX_BATCH_SIZE);
+  const wasTruncated = ids.length > BATCH_CONFIG.MAX_BATCH_SIZE;
+  
   if (isMockMode()) {
     // 在mock模式下模拟批量删除
-    const deleted = ids.length;
-    res.json({ success: true, data: { deleted, skipped: 0 } });
+    const deleted = safeIds.length;
+    res.json({ success: true, data: { deleted, skipped: 0, totalRequested: ids.length, truncated: wasTruncated } });
     return;
   }
   
+  const startTime = Date.now();
   let deleted = 0;
   let skipped = 0;
   const errors: { id: number; message: string }[] = [];
+  const results: { id: number; status: 'success' | 'skipped' | 'error'; message?: string }[] = [];
   
-  for (const id of ids) {
+  for (const id of safeIds) {
+    // 检查超时
+    if (Date.now() - startTime > BATCH_CONFIG.BATCH_TIMEOUT_MS) {
+      errors.push({ id, message: '操作超时' });
+      results.push({ id, status: 'error', message: '操作超时' });
+      skipped++;
+      continue;
+    }
+    
     try {
       // 保护管理员账户
       const [user] = await query('user', 'SELECT [role] FROM [atca_user] WHERE [user_id] = @id', { id });
       if (user && (user as any).role === 'admin') {
         skipped++;
-        errors.push({ id, message: '管理员账户不能删除' });
+        results.push({ id, status: 'skipped', message: '管理员账户不能删除' });
         continue;
       }
       await execute('user', 'DELETE FROM [atca_user] WHERE [user_id] = @id', { id });
+      await new Promise(resolve => setTimeout(resolve, BATCH_CONFIG.BATCH_DELAY_MS));
       deleted++;
+      results.push({ id, status: 'success' });
     } catch (e: any) {
       errors.push({ id, message: e.message || '删除失败' });
+      results.push({ id, status: 'error', message: e.message || '删除失败' });
     }
   }
   
@@ -1180,7 +1329,14 @@ router.post('/users/batch-delete', asyncHandler(async (req, res) => {
   
   res.json({ 
     success: true, 
-    data: { deleted, skipped, totalRequested: ids.length },
+    data: { 
+      deleted, 
+      skipped, 
+      totalRequested: ids.length,
+      truncated: wasTruncated,
+      duration: Date.now() - startTime,
+      results: results.slice(0, 20) // 只返回前20个详细结果
+    },
     errors: errors.length > 0 ? errors : undefined
   });
 }));
@@ -1197,30 +1353,48 @@ router.post('/users/batch-update-role', validateBody(z.object({
     return; 
   }
   
+  // 限制批量操作数量
+  const safeIds = ids.slice(0, BATCH_CONFIG.MAX_BATCH_SIZE);
+  const wasTruncated = ids.length > BATCH_CONFIG.MAX_BATCH_SIZE;
+  
   if (isMockMode()) {
     // 在mock模式下模拟批量角色更新
-    const updated = ids.length;
-    res.json({ success: true, data: { updated, skipped: 0, role } });
+    const updated = safeIds.length;
+    res.json({ success: true, data: { updated, skipped: 0, role, totalRequested: ids.length, truncated: wasTruncated } });
     return;
   }
   
+  const startTime = Date.now();
   let updated = 0;
   let skipped = 0;
   const errors: { id: number; message: string }[] = [];
+  const results: { id: number; status: 'success' | 'skipped' | 'error'; message?: string }[] = [];
   
-  for (const id of ids) {
+  for (const id of safeIds) {
+    // 检查超时
+    if (Date.now() - startTime > BATCH_CONFIG.BATCH_TIMEOUT_MS) {
+      errors.push({ id, message: '操作超时' });
+      results.push({ id, status: 'error', message: '操作超时' });
+      skipped++;
+      continue;
+    }
+    
     try {
       // 检查用户是否存在
       const [user] = await query('user', 'SELECT [user_id] FROM [atca_user] WHERE [user_id] = @id', { id });
       if (!user) {
         errors.push({ id, message: '用户不存在' });
+        results.push({ id, status: 'skipped', message: '用户不存在' });
         skipped++;
         continue;
       }
       await execute('user', 'UPDATE [atca_user] SET [role] = @role WHERE [user_id] = @id', { id, role });
+      await new Promise(resolve => setTimeout(resolve, BATCH_CONFIG.BATCH_DELAY_MS));
       updated++;
+      results.push({ id, status: 'success' });
     } catch (e: any) {
       errors.push({ id, message: e.message || '更新失败' });
+      results.push({ id, status: 'error', message: e.message || '更新失败' });
       skipped++;
     }
   }
@@ -1230,7 +1404,15 @@ router.post('/users/batch-update-role', validateBody(z.object({
   
   res.json({ 
     success: true, 
-    data: { updated, skipped, role, totalRequested: ids.length },
+    data: { 
+      updated, 
+      skipped, 
+      role, 
+      totalRequested: ids.length,
+      truncated: wasTruncated,
+      duration: Date.now() - startTime,
+      results: results.slice(0, 20)
+    },
     errors: errors.length > 0 ? errors : undefined
   });
 }));
@@ -1247,30 +1429,48 @@ router.post('/users/batch-update-status', validateBody(z.object({
     return; 
   }
   
+  // 限制批量操作数量
+  const safeIds = ids.slice(0, BATCH_CONFIG.MAX_BATCH_SIZE);
+  const wasTruncated = ids.length > BATCH_CONFIG.MAX_BATCH_SIZE;
+  
   if (isMockMode()) {
     // 在mock模式下模拟批量状态更新
-    const updated = ids.length;
-    res.json({ success: true, data: { updated, skipped: 0, is_active } });
+    const updated = safeIds.length;
+    res.json({ success: true, data: { updated, skipped: 0, is_active, totalRequested: ids.length, truncated: wasTruncated } });
     return;
   }
   
+  const startTime = Date.now();
   let updated = 0;
   let skipped = 0;
   const errors: { id: number; message: string }[] = [];
+  const results: { id: number; status: 'success' | 'skipped' | 'error'; message?: string }[] = [];
   
-  for (const id of ids) {
+  for (const id of safeIds) {
+    // 检查超时
+    if (Date.now() - startTime > BATCH_CONFIG.BATCH_TIMEOUT_MS) {
+      errors.push({ id, message: '操作超时' });
+      results.push({ id, status: 'error', message: '操作超时' });
+      skipped++;
+      continue;
+    }
+    
     try {
       // 检查用户是否存在
       const [user] = await query('user', 'SELECT [user_id] FROM [atca_user] WHERE [user_id] = @id', { id });
       if (!user) {
         errors.push({ id, message: '用户不存在' });
+        results.push({ id, status: 'skipped', message: '用户不存在' });
         skipped++;
         continue;
       }
       await execute('user', 'UPDATE [atca_user] SET [is_active] = @is_active WHERE [user_id] = @id', { id, is_active: is_active ? 1 : 0 });
+      await new Promise(resolve => setTimeout(resolve, BATCH_CONFIG.BATCH_DELAY_MS));
       updated++;
+      results.push({ id, status: 'success' });
     } catch (e: any) {
       errors.push({ id, message: e.message || '更新失败' });
+      results.push({ id, status: 'error', message: e.message || '更新失败' });
       skipped++;
     }
   }
@@ -1280,7 +1480,15 @@ router.post('/users/batch-update-status', validateBody(z.object({
   
   res.json({ 
     success: true, 
-    data: { updated, skipped, is_active, totalRequested: ids.length },
+    data: { 
+      updated, 
+      skipped, 
+      is_active, 
+      totalRequested: ids.length,
+      truncated: wasTruncated,
+      duration: Date.now() - startTime,
+      results: results.slice(0, 20)
+    },
     errors: errors.length > 0 ? errors : undefined
   });
 }));

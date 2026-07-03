@@ -143,7 +143,9 @@ import PageBackground from '@/components/common/PageBackground.vue';
 import TextClamp from '@/components/common/TextClamp.vue';
 import { socialApi } from '@/services/api';
 import { useUserStore } from '@/stores';
+import { useMemoryTrack } from '@/composables/useMemoryTrack';
 
+const memTrack = useMemoryTrack('TopicDetail');
 const route = useRoute();
 const router = useRouter();
 const userStore = useUserStore();

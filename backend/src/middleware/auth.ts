@@ -6,6 +6,7 @@ import jwt from 'jsonwebtoken';
 import type { SignOptions, Secret } from 'jsonwebtoken';
 import { Request, Response, NextFunction } from 'express';
 import { config } from '../config/app';
+import { logListenerAdd } from '../utils/memoryLifecycle';
 
 export interface AuthRequest extends Request {
   user?: {
@@ -69,6 +70,7 @@ class RedisBlacklistStore implements TokenBlacklistStore {
       this.client.on('error', () => {
         // 静默处理，不输出日志
       });
+      logListenerAdd('Auth', 'error', 'redisClient');
       
       await this.client.connect();
       await this.client.ping();

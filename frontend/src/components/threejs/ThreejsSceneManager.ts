@@ -12,6 +12,7 @@ import { MortiseTenonSnapEngine, type SnapPoint, type SnapResult, type RotationC
 import { SelectionManager } from './ThreejsSelectionManager';
 import { MeasureTool } from './ThreejsMeasureTool';
 import { generateUUID } from '../../utils/uuid';
+import { logResourceAlloc, logResourceRelease, logListenerAdd, logListenerRemove } from '../../utils/memoryLifecycle';
 
 export interface SceneComponent {
   uuid: string;
@@ -197,6 +198,7 @@ export class SceneManager {
   private axisConstraint: 'X' | 'Y' | 'Z' | 'XY' | 'YZ' | 'XZ' | 'XYZ' = 'XYZ';
 
   constructor(container: HTMLElement) {
+    logResourceAlloc('ThreejsSceneManager', 'SceneManager');
     this.container = container;
     this.scene = new THREE.Scene();
     this.camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
@@ -309,11 +311,17 @@ export class SceneManager {
 
     // 事件
     window.addEventListener('resize', this.onResize);
+    logListenerAdd('ThreejsSceneManager', 'resize', 'window');
     window.addEventListener('keydown', this.onKeyDown);
+    logListenerAdd('ThreejsSceneManager', 'keydown', 'window');
     window.addEventListener('keyup', this.onKeyUp);
+    logListenerAdd('ThreejsSceneManager', 'keyup', 'window');
     this.renderer.domElement.addEventListener('pointerdown', this.onPointerDown);
+    logListenerAdd('ThreejsSceneManager', 'pointerdown', 'canvas');
     this.renderer.domElement.addEventListener('pointermove', this.onPointerMove);
+    logListenerAdd('ThreejsSceneManager', 'pointermove', 'canvas');
     this.renderer.domElement.addEventListener('pointerup', this.onPointerUp);
+    logListenerAdd('ThreejsSceneManager', 'pointerup', 'canvas');
 
     this.animate();
   }
@@ -1611,13 +1619,20 @@ export class SceneManager {
   }
 
   destroy(): void {
+    logResourceRelease('ThreejsSceneManager', 'SceneManager');
     cancelAnimationFrame(this.animationId);
     window.removeEventListener('resize', this.onResize);
+    logListenerRemove('ThreejsSceneManager', 'resize', 'window');
     window.removeEventListener('keydown', this.onKeyDown);
+    logListenerRemove('ThreejsSceneManager', 'keydown', 'window');
     window.removeEventListener('keyup', this.onKeyUp);
+    logListenerRemove('ThreejsSceneManager', 'keyup', 'window');
     this.renderer.domElement.removeEventListener('pointerdown', this.onPointerDown);
+    logListenerRemove('ThreejsSceneManager', 'pointerdown', 'canvas');
     this.renderer.domElement.removeEventListener('pointermove', this.onPointerMove);
+    logListenerRemove('ThreejsSceneManager', 'pointermove', 'canvas');
     this.renderer.domElement.removeEventListener('pointerup', this.onPointerUp);
+    logListenerRemove('ThreejsSceneManager', 'pointerup', 'canvas');
     if (this.longPressTimer) {
       clearTimeout(this.longPressTimer);
       this.longPressTimer = null;

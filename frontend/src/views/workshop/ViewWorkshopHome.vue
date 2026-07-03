@@ -183,7 +183,9 @@ import { useI18n } from 'vue-i18n';
 import Navbar from '@/components/common/CommonNavbar.vue';
 import Footer from '@/components/common/CommonFooter.vue';
 import { model3dApi, i18nApi } from '@/services/api';
+import { useMemoryTrack } from '@/composables/useMemoryTrack';
 
+const memTrack = useMemoryTrack('ViewWorkshopHome');
 const { t } = useI18n();
 
 const officialModels = ref<any[]>([]);

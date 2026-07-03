@@ -414,7 +414,9 @@ import { ref, computed, onMounted, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useUserStore } from '@/stores';
 import { i18nApi } from '@/services/api';
+import { useMemoryTrack } from '@/composables/useMemoryTrack';
 
+const memTrack = useMemoryTrack('AdminTranslation');
 const { t } = useI18n();
 const userStore = useUserStore();
 

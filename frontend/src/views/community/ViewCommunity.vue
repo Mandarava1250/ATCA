@@ -195,7 +195,9 @@ import PageBackground from '@/components/common/PageBackground.vue';
 import { socialApi, model3dApi } from '@/services/api';
 import { useUserStore } from '@/stores';
 import { useI18n } from 'vue-i18n';
+import { useMemoryTrack } from '@/composables/useMemoryTrack';
 
+const memTrack = useMemoryTrack('ViewCommunity');
 const router = useRouter();
 const userStore = useUserStore();
 const { t } = useI18n();

@@ -207,6 +207,9 @@ import { useI18n } from 'vue-i18n';
 import type { Locale } from 'vue-i18n';
 import MobileNavMenu from './MobileNavMenu.vue';
 import type { NavItem } from './MobileNavMenu.vue';
+import { useMemoryTrack } from '@/composables/useMemoryTrack';
+
+const memTrack = useMemoryTrack('CommonNavbar');
 
 const userStore = useUserStore();
 const router = useRouter();
@@ -371,11 +374,15 @@ async function logout() {
 
 onMounted(() => {
   window.addEventListener('scroll', onScroll, { passive: true });
+  memTrack.trackListener('scroll', 'window');
   window.addEventListener('resize', onResize, { passive: true });
+  memTrack.trackListener('resize', 'window');
 });
 
 onUnmounted(() => {
+  memTrack.untrackListener('scroll', 'window');
   window.removeEventListener('scroll', onScroll);
+  memTrack.untrackListener('resize', 'window');
   window.removeEventListener('resize', onResize);
 });
 

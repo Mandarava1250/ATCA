@@ -10,6 +10,9 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue';
+import { useMemoryTrack } from '@/composables/useMemoryTrack';
+
+const memTrack = useMemoryTrack('RetryAvatar');
 
 const props = defineProps<{
   src: string;
@@ -62,7 +65,7 @@ function onError() {
   
   if (retryCount.value <= maxRetries) {
     // 延迟重试，递增间隔
-    setTimeout(() => {
+    const retryHandle = setTimeout(() => {
       const img = new Image();
       img.onload = () => {
         hasFailed.value = false;
@@ -74,6 +77,7 @@ function onError() {
       };
       img.src = props.src;
     }, retryCount.value * 500);
+    memTrack.trackTimer('retry-avatar', retryHandle as unknown as number, retryCount.value * 500);
   } else {
     hasFailed.value = true;
   }

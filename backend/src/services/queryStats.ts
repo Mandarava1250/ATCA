@@ -38,11 +38,13 @@ const SLOW_QUERY_THRESHOLD = 500;
 
 // 保留的最大记录数
 const MAX_RECORDS = 10000;
+const MAX_SQL_KEYS = 2000;
 
 class QueryStats {
   private records: QueryRecord[] = [];
   private queryCountBySql = new Map<string, number>();
   private totalDurationBySql = new Map<string, number>();
+  private lastAccessBySql = new Map<string, number>();
   private startTime = Date.now();
 
   // 记录查询
@@ -73,10 +75,16 @@ class QueryStats {
     const sqlKey = this.normalizeSql(sql);
     this.queryCountBySql.set(sqlKey, (this.queryCountBySql.get(sqlKey) || 0) + 1);
     this.totalDurationBySql.set(sqlKey, (this.totalDurationBySql.get(sqlKey) || 0) + duration);
+    this.lastAccessBySql.set(sqlKey, Date.now());
 
     // 清理旧记录
     if (this.records.length > MAX_RECORDS) {
       this.records = this.records.slice(-MAX_RECORDS);
+    }
+
+    // 限制 SQL 统计 Map 大小，防止内存泄漏
+    if (this.queryCountBySql.size > MAX_SQL_KEYS) {
+      this.trimSqlStats();
     }
 
     // 记录慢查询警告
@@ -86,6 +94,18 @@ class QueryStats {
         params: JSON.stringify(params).substring(0, 50),
       });
     }
+  }
+
+  private trimSqlStats(): void {
+    const entries = Array.from(this.lastAccessBySql.entries())
+      .sort((a, b) => a[1] - b[1]);
+    const toDelete = entries.slice(0, Math.ceil(entries.length * 0.3));
+    toDelete.forEach(([key]) => {
+      this.queryCountBySql.delete(key);
+      this.totalDurationBySql.delete(key);
+      this.lastAccessBySql.delete(key);
+    });
+    logger.warn(`QueryStats SQL统计超过 ${MAX_SQL_KEYS} 条，已清理 ${toDelete.length} 条旧记录`);
   }
 
   // 获取统计摘要

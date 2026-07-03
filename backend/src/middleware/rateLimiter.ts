@@ -196,7 +196,7 @@ export const createRateLimiter = (options: {
 
 export const authRateLimiter = createRateLimiter({
   windowMs: 15 * 60 * 1000, // 15分钟
-  max: 10, // 每个窗口内最多10次认证请求
+  max: 30, // 每个窗口内最多30次认证请求（放宽以适应正常使用）
   message: {
     success: false,
     error: {
@@ -213,7 +213,7 @@ export const authRateLimiter = createRateLimiter({
 
 export const generalRateLimiter = createRateLimiter({
   windowMs: 15 * 60 * 1000, // 15分钟
-  max: 200, // 每个窗口内最多200次请求
+  max: 1000, // 每个窗口内最多1000次请求（放宽以适应正常页面加载）
 });
 
 // ============================================

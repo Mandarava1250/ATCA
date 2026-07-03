@@ -287,7 +287,9 @@
 import { ref, computed, onMounted } from 'vue';
 import { adminApi, socialApi, model3dApi } from '@/services/api';
 import { noteManager } from '@/utils/noteManager';
+import { useMemoryTrack } from '@/composables/useMemoryTrack';
 
+const memTrack = useMemoryTrack('AdminCommunity');
 const activeSubTab = ref('topics');
 const allTopics = ref<any[]>([]);
 const allShares = ref<any[]>([]);

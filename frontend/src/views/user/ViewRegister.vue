@@ -124,7 +124,9 @@ import {
   validateEmail 
 } from '@/utils/errorHandler';
 import { preventDoubleClick } from '@/utils/performance';
+import { useMemoryTrack } from '@/composables/useMemoryTrack';
 
+const memTrack = useMemoryTrack('ViewRegister');
 const router = useRouter();
 const userStore = useUserStore();
 const { t } = useI18n();

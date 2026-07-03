@@ -9,6 +9,7 @@ import type { SignOptions, Secret } from 'jsonwebtoken';
 import { Request, Response, NextFunction } from 'express';
 import { config } from '../config/app';
 import { IService, ServiceState } from '../core';
+import { logInit, logDispose, logListenerAdd } from '../utils/memoryLifecycle';
 
 export interface AuthUser {
   userId: number;
@@ -69,6 +70,7 @@ class RedisBlacklistStore implements ITokenBlacklistStore {
       this.client.on('error', () => {
         // 静默处理
       });
+      logListenerAdd('AuthService', 'error', 'redisClient');
 
       await this.client.connect();
       await this.client.ping();
@@ -150,6 +152,7 @@ export class AuthService implements IService {
     
     this.state = ServiceState.READY;
     console.log(`[${this.serviceName}] 服务初始化完成`);
+    logInit('AuthService', `${this.serviceName}初始化完成`);
   }
 
   /**
@@ -159,6 +162,7 @@ export class AuthService implements IService {
     this.blacklistStore = null;
     this.state = ServiceState.DISPOSED;
     console.log(`[${this.serviceName}] 服务已销毁`);
+    logDispose('AuthService', `${this.serviceName}已销毁`);
   }
 
   /**

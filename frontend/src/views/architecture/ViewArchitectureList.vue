@@ -226,7 +226,9 @@ import {
   matchDynasty,
   dynastyNameMap 
 } from '@/utils/searchUtils';
+import { useMemoryTrack } from '@/composables/useMemoryTrack';
 
+const memTrack = useMemoryTrack('ViewArchitectureList');
 const logger = createLogger('ViewArchitectureList');
 const perfLogger = logger.child('Performance');
 

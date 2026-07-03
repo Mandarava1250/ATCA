@@ -158,7 +158,9 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
 import { adminApi } from '@/services/api';
+import { useMemoryTrack } from '@/composables/useMemoryTrack';
 
+const memTrack = useMemoryTrack('AdminDailyChallenge');
 const challenges = ref<any[]>([]);
 const questions = ref<any[]>([]);
 const selectedIds = ref<number[]>([]);

@@ -1,5 +1,8 @@
 <template>
   <div class="admin-page">
+    <div v-if="messageText" class="message-toast" :class="messageType">
+      {{ messageText }}
+    </div>
     <div class="page-toolbar">
       <h3>活动管理</h3>
       <button class="atca-btn atca-btn-primary" @click="openModal()">
@@ -118,12 +121,25 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
-import { adminApi } from '@/services/api';
+import { adminApi, http } from '@/services/api';
+import { useMemoryTrack } from '@/composables/useMemoryTrack';
 
+const memTrack = useMemoryTrack('AdminActivity');
 const list = ref<any[]>([]);
 const showModal = ref(false);
 const editingId = ref<number | null>(null);
 const saving = ref(false);
+const messageText = ref('');
+const messageType = ref<'success' | 'error'>('success');
+
+function showMessage(text: string, type: 'success' | 'error' = 'success') {
+  messageText.value = text;
+  messageType.value = type;
+  setTimeout(() => {
+    messageText.value = '';
+  }, 3000);
+}
+
 const form = ref({
   title: '', description: '', activity_type: '线上',
   start_date: '', end_date: '', reward_points: 10,
@@ -163,15 +179,33 @@ async function load() {
   catch (e) { console.error(e); }
 }
 async function save() {
-  if (!form.value.title || !form.value.start_date || !form.value.end_date) { alert('标题和日期必填'); return; }
+  if (!form.value.title || !form.value.start_date || !form.value.end_date) {
+    showMessage('标题和日期必填', 'error');
+    return;
+  }
   saving.value = true;
   try {
     const payload = { ...form.value };
-    if (editingId.value) { await adminApi.updateActivity(editingId.value, payload); }
-    else { await adminApi.createActivity(payload); }
-    closeModal(); load();
-  } catch (e: any) { alert('保存失败: ' + (e.response?.data?.error?.message || e.message)); }
-  finally { saving.value = false; }
+    let res;
+    if (editingId.value) {
+      res = await adminApi.updateActivity(editingId.value, payload);
+    } else {
+      res = await adminApi.createActivity(payload);
+    }
+    if (res.success) {
+      showMessage(editingId.value ? '活动更新成功' : '活动创建成功');
+      closeModal();
+      http.clearCache('/admin/activities');
+      await load();
+    } else {
+      showMessage('保存失败: ' + (res.error?.message || '未知错误'), 'error');
+    }
+  } catch (e: any) {
+    console.error('[Activity] 保存失败:', e);
+    showMessage('保存失败: ' + (e.message || '网络/服务器错误'), 'error');
+  } finally {
+    saving.value = false;
+  }
 }
 async function del(id: number) {
   if (!confirm('确认删除该活动？')) return;
@@ -197,6 +231,20 @@ onMounted(load);
 .btn-text:hover { background: rgba(var(--color-primary-rgb),0.06); }
 .btn-text.danger { color: var(--color-error); }
 .empty-table { padding: 48px; text-align: center; color: var(--color-text-muted); }
+
+.message-toast {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  padding: 12px 24px;
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  z-index: 1000;
+  animation: slideIn 0.3s ease;
+}
+.message-toast.success { background: rgba(90,123,108,0.9); color: #fff; }
+.message-toast.error { background: rgba(139,58,42,0.9); color: #fff; }
+@keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 
 .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 20px; }
 .modal-card { background: var(--color-surface); border-radius: var(--radius-lg); padding: 24px; width: 100%; max-width: 600px; max-height: 85vh; overflow-y: auto; box-shadow: var(--shadow-lg); }

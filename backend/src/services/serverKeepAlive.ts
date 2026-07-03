@@ -6,6 +6,7 @@
 
 import { createLogger } from '../utils/logger';
 import { getClientStateStats } from '../middleware/browseState';
+import { logInit, logDispose, logTimerStart, logTimerStop } from '../utils/memoryLifecycle';
 
 const logger = createLogger('ServerKeepAlive');
 
@@ -193,13 +194,16 @@ export function startKeepAliveService(customConfig?: Partial<KeepAliveConfig>): 
 
   // 启动保活定时器
   keepAliveTimer = setInterval(performKeepAlive, config.interval);
+  logTimerStart('ServerKeepAlive', 'keepAlive', config.interval);
 
   // 启动健康检查定时器
   healthCheckTimer = setInterval(performHealthCheck, config.healthCheckInterval);
+  logTimerStart('ServerKeepAlive', 'healthCheck', config.healthCheckInterval);
 
   // 立即执行一次保活操作
   performKeepAlive();
 
+  logInit('ServerKeepAlive', '服务器保活服务启动成功');
   logger.info('服务器保活服务启动成功');
 }
 
@@ -217,16 +221,19 @@ export function stopKeepAliveService(): void {
   // 清除定时器
   if (keepAliveTimer) {
     clearInterval(keepAliveTimer);
+    logTimerStop('ServerKeepAlive', 'keepAlive');
     keepAliveTimer = null;
   }
 
   if (healthCheckTimer) {
     clearInterval(healthCheckTimer);
+    logTimerStop('ServerKeepAlive', 'healthCheck');
     healthCheckTimer = null;
   }
 
   status = 'idle';
 
+  logDispose('ServerKeepAlive', '服务器保活服务停止成功');
   logger.info('服务器保活服务停止成功');
 }
 

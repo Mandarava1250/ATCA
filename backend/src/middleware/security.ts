@@ -4,6 +4,7 @@
 
 import { Request, Response, NextFunction } from 'express';
 import { logger, ErrorType } from '../utils/logger';
+import { logListenerAdd } from '../utils/memoryLifecycle';
 
 // ============================================
 // SQL注入检测中间件
@@ -332,6 +333,7 @@ export function securityLogger(req: Request, res: Response, next: NextFunction):
     }
     // 2xx/3xx 状态码不记录日志
   });
-  
+  logListenerAdd('Security', 'finish', 'res');
+
   next();
 }

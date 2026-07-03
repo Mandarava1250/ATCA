@@ -25,6 +25,9 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { socialApi } from '@/services/api';
+import { useMemoryTrack } from '@/composables/useMemoryTrack';
+
+const memTrack = useMemoryTrack('ShareButton');
 
 const props = defineProps<{
   targetType: string;
@@ -56,7 +59,8 @@ async function share(platform: string) {
 function copyLink() {
   navigator.clipboard.writeText(window.location.href).then(() => {
     copied.value = true;
-    setTimeout(() => copied.value = false, 2000);
+    const handle = setTimeout(() => copied.value = false, 2000);
+    memTrack.trackTimer('share-copy-feedback', handle as unknown as number, 2000);
   }).catch(() => {
     const el = document.createElement('textarea');
     el.value = window.location.href;
@@ -65,7 +69,8 @@ function copyLink() {
     document.execCommand('copy');
     document.body.removeChild(el);
     copied.value = true;
-    setTimeout(() => copied.value = false, 2000);
+    const handle = setTimeout(() => copied.value = false, 2000);
+    memTrack.trackTimer('share-copy-feedback', handle as unknown as number, 2000);
   });
   showMenu.value = false;
 }

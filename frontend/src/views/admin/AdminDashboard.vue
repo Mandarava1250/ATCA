@@ -189,7 +189,9 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
 import { adminApi } from '@/services/api';
+import { useMemoryTrack } from '@/composables/useMemoryTrack';
 
+const memTrack = useMemoryTrack('AdminDashboard');
 // ===== 生成过去7天的标签 =====
 const chartLabels = ref<string[]>([]);
 for (let i = 6; i >= 0; i--) {

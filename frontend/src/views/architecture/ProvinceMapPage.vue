@@ -115,7 +115,9 @@
 import { ref, onMounted, onBeforeUnmount, nextTick, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { architectureApi } from '@/services/api';
+import { useMemoryTrack } from '@/composables/useMemoryTrack';
 
+const memTrack = useMemoryTrack('ProvinceMapPage');
 const router = useRouter();
 
 // ============================================
@@ -501,8 +503,12 @@ function showToast(msg: string, type: 'warning' | 'info' = 'info') {
     opacity: 1
   };
   toastVisible.value = true;
-  if (toastTimer) clearTimeout(toastTimer);
+  if (toastTimer) {
+    memTrack.untrackTimer('toast');
+    clearTimeout(toastTimer);
+  }
   toastTimer = setTimeout(() => { toastVisible.value = false; }, 2500);
+  memTrack.trackTimer('toast', toastTimer as unknown as number, 0);
 }
 
 // ============================================
@@ -537,17 +543,24 @@ function toggleDynamicMode() {
 }
 
 function startAutoCycle() {
-  if (autoCycleTimer) clearInterval(autoCycleTimer);
+  if (autoCycleTimer) {
+    memTrack.untrackTimer('autoCycle');
+    clearInterval(autoCycleTimer);
+  }
   isDynamicMode.value = true;
   const cycleList = ['全部', ...CATEGORY_RULES.value.map(r => r.name)];
   autoCycleTimer = setInterval(() => {
     cycleIndex = (cycleIndex + 1) % cycleList.length;
     executeFilter(cycleList[cycleIndex]);
   }, 3000);
+  memTrack.trackTimer('autoCycle', autoCycleTimer as unknown as number, 3000);
 }
 
 function stopAutoCycle() {
-  if (autoCycleTimer) clearInterval(autoCycleTimer);
+  if (autoCycleTimer) {
+    memTrack.untrackTimer('autoCycle');
+    clearInterval(autoCycleTimer);
+  }
   isDynamicMode.value = false;
 }
 
@@ -1167,30 +1180,40 @@ function toggleProvincePanel() {
 onMounted(async () => {
   // 检测设备类型
   detectDevice();
-  
+
   // 添加窗口大小变化监听
   window.addEventListener('resize', handleResize);
-  
+  memTrack.trackListener('resize', 'window');
+
   // 移动端触摸事件优化
   if ('ontouchstart' in window) {
     document.addEventListener('touchstart', preventDoubleZoom, { passive: false });
+    memTrack.trackListener('touchstart', 'document');
   }
-  
+
   // 先加载建筑数据，再加载地图，确保数据就绪
   await loadBuildings();
   initMap();
 });
 
 onBeforeUnmount(() => {
-  if (autoCycleTimer) clearInterval(autoCycleTimer);
-  if (toastTimer) clearTimeout(toastTimer);
+  if (autoCycleTimer) {
+    memTrack.untrackTimer('autoCycle');
+    clearInterval(autoCycleTimer);
+  }
+  if (toastTimer) {
+    memTrack.untrackTimer('toast');
+    clearTimeout(toastTimer);
+  }
+  memTrack.untrackListener('resize', 'window');
   window.removeEventListener('resize', handleResize);
-  
+
   // 移除触摸事件监听
   if ('ontouchstart' in window) {
+    memTrack.untrackListener('touchstart', 'document');
     document.removeEventListener('touchstart', preventDoubleZoom);
   }
-  
+
   chart && chart.dispose();
   statsChart && statsChart.dispose();
 });

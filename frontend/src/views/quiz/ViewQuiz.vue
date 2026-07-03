@@ -125,7 +125,11 @@ import { useUserStore } from '@/stores';
 import Navbar from '@/components/common/CommonNavbar.vue';
 import Footer from '@/components/common/CommonFooter.vue';
 import PageBackground from '@/components/common/PageBackground.vue';
-import { quizApi, indexApi } from '@/services/api';
+import { quizApi, indexApi, activityApi } from '@/services/api';
+import { createLogger } from '@/utils/logger';
+import { logMount, logUnmount, logTimerStart, logTimerStop, logListenerAdd, logListenerRemove } from '@/utils/memoryLifecycle';
+
+const logger = createLogger('ViewQuiz');
 
 const router = useRouter();
 const userStore = useUserStore();
@@ -149,16 +153,51 @@ function loadWrongCount() {
 const checkin = ref({ todayChecked: false, streak: 0, lastCheckin: '' });
 const countdownText = ref('');
 let countdownTimer: ReturnType<typeof setInterval> | null = null;
+const checkinLoading = ref(false);
 
-function loadCheckin() {
-  const saved = localStorage.getItem('atca_checkin');
-  if (saved) {
-    try { checkin.value = JSON.parse(saved); } catch { /* ignore */ }
-  }
-  const today = new Date().toDateString();
-  checkin.value.todayChecked = checkin.value.lastCheckin === today;
-  if (!checkin.value.todayChecked) {
-    startCountdown();
+async function loadCheckin() {
+  checkinLoading.value = true;
+  const today = new Date().toISOString().split('T')[0];
+
+  try {
+    const [statusRes, statsRes] = await Promise.all([
+      activityApi.checkTodayCheckin(),
+      activityApi.getCheckinStats(),
+    ]);
+
+    if (statusRes.success && statusRes.data) {
+      checkin.value.todayChecked = statusRes.data.checked_today;
+    }
+    if (statsRes.success && statsRes.data) {
+      checkin.value.streak = statsRes.data.max_streak || 0;
+      checkin.value.lastCheckin = statsRes.data.last_checkin_date || '';
+    }
+
+    const newCheckin = {
+      todayChecked: checkin.value.todayChecked,
+      streak: checkin.value.streak,
+      lastCheckin: checkin.value.lastCheckin || (checkin.value.todayChecked ? today : ''),
+    };
+    localStorage.setItem('atca_checkin', JSON.stringify(newCheckin));
+    localStorage.setItem('atca_checkin_sync_time', Date.now().toString());
+
+    logger?.info?.('打卡状态已同步', newCheckin);
+  } catch (e: any) {
+    logger?.warn?.('打卡状态同步失败，使用本地缓存', { error: e.message });
+    const saved = localStorage.getItem('atca_checkin');
+    if (saved) {
+      try {
+        const cached = JSON.parse(saved);
+        checkin.value.todayChecked = cached.todayChecked || cached.lastCheckin === today;
+        checkin.value.streak = cached.streak || 0;
+        checkin.value.lastCheckin = cached.lastCheckin || '';
+      } catch { /* ignore */ }
+    }
+  } finally {
+    checkinLoading.value = false;
+    if (!checkin.value.todayChecked) {
+      startCountdown();
+    }
   }
 }
 
@@ -178,8 +217,22 @@ function updateCountdown() {
 }
 
 function markCheckinEntry() {
-  // 标记是从打卡入口进入的，交卷后才真正打卡
   sessionStorage.setItem('quiz_from_checkin', '1');
+}
+
+function handleStorageSync(e: StorageEvent) {
+  if (e.key === 'atca_checkin' && e.newValue) {
+    try {
+      const newCheckin = JSON.parse(e.newValue);
+      checkin.value.todayChecked = newCheckin.todayChecked || false;
+      checkin.value.streak = newCheckin.streak || 0;
+      checkin.value.lastCheckin = newCheckin.lastCheckin || '';
+      if (checkin.value.todayChecked && countdownTimer) {
+        clearInterval(countdownTimer);
+        countdownTimer = null;
+      }
+    } catch { /* ignore */ }
+  }
 }
 
 const accuracy = computed(() => {
@@ -225,8 +278,11 @@ function handleAvatarError(e: Event) {
 }
 
 onMounted(async () => {
+  logMount('ViewQuiz');
   loadCheckin();
   loadWrongCount();
+  window.addEventListener('storage', handleStorageSync);
+  logListenerAdd('ViewQuiz', 'storage', 'window');
   try {
     const [modesRes, statsRes, lbRes] = await Promise.all([
       quizApi.getModes(),
@@ -242,7 +298,13 @@ onMounted(async () => {
 });
 
 onUnmounted(() => {
-  if (countdownTimer) clearInterval(countdownTimer);
+  if (countdownTimer) {
+    clearInterval(countdownTimer);
+    logTimerStop('ViewQuiz', 'countdown');
+  }
+  window.removeEventListener('storage', handleStorageSync);
+  logListenerRemove('ViewQuiz', 'storage', 'window');
+  logUnmount('ViewQuiz');
 });
 </script>
 

@@ -6,6 +6,7 @@
 import { ref, onMounted, onUnmounted, readonly } from 'vue';
 import { heartbeatService } from './heartbeat';
 import { keepAliveService } from './keepAlive';
+import { logInit, logDispose, logListenerAdd, logListenerRemove, logTimerStart, logTimerStop } from '@/utils/memoryLifecycle';
 
 // 全局状态
 const isInitialized = ref(false);
@@ -47,12 +48,14 @@ function initialize(): void {
     return;
   }
 
+  logInit('serviceManager', '开始初始化服务');
   console.log('[ServiceManager] Initializing services...');
   
   // 绑定用户活动监听
   if (typeof window !== 'undefined') {
     ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'].forEach(event => {
       window.addEventListener(event, handleUserActivity, { passive: true });
+      logListenerAdd('serviceManager', event, 'window');
     });
   }
   
@@ -60,6 +63,7 @@ function initialize(): void {
   // 服务器保活已在后端实现，前端不再发送频繁请求
   setTimeout(() => {
     heartbeatService.start();
+    logTimerStart('serviceManager', 'heartbeat', 60000);
     console.log('[ServiceManager] Heartbeat service started (delayed)');
   }, 60000); // 60秒后启动（进一步延迟，减少初始请求压力）
   
@@ -104,25 +108,30 @@ function cleanup(): void {
   if (typeof window !== 'undefined') {
     ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'].forEach(event => {
       window.removeEventListener(event, handleUserActivity);
+      logListenerRemove('serviceManager', event, 'window');
     });
   }
   
   // 清除定时器
   if (activityTimer) {
     clearTimeout(activityTimer);
+    logTimerStop('serviceManager', 'activity');
     activityTimer = null;
   }
   
   if (managerTimer) {
     clearInterval(managerTimer);
+    logTimerStop('serviceManager', 'manager');
     managerTimer = null;
   }
   
   // 停止所有服务
   heartbeatService.stop();
+  logTimerStop('serviceManager', 'heartbeat');
   keepAliveService.stop();
   
   isInitialized.value = false;
+  logDispose('serviceManager', '服务已清理');
   console.log('[ServiceManager] Services cleaned up');
 }
 

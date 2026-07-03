@@ -6,6 +6,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { createLogger } from '../utils/logger';
 import { BrowseState, isInBrowseState, isRequestFromBot } from './browseState';
+import { logCacheCleanup, logTimerStart, logTimerStop } from '../utils/memoryLifecycle';
 
 const logger = createLogger('ConditionalOutput');
 
@@ -73,10 +74,11 @@ function setCachedResponse(key: string, data: any): void {
     data,
     timestamp: Date.now(),
   });
+  enforceCacheLimits();
 }
 
 // 定期清理过期缓存
-setInterval(() => {
+const conditionalCleanupTimer = setInterval(() => {
   const now = Date.now();
   let cleaned = 0;
   for (const [key, cached] of responseCache.entries()) {
@@ -85,10 +87,38 @@ setInterval(() => {
       cleaned++;
     }
   }
+  // 同时清理 lastResponseTime，防止无限增长
+  for (const [key, time] of lastResponseTime.entries()) {
+    if (now - time > 300000) { // 5分钟过期
+      lastResponseTime.delete(key);
+      cleaned++;
+    }
+  }
   if (cleaned > 0) {
+    logCacheCleanup('ConditionalOutput', cleaned, responseCache.size + lastResponseTime.size);
     logger.debug(`清理过期缓存: ${cleaned} 条`);
   }
 }, 60000); // 每分钟清理一次
+logTimerStart('ConditionalOutput', 'cleanup', 60000);
+
+// 最大缓存数量限制，防止内存溢出
+const MAX_CACHE_SIZE = 500;
+function enforceCacheLimits(): void {
+  if (responseCache.size > MAX_CACHE_SIZE) {
+    const entries = Array.from(responseCache.entries())
+      .sort((a, b) => a[1].timestamp - b[1].timestamp);
+    const toDelete = entries.slice(0, Math.ceil(entries.length * 0.2));
+    toDelete.forEach(([key]) => responseCache.delete(key));
+    logger.warn(`responseCache 超过最大限制，删除 ${toDelete.length} 条旧记录`);
+  }
+  if (lastResponseTime.size > MAX_CACHE_SIZE) {
+    const entries = Array.from(lastResponseTime.entries())
+      .sort((a, b) => a[1] - b[1]);
+    const toDelete = entries.slice(0, Math.ceil(entries.length * 0.2));
+    toDelete.forEach(([key]) => lastResponseTime.delete(key));
+    logger.warn(`lastResponseTime 超过最大限制，删除 ${toDelete.length} 条旧记录`);
+  }
+}
 
 // ============================================
 // 响应拦截包装器
@@ -146,6 +176,7 @@ export function createConditionalOutput(config: OutputControlConfig = {}) {
         }
       }
       lastResponseTime.set(clientKey, now);
+      enforceCacheLimits();
     }
     
     // 重写响应方法

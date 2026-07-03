@@ -7,7 +7,16 @@
         <aside class="profile-sidebar">
           <div class="profile-card">
             <div class="avatar-wrapper">
-              <SafeImage :src="avatarFullUrl" class="profile-avatar" @click="triggerAvatarUpload" fallback="https://api.dicebear.com/7.x/avataaars/svg?seed=user" />
+              <SafeImage 
+                :src="avatarFullUrl" 
+                class="profile-avatar" 
+                :is-avatar="true"
+                :fallback-type="'initials'"
+                :initials-name="profile?.nickname || profile?.username || ''"
+                :width="100"
+                :height="100"
+                :circle="true"
+              />
               <div class="avatar-overlay" @click="triggerAvatarUpload">
                 <svg viewBox="0 0 24 24" width="20" height="20"><path d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" stroke="currentColor" fill="none" stroke-width="1.5"/><path d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
                 <span>{{ t('profile.changeAvatar') }}</span>
@@ -120,7 +129,13 @@
                 class="fav-card"
               >
                 <div class="fav-image-wrapper">
-                  <img :src="fav.main_image_url || '/images/default-arch.jpg'" :alt="fav.name" />
+                  <SafeImage 
+                    :src="fav.main_image_url" 
+                    :alt="fav.name"
+                    :fallback-type="'icon'"
+                    :rounded="true"
+                    class="fav-image"
+                  />
                   <div class="fav-overlay">
                     <span class="fav-type">{{ fav.type }}</span>
                     <span class="fav-dynasty">{{ fav.founding_dynasty }}</span>
@@ -239,7 +254,7 @@
                     <svg viewBox="0 0 24 24" width="12" height="12"><path d="M3 21h18M5 21V7l8-4 8 4v14M9 21v-6h6v6" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
                     {{ note.relatedBuildingName }}
                   </span>
-                  <span>{{ new Date(note.updatedAt).toLocaleDateString('zh-CN') }}</span>
+                  <span>{{ formatDate(note.updatedAt) }}</span>
                 </div>
               </div>
             </div>
@@ -415,7 +430,9 @@ import { useAnimationSettingsStore } from '@/stores/animationSettings';
 import { useUserStore } from '@/stores';
 import { API_BASE } from '@/services/api';
 import { compressImage, isValidImageType, formatFileSize } from '@/utils/imageCompressor';
+import { useMemoryTrack } from '@/composables/useMemoryTrack';
 
+const memTrack = useMemoryTrack('ViewProfile');
 const router = useRouter();
 const { t } = useI18n();
 const animationSettings = useAnimationSettingsStore();
@@ -745,7 +762,7 @@ async function saveSettings() {
     alert(t('profile.saveSuccess'));
     loadProfile();
   } catch (e: any) {
-    alert(t('profile.saveFail') + (e.message || 'Unknown error'));
+    alert(t('profile.saveFail') + (e.message || t('common.unknownError')));
   } finally {
     saving.value = false;
   }
@@ -773,7 +790,7 @@ async function changePassword() {
     alert(t('profile.saveSuccess'));
     passwordForm.value = { oldPassword: '', newPassword: '', confirmPassword: '' };
   } catch (e: any) {
-    alert(t('profile.saveFail') + (e.response?.data?.error?.message || e.message || 'Please check your current password'));
+    alert(t('profile.saveFail') + (e.response?.data?.error?.message || e.message || t('profile.checkPasswordHint')));
   } finally {
     changingPassword.value = false;
   }
@@ -860,7 +877,7 @@ async function handleAvatarChange(e: Event) {
     } else if (e.response?.data?.error?.message) {
       alert(t('profile.uploadFail') + e.response.data.error.message);
     } else {
-      alert(t('profile.uploadFail') + 'Network error, please retry');
+      alert(t('profile.uploadFail') + t('errors.network'));
     }
   }
 
@@ -880,7 +897,7 @@ async function deleteModel(id: number) {
     stats.value.totalModels = models.value.length;
     alert(t('profile.deleteSuccess'));
   } catch (e: any) {
-    alert(t('profile.deleteFail') + (e.message || 'Unknown error'));
+    alert(t('profile.deleteFail') + (e.message || t('common.unknownError')));
   }
 }
 
@@ -926,14 +943,30 @@ onMounted(async () => {
   display: inline-block;
   margin-bottom: 16px;
   cursor: pointer;
-}
-.profile-avatar {
   width: 100px;
   height: 100px;
+}
+.profile-avatar {
+  width: 100%;
+  height: 100%;
   border-radius: 50%;
   object-fit: cover;
-  border: 3px solid var(--border);
   transition: all var(--t);
+}
+.avatar-wrapper .safe-image-container {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 3px solid var(--border);
+  overflow: hidden;
+}
+.avatar-wrapper .safe-image-container img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.avatar-wrapper .safe-image-container .error-fallback {
+  border-radius: 50%;
 }
 .avatar-overlay {
   position: absolute;
@@ -1232,27 +1265,26 @@ onMounted(async () => {
 }
 .fav-image-wrapper {
   position: relative;
-  /* IE11 fallback for aspect-ratio */
-  padding-bottom: 62.5%; /* 10/16 = 62.5% */
   aspect-ratio: 16/10;
   overflow: hidden;
 }
-.fav-image-wrapper::before {
-  content: '';
-  display: block;
-  width: 100%;
-  padding-bottom: 62.5%;
-}
-.fav-image-wrapper img {
+.fav-image-wrapper .safe-image-container {
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
+}
+.fav-image-wrapper .safe-image-container img,
+.fav-image-wrapper .fav-image {
+  width: 100%;
+  height: 100%;
   object-fit: cover;
   transition: transform 0.3s ease;
 }
-.fav-card:hover .fav-image-wrapper img { transform: scale(1.05); }
+.fav-card:hover .fav-image-wrapper img { 
+  transform: scale(1.05); 
+}
 .fav-overlay {
   position: absolute;
   inset: 0;

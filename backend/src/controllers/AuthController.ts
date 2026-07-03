@@ -23,6 +23,7 @@ import { createLogger } from '../utils/logger';
 import { authRateLimiter, loginRateLimit } from '../middleware/rateLimiter';
 import { validatePassword } from '../middleware/security';
 import { Controller, Get, Post, Put } from './Controller';
+import { logTimerStart } from '../utils/memoryLifecycle';
 
 const logger = createLogger('AuthController');
 
@@ -57,6 +58,7 @@ function cleanupOldBackups() {
 
 cleanupOldBackups();
 setInterval(cleanupOldBackups, 6 * 60 * 60 * 1000);
+logTimerStart('AuthController', 'avatar-backup-cleanup', 6 * 60 * 60 * 1000);
 
 function moveToBackup(oldAvatarUrl: string | null): string | null {
   if (!oldAvatarUrl) return null;

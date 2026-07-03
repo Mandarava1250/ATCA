@@ -293,7 +293,9 @@ import TextClamp from '@/components/common/TextClamp.vue';
 import { architectureApi } from '@/services/api';
 import { useUserStore } from '@/stores';
 import { noteManager, type Note } from '@/utils/noteManager';
+import { useMemoryTrack } from '@/composables/useMemoryTrack';
 
+const memTrack = useMemoryTrack('ViewArchitectureDetail');
 const route = useRoute();
 const router = useRouter();
 const userStore = useUserStore();

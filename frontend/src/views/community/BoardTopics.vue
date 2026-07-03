@@ -104,7 +104,9 @@ import Footer from '@/components/common/CommonFooter.vue';
 import PageBackground from '@/components/common/PageBackground.vue';
 import { socialApi } from '@/services/api';
 import { useUserStore } from '@/stores';
+import { useMemoryTrack } from '@/composables/useMemoryTrack';
 
+const memTrack = useMemoryTrack('BoardTopics');
 const route = useRoute();
 const router = useRouter();
 const userStore = useUserStore();

@@ -1,5 +1,10 @@
 <template>
   <div class="admin-page">
+    <!-- 消息提示 -->
+    <div v-if="messageText" class="message-toast" :class="messageType">
+      {{ messageText }}
+    </div>
+
     <div class="page-toolbar">
       <input v-model="search" @input="debounceSearch" class="atca-input search-input" placeholder="搜索模型..." />
       <div style="display:flex;gap:8px;align-items:center">
@@ -120,7 +125,9 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed, nextTick } from 'vue';
 import { adminApi } from '@/services/api';
+import { useMemoryTrack } from '@/composables/useMemoryTrack';
 
+const memTrack = useMemoryTrack('AdminModel3D');
 const models = ref<any[]>([]);
 const selectedIds = ref<number[]>([]);
 const isAllSelected = computed(() => models.value.length > 0 && selectedIds.value.length === models.value.length);
@@ -129,7 +136,18 @@ const fileInput = ref<HTMLInputElement | null>(null);
 const importFiles = ref<File[]>([]);
 const featuredModels = ref<any[]>([]);
 const search = ref('');
+const loading = ref(false);
+const messageText = ref('');
+const messageType = ref<'success' | 'error'>('success');
 const showBatchImport = ref(false);
+
+function showMessage(text: string, type: 'success' | 'error' = 'success') {
+  messageText.value = text;
+  messageType.value = type;
+  setTimeout(() => {
+    messageText.value = '';
+  }, 3000);
+}
 const importType = ref<'model' | 'building'>('model');
 const batchJson = ref('');
 const batchImporting = ref(false);
@@ -185,8 +203,36 @@ async function autoParseFiles(files: FileList) {
 
 async function batchDeleteModels() {
   if (!selectedIds.value.length || !confirm(`确认删除 ${selectedIds.value.length} 个模型？`)) return;
-  try { await adminApi.batchDeleteModels(selectedIds.value); selectedIds.value = []; loadData(); }
-  catch (e: any) { alert('批量删除失败: ' + e.message); }
+  loading.value = true;
+  try {
+    const res = await adminApi.batchDeleteModels(selectedIds.value);
+    if (res.success) {
+      const { deleted, totalRequested, truncated, duration, errors } = res.data;
+      let msg = `成功删除 ${deleted} 个模型`;
+      if (totalRequested !== deleted) {
+        msg += ` (请求: ${totalRequested}, 实际处理: ${deleted})`;
+      }
+      if (truncated) {
+        msg += ` (由于数量限制，部分模型未被处理)`;
+      }
+      if (duration) {
+        msg += ` - 耗时 ${duration}ms`;
+      }
+      showMessage(msg);
+      if (errors && errors.length > 0) {
+        console.warn('批量删除部分失败:', errors);
+      }
+      selectedIds.value = [];
+      loadData();
+    } else {
+      showMessage('批量删除失败: ' + (res.error?.message || '未知错误'), 'error');
+    }
+  } catch (e: any) {
+    console.error('批量删除失败:', e);
+    showMessage('批量删除失败: ' + (e.message || '未知错误'), 'error');
+  } finally {
+    loading.value = false;
+  }
 }
 
 async function loadData() {
@@ -259,11 +305,27 @@ async function runBatchImport() {
 
 function handleRouteChange() { loadData(); }
 window.addEventListener('admin-route-change', handleRouteChange);
-onUnmounted(() => { window.removeEventListener('admin-route-change', handleRouteChange); });
+memTrack.trackListener('admin-route-change', 'window');
+onUnmounted(() => { memTrack.untrackListener('admin-route-change', 'window'); window.removeEventListener('admin-route-change', handleRouteChange); });
 onMounted(() => { loadData(); loadFeatured(); });
 </script>
 
 <style scoped>
+/* 消息提示 */
+.message-toast {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  padding: 12px 24px;
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  z-index: 1000;
+  animation: slideIn 0.3s ease;
+}
+.message-toast.success { background: rgba(90,123,108,0.9); color: #fff; }
+.message-toast.error { background: rgba(139,58,42,0.9); color: #fff; }
+@keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
 .admin-page { display: flex; flex-direction: column; gap: 16px; }
 .page-toolbar { display: flex; gap: 12px; justify-content: space-between; align-items: center; }
 .search-input { max-width: 320px; }

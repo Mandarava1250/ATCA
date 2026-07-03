@@ -5,22 +5,29 @@ import router from '@/router';
 import App from './App.vue';
 import './styles/global.css';
 import { useUserStore } from '@/stores';
+import { scheduleCheckinSync } from '@/utils/checkinSync';
 
 const app = createApp(App);
 app.use(createPinia());
 app.use(i18n);
 app.use(router);
 
-// 从localStorage恢复登录状态
 const userStore = useUserStore();
 userStore.loadFromStorage();
 
-// 如果token存在，获取当前用户信息
 if (userStore.tokens?.accessToken) {
   userStore.me().catch(() => {
-    // 获取失败则清除token
     userStore.logout();
   });
 }
 
+const cleanupCheckinSync = scheduleCheckinSync();
+
 app.mount('#app');
+
+// 开发环境下HMR热重载时清理定时器和事件监听器，避免内存泄漏
+if (import.meta.hot) {
+  import.meta.hot.dispose(() => {
+    cleanupCheckinSync();
+  });
+}

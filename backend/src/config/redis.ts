@@ -5,6 +5,7 @@
 
 import Redis from 'ioredis';
 import { config } from './app';
+import { logInit, logDispose, logListenerAdd } from '../utils/memoryLifecycle';
 
 // Redis客户端实例
 let redisClient: Redis | null = null;
@@ -35,18 +36,22 @@ export function initRedis(): Redis {
   }
 
   redisClient = new Redis(redisConfig);
+  logInit('Redis', 'Redis客户端初始化');
 
   redisClient.on('connect', () => {
     console.log('[Redis] 连接成功');
   });
+  logListenerAdd('Redis', 'connect', 'redisClient');
 
   redisClient.on('error', (err) => {
     console.error('[Redis] 连接错误:', err.message);
   });
+  logListenerAdd('Redis', 'error', 'redisClient');
 
   redisClient.on('close', () => {
     console.log('[Redis] 连接关闭');
   });
+  logListenerAdd('Redis', 'close', 'redisClient');
 
   return redisClient;
 }
@@ -69,6 +74,7 @@ export async function closeRedis(): Promise<void> {
     await redisClient.quit();
     redisClient = null;
     console.log('[Redis] 连接已关闭');
+    logDispose('Redis', 'Redis连接已关闭');
   }
 }
 

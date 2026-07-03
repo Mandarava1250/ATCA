@@ -5,9 +5,10 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { query, execute, isMockMode } from '../../config/database';
-import { authMiddleware, AuthRequest } from '../../middleware/auth';
+import { authMiddleware, AuthRequest, adminMiddleware } from '../../middleware/auth';
 import { validateParams } from '../../middleware/validation';
 import { asyncHandler } from '../../middleware/errorHandler';
+import { pushToUser } from '../../services/SyncService';
 import { mockActivities, mockAchievements } from '../../utils/mockData';
 
 const router = Router();
@@ -34,6 +35,88 @@ router.get('/achievements', asyncHandler(async (_req, res) => {
   if (isMockMode()) { res.json({ success: true, data: mockAchievements }); return; }
   const achievements = await query('activity', 'SELECT [achievement_id], [achievement_name], [description], [achievement_type], [required_points], [required_actions], [icon], [badge_url], [created_at] FROM [achievement] ORDER BY [required_points]');
   res.json({ success: true, data: achievements });
+}));
+
+// 创建成就（管理员）
+router.post('/achievements', authMiddleware, adminMiddleware, asyncHandler(async (req: AuthRequest, res) => {
+  const { name, description, icon, condition_type, condition_value, points, is_active } = req.body;
+  if (isMockMode()) {
+    const newAchievement = {
+      achievement_id: Date.now(),
+      achievement_name: name,
+      description,
+      achievement_type: condition_type,
+      required_points: points,
+      required_actions: condition_value,
+      icon,
+      badge_url: null,
+      is_active: is_active !== false,
+      created_at: new Date().toISOString()
+    };
+    res.json({ success: true, data: newAchievement });
+    return;
+  }
+  const result = await execute('activity', `INSERT INTO [achievement] ([achievement_name], [description], [achievement_type], [required_points], [required_actions], [icon], [is_active]) OUTPUT INSERTED.* VALUES (@name, @description, @type, @points, @actions, @icon, @is_active)`, {
+    name,
+    description,
+    type: condition_type,
+    points,
+    actions: condition_value,
+    icon,
+    is_active: is_active !== false
+  });
+  res.json({ success: true, data: result && Array.isArray(result) ? result[0] : result });
+}));
+
+// 更新成就（管理员）
+router.put('/achievements/:id', authMiddleware, adminMiddleware, validateParams(idParamSchema), asyncHandler(async (req: AuthRequest, res) => {
+  const id = parseInt(req.params.id);
+  const { name, description, icon, condition_type, condition_value, points, is_active } = req.body;
+  if (isMockMode()) {
+    res.json({ success: true, data: { achievement_id: id, achievement_name: name, description, achievement_type: condition_type, required_points: points, required_actions: condition_value, icon, is_active } });
+    return;
+  }
+  const result = await execute('activity', `UPDATE [achievement] SET [achievement_name] = COALESCE(@name, [achievement_name]), [description] = COALESCE(@description, [description]), [achievement_type] = COALESCE(@type, [achievement_type]), [required_points] = COALESCE(@points, [required_points]), [required_actions] = COALESCE(@actions, [required_actions]), [icon] = COALESCE(@icon, [icon]), [is_active] = COALESCE(@is_active, [is_active]) OUTPUT DELETED.* WHERE [achievement_id] = @id`, {
+    id,
+    name,
+    description,
+    type: condition_type,
+    points,
+    actions: condition_value,
+    icon,
+    is_active
+  });
+  const updated = result && Array.isArray(result) ? result[0] : null;
+  if (!updated) { res.status(404).json({ success: false, error: { code: 'SYS_004', message: '成就不存在' } }); return; }
+  res.json({ success: true, data: updated });
+}));
+
+// 删除成就（管理员）
+router.delete('/achievements/:id', authMiddleware, adminMiddleware, validateParams(idParamSchema), asyncHandler(async (req: AuthRequest, res) => {
+  const id = parseInt(req.params.id);
+  if (isMockMode()) {
+    res.json({ success: true, message: '删除成功（Mock）' });
+    return;
+  }
+  const result = await execute('activity', `DELETE FROM [achievement] OUTPUT DELETED.* WHERE [achievement_id] = @id`, { id });
+  const deleted = result && Array.isArray(result) ? result[0] : null;
+  if (!deleted) { res.status(404).json({ success: false, error: { code: 'SYS_004', message: '成就不存在' } }); return; }
+  res.json({ success: true, message: '删除成功' });
+}));
+
+// 获取成就统计（管理员）
+router.get('/achievements/stats', authMiddleware, adminMiddleware, asyncHandler(async (req: AuthRequest, res) => {
+  if (isMockMode()) {
+    res.json({ success: true, data: { total_achievements: mockAchievements.length, total_users: 0, total_unlocked: 0 } });
+    return;
+  }
+  const stats = await query('activity', `SELECT COUNT(*) AS total_achievements FROM [achievement]`);
+  const userStats = await query('activity', `SELECT COUNT(DISTINCT [external_user_id]) AS total_users, COUNT(*) AS total_unlocked FROM [user_achievement]`);
+  res.json({ success: true, data: {
+    total_achievements: stats.length > 0 ? stats[0].total_achievements : 0,
+    total_users: userStats.length > 0 ? userStats[0].total_users : 0,
+    total_unlocked: userStats.length > 0 ? userStats[0].total_unlocked : 0
+  }});
 }));
 
 // 获取用户成就（必须在 /:id 之前）
@@ -135,24 +218,23 @@ router.post('/:id/join', authMiddleware, validateParams(idParamSchema), asyncHan
 
 // 用户打卡
 router.post('/checkin', authMiddleware, asyncHandler(async (req: AuthRequest, res) => {
-  const { device_type, device_info } = req.body;
+  const { device_type, device_info, checkin_date } = req.body;
+
+  const targetDate = checkin_date ? new Date(checkin_date) : new Date();
+  const targetDateStr = targetDate.toISOString().split('T')[0];
+  const yesterday = new Date(targetDate);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yesterdayStr = yesterday.toISOString().split('T')[0];
 
   if (isMockMode()) {
-    const today = new Date();
-    const todayStr = today.toISOString().split('T')[0];
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayStr = yesterday.toISOString().split('T')[0];
-
     const mockCheckins = JSON.parse(mockStorage.get('mock_checkins') || '[]');
-    const hasCheckedToday = mockCheckins.some((c: any) => c.checkin_date === todayStr);
+    const hasCheckedToday = mockCheckins.some((c: any) => c.checkin_date === targetDateStr);
     
     if (hasCheckedToday) {
-      res.json({ success: false, message: '今日已打卡', already_checked: true });
+      res.json({ success: false, message: '该日期已打卡', already_checked: true });
       return;
     }
 
-    // 查找昨天的打卡记录，验证连续性
     const yesterdayCheckin = mockCheckins.find((c: any) => c.checkin_date === yesterdayStr);
     const streak = yesterdayCheckin ? yesterdayCheckin.streak_count + 1 : 1;
     let points = 10;
@@ -162,7 +244,7 @@ router.post('/checkin', authMiddleware, asyncHandler(async (req: AuthRequest, re
 
     const newCheckin = {
       checkin_id: Date.now(),
-      checkin_date: todayStr,
+      checkin_date: targetDateStr,
       checkin_time: new Date().toISOString(),
       streak_count: streak,
       points_earned: points,
@@ -181,13 +263,25 @@ router.post('/checkin', authMiddleware, asyncHandler(async (req: AuthRequest, re
   try {
     const result = await execute(
       'activity',
-      'EXEC sp_user_checkin @user_id = @uid, @device_type = @dt, @device_info = @di',
-      { uid: req.user!.userId, dt: device_type || null, di: device_info || null }
+      'EXEC sp_user_checkin @user_id = @uid, @device_type = @dt, @device_info = @di, @checkin_date = @cd',
+      { uid: req.user!.userId, dt: device_type || null, di: device_info || null, cd: checkin_date || null }
     );
 
     if (Array.isArray(result) && result.length > 0) {
       const row = result[0];
       if (row.success) {
+        try {
+          pushToUser(req.user!.userId, 'sync:checkin_update', {
+            checkin_date: new Date().toISOString().split('T')[0],
+            streak_count: row.streak_count,
+            points_earned: row.points_earned,
+            device_type,
+            timestamp: Date.now(),
+          });
+        } catch (syncErr: any) {
+          console.warn('[Checkin] 同步推送失败（用户可能未连接WebSocket）:', syncErr.message);
+        }
+
         res.json({
           success: true,
           message: row.message,
@@ -208,7 +302,44 @@ router.post('/checkin', authMiddleware, asyncHandler(async (req: AuthRequest, re
     }
   } catch (err: any) {
     console.error('[Checkin] 打卡失败:', err.message);
-    res.status(500).json({ success: false, message: '打卡失败', details: err.message });
+    
+    // 数据库失败时降级到 Mock 模式处理
+    const mockCheckins = JSON.parse(mockStorage.get('mock_checkins') || '[]');
+    const hasCheckedToday = mockCheckins.some((c: any) => c.checkin_date === targetDateStr);
+    
+    if (hasCheckedToday) {
+      res.json({ success: false, message: '该日期已打卡', already_checked: true });
+    } else {
+      const yesterdayCheckin = mockCheckins.find((c: any) => c.checkin_date === yesterdayStr);
+      const streak = yesterdayCheckin ? yesterdayCheckin.streak_count + 1 : 1;
+      let points = 10;
+      if (streak >= 7) points = 50;
+      else if (streak >= 5) points = 30;
+      else if (streak >= 3) points = 20;
+
+      const newCheckin = {
+        checkin_id: Date.now(),
+        checkin_date: targetDateStr,
+        checkin_time: new Date().toISOString(),
+        streak_count: streak,
+        points_earned: points,
+        device_type,
+        device_info,
+        created_at: new Date().toISOString(),
+      };
+
+      mockCheckins.unshift(newCheckin);
+      mockStorage.set('mock_checkins', JSON.stringify(mockCheckins));
+
+      res.json({
+        success: true,
+        message: '打卡成功（降级模式）',
+        checkin_id: newCheckin.checkin_id,
+        streak_count: streak,
+        points_earned: points,
+        already_checked: false,
+      });
+    }
   }
 }));
 

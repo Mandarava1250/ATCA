@@ -1,5 +1,10 @@
 <template>
   <div class="admin-page">
+    <!-- 消息提示 -->
+    <div v-if="messageText" class="message-toast" :class="messageType">
+      {{ messageText }}
+    </div>
+
     <div class="page-toolbar">
       <input v-model="search" @input="debounceSearch" class="atca-input search-input" :placeholder="$t('admin.searchArch') || '搜索古建筑...'" />
       <div style="display:flex;gap:8px;align-items:center">
@@ -209,14 +214,27 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed } from 'vue';
-import { adminApi } from '@/services/api';
+import { adminApi, http } from '@/services/api';
+import { useMemoryTrack } from '@/composables/useMemoryTrack';
 
+const memTrack = useMemoryTrack('AdminArchitecture');
 const dynasties = ['先秦', '秦汉', '魏晋南北朝', '隋唐', '宋', '辽', '元', '明', '清'];
 const typeOptions = ['宫殿', '寺庙', '祭祀建筑', '塔', '园林', '民居', '城墙', '桥梁', '楼阁', '石窟', '牌坊', '陵墓', '阙', '坛', '鼓楼', '戏台', '书院', '会馆'];
 
 const architectures = ref<any[]>([]);
 const loadError = ref('');
+const loading = ref(false);
+const messageText = ref('');
+const messageType = ref<'success' | 'error'>('success');
 const selectedIds = ref<number[]>([]);
+
+function showMessage(text: string, type: 'success' | 'error' = 'success') {
+  messageText.value = text;
+  messageType.value = type;
+  setTimeout(() => {
+    messageText.value = '';
+  }, 3000);
+}
 const isAllSelected = computed(() => architectures.value.length > 0 && selectedIds.value.length === architectures.value.length);
 function toggleSelectAll() { if (isAllSelected.value) selectedIds.value = []; else selectedIds.value = architectures.value.map(a => a.architecture_id); }
 const search = ref('');
@@ -270,8 +288,36 @@ async function loadData() {
 
 async function batchDelete() {
   if (!selectedIds.value.length || !confirm(`确认删除 ${selectedIds.value.length} 个古建筑？`)) return;
-  try { await adminApi.batchDeleteArchitectures(selectedIds.value); selectedIds.value = []; loadData(); }
-  catch (e: any) { alert('批量删除失败: ' + e.message); }
+  loading.value = true;
+  try {
+    const res = await adminApi.batchDeleteArchitectures(selectedIds.value);
+    if (res.success) {
+      const { deleted, totalRequested, truncated, duration, errors } = res.data;
+      let msg = `成功删除 ${deleted} 个古建筑`;
+      if (totalRequested !== deleted) {
+        msg += ` (请求: ${totalRequested}, 实际处理: ${deleted})`;
+      }
+      if (truncated) {
+        msg += ` (由于数量限制，部分建筑未被处理)`;
+      }
+      if (duration) {
+        msg += ` - 耗时 ${duration}ms`;
+      }
+      showMessage(msg);
+      if (errors && errors.length > 0) {
+        console.warn('批量删除部分失败:', errors);
+      }
+      selectedIds.value = [];
+      loadData();
+    } else {
+      showMessage('批量删除失败: ' + (res.error?.message || '未知错误'), 'error');
+    }
+  } catch (e: any) {
+    console.error('批量删除失败:', e);
+    showMessage('批量删除失败: ' + (e.message || '未知错误'), 'error');
+  } finally {
+    loading.value = false;
+  }
 }
 
 function openAdd() {
@@ -308,14 +354,24 @@ async function saveArch() {
     if (galleryUrls.value.trim()) {
       payload.image_gallery = galleryUrls.value.split('\n').map((u: string) => u.trim()).filter(Boolean);
     }
+    let res;
     if (editingId.value) {
-      await adminApi.updateArchitecture(editingId.value, payload);
+      res = await adminApi.updateArchitecture(editingId.value, payload);
     } else {
-      await adminApi.createArchitecture(payload);
+      res = await adminApi.createArchitecture(payload);
     }
-    closeModal();
-    loadData();
-  } catch (e) { console.error(e); alert('保存失败'); }
+    if (res.success) {
+      showMessage(editingId.value ? '建筑信息更新成功' : '建筑添加成功');
+      closeModal();
+      http.clearCache('/admin/architectures');
+      await loadData();
+    } else {
+      showMessage('保存失败: ' + (res.error?.message || '未知错误'), 'error');
+    }
+  } catch (e: any) {
+    console.error('[Arch] 保存失败:', e);
+    showMessage('保存失败: ' + (e.message || '网络/服务器错误'), 'error');
+  }
 }
 
 async function deleteArch(id: number) {
@@ -326,11 +382,27 @@ async function deleteArch(id: number) {
 // 切换界面时自动刷新
 function handleRouteChange() { loadData(); }
 window.addEventListener('admin-route-change', handleRouteChange);
-onUnmounted(() => { window.removeEventListener('admin-route-change', handleRouteChange); });
+memTrack.trackListener('admin-route-change', 'window');
+onUnmounted(() => { memTrack.untrackListener('admin-route-change', 'window'); window.removeEventListener('admin-route-change', handleRouteChange); });
 onMounted(loadData);
 </script>
 
 <style scoped>
+/* 消息提示 */
+.message-toast {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  padding: 12px 24px;
+  border-radius: var(--r-md);
+  font-size: 0.875rem;
+  z-index: 1000;
+  animation: slideIn 0.3s ease;
+}
+.message-toast.success { background: rgba(90,123,108,0.9); color: #fff; }
+.message-toast.error { background: rgba(139,58,42,0.9); color: #fff; }
+@keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
 /* 表格专有样式 */
 .col-img { width: 60px; text-align: center; }
 .arch-thumb { width: 48px; height: 36px; object-fit: cover; border-radius: var(--r-sm); border: 1px solid var(--border); }

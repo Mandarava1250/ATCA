@@ -245,7 +245,9 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { adminApi } from '@/services/api';
 import { useI18n } from 'vue-i18n';
+import { useMemoryTrack } from '@/composables/useMemoryTrack';
 
+const memTrack = useMemoryTrack('AdminAI');
 const { t } = useI18n();
 
 interface AIConfig {
@@ -446,7 +448,8 @@ async function loadData() {
 // 切换界面时自动刷新
 function handleRouteChange() { loadData(); }
 window.addEventListener('admin-route-change', handleRouteChange);
-onUnmounted(() => { window.removeEventListener('admin-route-change', handleRouteChange); });
+memTrack.trackListener('admin-route-change', 'window');
+onUnmounted(() => { memTrack.untrackListener('admin-route-change', 'window'); window.removeEventListener('admin-route-change', handleRouteChange); });
 onMounted(() => { loadData(); });
 </script>
 

@@ -173,7 +173,9 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed } from 'vue';
 import { adminApi } from '@/services/api';
+import { useMemoryTrack } from '@/composables/useMemoryTrack';
 
+const memTrack = useMemoryTrack('AdminUsers');
 const users = ref<any[]>([]);
 const selectedIds = ref<number[]>([]);
 const search = ref('');
@@ -345,12 +347,21 @@ async function batchDelete() {
   try {
     const res = await adminApi.batchDeleteUsers(selectedIds.value);
     if (res.success) {
-      const { deleted, skipped } = res.data;
+      const { deleted, skipped, truncated, duration, errors } = res.data;
       let msg = `成功删除 ${deleted} 个用户`;
       if (skipped && skipped > 0) {
-        msg += `，跳过 ${skipped} 个管理员账户`;
+        msg += `，跳过 ${skipped} 个用户`;
+      }
+      if (truncated) {
+        msg += ` (由于数量限制，部分用户未被处理)`;
+      }
+      if (duration) {
+        msg += ` - 耗时 ${duration}ms`;
       }
       showMessage(msg);
+      if (errors && errors.length > 0) {
+        console.warn('批量删除部分失败:', errors);
+      }
       selectedIds.value = [];
       loadUsers();
     } else {

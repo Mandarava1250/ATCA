@@ -118,6 +118,9 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import { knowledgeApi } from '@/services/api';
+import { useMemoryTrack } from '@/composables/useMemoryTrack';
+
+const memTrack = useMemoryTrack('KnowledgeBasePanel');
 
 interface KnowledgeItem {
   topic_id: number;

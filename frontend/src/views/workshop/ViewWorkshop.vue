@@ -1070,6 +1070,7 @@ import {
   type ComponentDefinition,
 } from '@/components/threejs/ThreejsArchitectureComponents';
 import { model3dApi } from '@/services/api';
+import { logMount, logUnmount, logResourceAlloc, logResourceRelease } from '@/utils/memoryLifecycle';
 
 // 小屏幕设备检测
 const MIN_WORKSHOP_WIDTH = 1050; // 最小工作区宽度（像素）
@@ -2615,11 +2616,13 @@ function $t(key: string): string {
 
 // ===== 生命周期 =====
 onMounted(async () => {
+  logMount('ViewWorkshop');
   // 首先检测屏幕尺寸
   checkScreenSize();
   
   if (!workshopDisabled.value && canvasContainer.value) {
     sceneManager = new SceneManager(canvasContainer.value);
+    logResourceAlloc('ViewWorkshop', 'SceneManager');
     sceneManager.setBuildMode(buildMode.value);
     sceneManager.onSelect((uuids: string[]) => { refreshComponents(); });
     sceneManager.onTransform(() => { refreshComponents(); });
@@ -2668,10 +2671,12 @@ onMounted(async () => {
 
 onUnmounted(() => {
   sceneManager?.destroy();
+  logResourceRelease('ViewWorkshop', 'SceneManager');
   sceneManager = null;
   window.removeEventListener('keydown', onKeyDown);
   window.removeEventListener('resize', checkScreenSize);
   document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  logUnmount('ViewWorkshop');
 });
 </script>
 
