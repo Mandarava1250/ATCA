@@ -91,23 +91,23 @@ export function throttle<T extends (...args: any[]) => any>(
 export async function retry<T>(
   fn: () => Promise<T>,
   maxRetries: number = 3,
-  baseDelay: number = 1000
+  baseDelay: number = 200
 ): Promise<T> {
   let lastError: Error | null = null;
-  
+
   for (let i = 0; i < maxRetries; i++) {
     try {
       return await fn();
     } catch (error) {
       lastError = error as Error;
       if (i < maxRetries - 1) {
-        // 指数退避：每次等待时间翻倍
+        // 指数退避：每次等待时间翻倍，初始200ms
         const delay = baseDelay * Math.pow(2, i);
         await new Promise(resolve => setTimeout(resolve, delay));
       }
     }
   }
-  
+
   throw lastError;
 }
 

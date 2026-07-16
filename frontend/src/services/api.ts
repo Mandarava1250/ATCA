@@ -93,6 +93,16 @@ interface RequestOptions {
   maxRetries?: number;
 }
 
+// 获取缓存前缀（从URL中提取API路径前缀）
+function getCachePrefix(url: string): string {
+  const parts = url.split('/').filter(Boolean);
+  // 取前两级路径作为前缀，例如 /admin/models
+  if (parts.length >= 2) {
+    return '/' + parts.slice(0, 2).join('/');
+  }
+  return url;
+}
+
 export const http = {
   get: <T = ApiResponse>(
     url: string, 
@@ -128,35 +138,50 @@ export const http = {
     return promise;
   },
   post: <T = ApiResponse>(
-    url: string, 
+    url: string,
     data?: any,
     options?: Omit<RequestOptions, 'cache'>
   ) => {
-    const { retry: shouldRetry = true, maxRetries = 3 } = options || {};
-    
+    const { retry: shouldRetry = false, maxRetries = 3 } = options || {}; // 非幂等操作默认不重试
+
     const request = () => apiClient.post<T>(url, data) as Promise<T>;
-    return shouldRetry ? retry(request, maxRetries) : request();
+    const promise = shouldRetry ? retry(request, maxRetries) : request();
+    // 数据变更后清除匹配前缀的缓存，确保后续GET获取最新数据
+    return promise.then(response => {
+      apiCache.clearByPrefix(getCachePrefix(url));
+      return response;
+    });
   },
   put: <T = ApiResponse>(
-    url: string, 
+    url: string,
     data?: any,
     options?: Omit<RequestOptions, 'cache'>
   ) => {
-    const { retry: shouldRetry = true, maxRetries = 3 } = options || {};
-    
+    const { retry: shouldRetry = false, maxRetries = 3 } = options || {}; // 非幂等操作默认不重试
+
     const request = () => apiClient.put<T>(url, data) as Promise<T>;
-    return shouldRetry ? retry(request, maxRetries) : request();
+    const promise = shouldRetry ? retry(request, maxRetries) : request();
+    // 数据变更后清除匹配前缀的缓存，确保后续GET获取最新数据
+    return promise.then(response => {
+      apiCache.clearByPrefix(getCachePrefix(url));
+      return response;
+    });
   },
   delete: <T = ApiResponse>(
     url: string,
     options?: Omit<RequestOptions, 'cache'>
   ) => {
-    const { retry: shouldRetry = true, maxRetries = 3 } = options || {};
-    
+    const { retry: shouldRetry = false, maxRetries = 3 } = options || {}; // 非幂等操作默认不重试
+
     const request = () => apiClient.delete<T>(url) as Promise<T>;
-    return shouldRetry ? retry(request, maxRetries) : request();
+    const promise = shouldRetry ? retry(request, maxRetries) : request();
+    // 数据变更后清除匹配前缀的缓存，确保后续GET获取最新数据
+    return promise.then(response => {
+      apiCache.clearByPrefix(getCachePrefix(url));
+      return response;
+    });
   },
-  
+
   // 清除特定缓存
   clearCache: (prefix?: string) => {
     if (prefix) {
@@ -415,10 +440,13 @@ export const adminApi = {
   // 3D模型管理
   getModels: (params?: any) => http.get<{ success: boolean; data: any[]; meta?: any }>('/admin/models', params),
   getFeaturedTemplates: () => http.get<{ success: boolean; data: any[] }>('/models/templates'),
-  batchDeleteModels: (ids: number[]) => http.post('/admin/models/batch-delete', { ids }),
+  batchDeleteModels: (ids: number[], source?: string) => http.post('/admin/models/batch-delete', { ids, source }),
   getFeaturedModels: () => http.get<{ success: boolean; data: any[] }>('/admin/models/featured'),
   toggleModelFeatured: (id: number, is_featured: boolean, source?: string) => http.put(`/admin/models/${id}/featured`, { is_featured, source }),
-  deleteModel: (id: number) => http.delete(`/admin/models/${id}`),
+  deleteModel: (id: number, source?: string) => {
+    const url = source ? `/admin/models/${id}?source=${source}` : `/admin/models/${id}`;
+    return http.delete(url);
+  },
   // 每日打卡管理
   getDailyChallenges: (params?: any) => http.get<{ success: boolean; data: any[] }>('/admin/daily-challenges', params),
   createDailyChallenge: (data: any) => http.post('/admin/daily-challenges', data),

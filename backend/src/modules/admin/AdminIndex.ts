@@ -219,6 +219,7 @@ router.put('/users/:id/mute', asyncHandler(async (req: any, res) => {
   try {
     await execute('user', 'UPDATE [atca_user] SET [is_muted] = @muted, [mute_reason] = @reason WHERE [user_id] = @id',
         { id: parseInt(id), muted: is_muted ? 1 : 0, reason: mute_reason || null });
+    userQueryCache.clear(); // 清除用户缓存
     res.json({ success: true, message: is_muted ? '用户已被禁言' : '用户已解除禁言' });
   } catch (err: any) {
     // 如果列不存在，尝试创建列
