@@ -10,12 +10,8 @@
     }"
     :style="containerStyle"
   >
-    <!-- 加载中状态 -->
-    <div v-if="isLoading && !hasFailed" class="loading-spinner">
-      <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
-        <circle class="spinner" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" fill="none"/>
-      </svg>
-    </div>
+    <!-- 加载中状态 — shimmer 光影动画 -->
+    <div v-if="isLoading && !hasFailed" class="loading-shimmer"></div>
     
     <!-- 图片 -->
     <img
@@ -361,36 +357,28 @@ onUnmounted(() => {
   border-radius: 50%;
 }
 
-/* 加载中状态 */
-.loading-spinner {
+/* 加载中状态 — shimmer 光影动画 */
+.loading-shimmer {
   position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  color: var(--text-muted);
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(201, 169, 110, 0.06) 30%,
+    rgba(201, 169, 110, 0.12) 50%,
+    rgba(201, 169, 110, 0.06) 70%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
   z-index: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  border-radius: inherit;
+  pointer-events: none;
 }
 
-.loading-spinner svg {
-  width: 24px;
-  height: 24px;
-}
-
-.is-avatar .loading-spinner svg {
-  width: 32px;
-  height: 32px;
-}
-
-.spinner {
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
 
 /* 错误状态 */

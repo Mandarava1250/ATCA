@@ -38,8 +38,7 @@ export default defineConfig({
     sourcemap: false,
     chunkSizeWarningLimit: 1500,
     assetsDir: 'assets',
-    // 使用esbuild进行压缩
-    minify: 'esbuild',
+    minify: 'oxc',
     rollupOptions: {
       output: {
         manualChunks(id) {
