@@ -195,8 +195,8 @@ app.get('/api/v1/health', (_req, res) => {
 
 // 速率限制（健康检查端点已豁免）
 app.use(generalRateLimiter);
-app.use(express.json({ limit: '100mb' }));
-app.use(express.urlencoded({ extended: true, limit: '100mb' }));
+app.use(express.json({ limit: '500mb' }));
+app.use(express.urlencoded({ extended: true, limit: '500mb' }));
 
 // ============================================
 // 浏览状态检测与条件性数据输出中间件

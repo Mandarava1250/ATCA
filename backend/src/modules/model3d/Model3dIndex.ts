@@ -379,11 +379,11 @@ router.get('/:id/export', authMiddleware, validateParams(idParamSchema), asyncHa
 const batchImportSchema = z.object({
   models: z.array(z.object({
     model_name: z.string().min(1),
-    model_data: z.string().optional(),
+    model_data: z.string().max(50 * 1024 * 1024).optional(),
     thumbnail_url: z.string().optional(),
     is_public: z.boolean().optional().default(true),
     is_featured: z.boolean().optional().default(false),
-  })).min(1).max(50),
+  })).min(1).max(20),
 });
 
 router.post('/batch-import', authMiddleware, validateBody(batchImportSchema), asyncHandler(async (req: AuthRequest, res) => {
