@@ -15,7 +15,7 @@ import { SelectionManager } from './ThreejsSelectionManager';
 import { MeasureTool } from './ThreejsMeasureTool';
 import { generateUUID } from '../../utils/uuid';
 import { logResourceAlloc, logResourceRelease, logListenerAdd, logListenerRemove } from '../../utils/memoryLifecycle';
-import { LODSystem, lodSystem } from './LODSystem';
+import { LODSystem } from './LODSystem';
 import { SpatialIndex } from './SpatialIndex';
 
 export interface SceneComponent {
@@ -1013,7 +1013,7 @@ export class SceneManager {
           } else {
             texture.mapping = THREE.UVMapping;
             this.scene.background = texture;
-            this.scene.environment = null;
+            // 不清理 scene.environment — 保留已有的环境贴图用于反射
             this.backgroundType = 'image';
           }
           resolve();

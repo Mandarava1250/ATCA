@@ -1933,19 +1933,23 @@ function loadBackgroundFile(file: File) {
     sceneManager?.setBackgroundEnvironment(url)
       .then(() => {
         sceneManager?.setEnvironmentIntensity(sceneSettings.value.envIntensity);
+        URL.revokeObjectURL(url);
       })
       .catch((err) => {
         console.error('[Background] HDR加载失败:', err);
-        alert('环境贴图加载失败，请确认文件格式正确');
+        URL.revokeObjectURL(url);
+        showToast('环境贴图加载失败，请确认文件格式正确', 'error');
       });
   } else {
     const isEquirectangular = file.name.toLowerCase().includes('panorama') ||
       file.name.toLowerCase().includes('equirectangular') ||
       file.name.toLowerCase().includes('360');
     sceneManager?.setBackgroundImage(url, isEquirectangular)
+      .then(() => URL.revokeObjectURL(url))
       .catch((err) => {
         console.error('[Background] 图片加载失败:', err);
-        alert('背景图片加载失败');
+        URL.revokeObjectURL(url);
+        showToast('背景图片加载失败', 'error');
       });
   }
 }
@@ -1981,13 +1985,11 @@ function onDragEnterCanvas(e: DragEvent) {
 function onDragLeaveCanvas(e: DragEvent) {
   e.preventDefault();
   // 只有当离开画布区域时才取消高亮
-  const rect = canvasContainer.value?.getBoundingClientRect();
-  if (rect) {
-    const x = e.clientX, y = e.clientY;
-    if (x <= rect.left || x >= rect.right || y <= rect.top || y >= rect.bottom) {
-      isDragOver.value = false;
-    }
-  } else {
+  const container = canvasContainer.value;
+  if (!container) { isDragOver.value = false; return; }
+  const rect = container.getBoundingClientRect();
+  const x = e.clientX, y = e.clientY;
+  if (x <= rect.left || x >= rect.right || y <= rect.top || y >= rect.bottom) {
     isDragOver.value = false;
   }
 }
@@ -2215,33 +2217,41 @@ function generateThumbnail(): Promise<string> {
       if (!dataUrl || dataUrl.length < 100) { resolve(''); return; }
 
       const img = new Image();
+      const timeoutId = setTimeout(() => { resolve(''); }, 5000); // 5秒超时
+
       img.onload = () => {
+        clearTimeout(timeoutId);
         try {
           const canvas = document.createElement('canvas');
           canvas.width = 200;
           canvas.height = 150;
           const ctx = canvas.getContext('2d');
           if (!ctx) { resolve(''); return; }
-          ctx.drawImage(img, 0, 0, 200, 150);
+          // 保持宽高比裁剪
+          const sX = Math.max(0, (img.width - img.height * 200/150) / 2);
+          const sY = Math.max(0, (img.height - img.width * 150/200) / 2);
+          const sW = img.width - sX * 2;
+          const sH = img.height - sY * 2;
+          ctx.drawImage(img, sX, sY, sW, sH, 0, 0, 200, 150);
           // 压缩为JPEG，质量0.7
           const compressed = canvas.toDataURL('image/jpeg', 0.7);
-          // 如果仍然太大，降低质量到0.4
-          if (compressed.length > 50000) {
-            const smaller = canvas.toDataURL('image/jpeg', 0.4);
-            resolve(smaller);
-          } else {
-            resolve(compressed);
-          }
+          resolve(compressed.length > 50000 ? canvas.toDataURL('image/jpeg', 0.4) : compressed);
         } catch { resolve(''); }
       };
-      img.onerror = () => resolve('');
+      img.onerror = () => { clearTimeout(timeoutId); resolve(''); };
       img.src = dataUrl;
     } catch { resolve(''); }
   });
 }
 
 /** Toast 通知 */
+let toastTimer: ReturnType<typeof setTimeout> | null = null;
 function showToast(message: string, type: 'success' | 'error' | 'info' = 'info') {
+  // 移除已有 Toast
+  const existing = document.querySelector('.toast-notification');
+  if (existing) existing.remove();
+  if (toastTimer) { clearTimeout(toastTimer); toastTimer = null; }
+
   // 创建 Toast 元素
   const toast = document.createElement('div');
   toast.className = `toast-notification toast-${type}`;
@@ -2260,7 +2270,7 @@ function showToast(message: string, type: 'success' | 'error' | 'info' = 'info')
   document.body.appendChild(toast);
 
   // 3秒后自动移除
-  setTimeout(() => {
+  toastTimer = setTimeout(() => {
     toast.style.opacity = '0';
     toast.style.transition = 'opacity 0.3s ease';
     setTimeout(() => { if (toast.parentNode) toast.parentNode.removeChild(toast); }, 300);
