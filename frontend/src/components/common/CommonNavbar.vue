@@ -421,13 +421,32 @@ watch(() => route.path, () => {
 }
 
 .navbar.scrolled {
-  background: rgba(26, 23, 20, 0.95);
-  backdrop-filter: blur(32px) saturate(1.5);
-  -webkit-backdrop-filter: blur(32px) saturate(1.5);
-  border-bottom-color: rgba(201, 169, 110, 0.12);
+  background: rgba(26, 23, 20, 0.96);
+  backdrop-filter: blur(32px) saturate(1.6);
+  -webkit-backdrop-filter: blur(32px) saturate(1.6);
+  border-bottom-color: rgba(201, 169, 110, 0.15);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.03),
-    0 6px 30px rgba(0, 0, 0, 0.35);
+    0 8px 32px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(201, 169, 110, 0.08);
+  transform: translateY(0);
+}
+
+.navbar.scrolled::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, 
+    transparent, 
+    rgba(201, 169, 110, 0.4), 
+    rgba(201, 169, 110, 0.6), 
+    rgba(201, 169, 110, 0.4), 
+    transparent);
+  opacity: 1;
+  transition: opacity var(--t-fast);
 }
 
 .navbar.hidden {
@@ -501,13 +520,30 @@ watch(() => route.path, () => {
   font-weight: 500;
   letter-spacing: 0.06em;
   position: relative;
-  transition: all 0.25s ease;
+  transition: all var(--t-fast);
   text-decoration: none !important;
   min-height: 28px;
+  overflow: hidden;
+}
+.nav-link::before {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--gold-dim), var(--gold), var(--gold-dim));
+  border-radius: 1px;
+  transform: translateX(-50%);
+  transition: all var(--t-fast);
 }
 .nav-link:hover {
   color: var(--gold) !important;
   background: rgba(201, 169, 110, 0.08);
+  transform: translateY(-1px);
+}
+.nav-link:hover::before {
+  width: 60%;
 }
 
 .nav-link.active {
@@ -520,6 +556,11 @@ watch(() => route.path, () => {
     inset 0 1px 0 rgba(255, 255, 255, 0.05),
     0 2px 8px rgba(201, 169, 110, 0.1);
 }
+.nav-link.active::before {
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(90deg, var(--gold-dim), var(--gold), var(--gold-dim));
+}
 
 /* Actions */
 .navbar-actions {
@@ -531,24 +572,43 @@ watch(() => route.path, () => {
 .lang-btn {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 6px 10px;
-  border-radius: var(--r-sm);
+  gap: 6px;
+  padding: 7px 12px;
+  border-radius: var(--r-md);
   color: var(--text-muted);
-  font-family: 'Noto Serif SC','STSong',serif;
+  font-family: var(--font-serif);
   font-size: 0.75rem;
   font-weight: 600;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.06em;
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.06);
   backdrop-filter: blur(8px);
-  transition: all var(--t);
+  -webkit-backdrop-filter: blur(8px);
+  transition: all var(--t-fast);
   cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+.lang-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(201, 169, 110, 0.08), transparent);
+  opacity: 0;
+  transition: opacity var(--t-fast);
 }
 .lang-btn:hover {
   color: var(--gold);
-  border-color: rgba(201, 169, 110, 0.25);
-  background: rgba(201, 169, 110, 0.06);
+  border-color: rgba(201, 169, 110, 0.3);
+  background: rgba(201, 169, 110, 0.08);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(201, 169, 110, 0.1);
+}
+.lang-btn:hover::before {
+  opacity: 1;
+}
+.lang-btn:active {
+  transform: translateY(0);
 }
 
 /* User */
@@ -557,23 +617,54 @@ watch(() => route.path, () => {
   align-items: center;
   gap: 8px;
   padding: 4px 12px 4px 4px;
-  border-radius: 50px;
+  border-radius: var(--r-full);
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.06);
   backdrop-filter: blur(8px);
   text-decoration: none;
-  transition: all var(--t);
+  transition: all var(--t-fast);
 }
 .nav-user:hover {
   background: rgba(201, 169, 110, 0.08);
   border-color: rgba(201, 169, 110, 0.15);
+  transform: translateY(-1px);
 }
 .nav-avatar {
   width: 28px;
   height: 28px;
-  border-radius: 50%;
+  border-radius: var(--r-full);
   object-fit: cover;
-  border: 1.5px solid rgba(201, 169, 110, 0.2);
+  border: 2px solid rgba(201, 169, 110, 0.2);
+  position: relative;
+  transition: all var(--t-fast);
+}
+.nav-avatar::before {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: var(--r-full);
+  background: linear-gradient(45deg, var(--gold-dim), var(--gold), var(--gold-light), var(--gold-dim));
+  opacity: 0;
+  transition: opacity var(--t-fast);
+  z-index: -1;
+}
+.nav-user:hover .nav-avatar {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 2px rgba(201, 169, 110, 0.15), var(--shadow-gold);
+}
+.nav-user:hover .nav-avatar::before {
+  opacity: 0.3;
+  animation: avatar-ring 1.5s ease-in-out infinite;
+}
+@keyframes avatar-ring {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.3;
+  }
+  50% {
+    transform: scale(1.15);
+    opacity: 0;
+  }
 }
 .nav-username {
   font-size: 0.8125rem;

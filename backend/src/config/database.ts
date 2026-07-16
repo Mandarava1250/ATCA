@@ -51,6 +51,13 @@ export function isDbFailed(dbName: string): boolean {
   return failedDbs.has(dbName);
 }
 
+// 全局连接池配置（从环境变量读取，支持动态调优）
+const globalPoolMax = parseInt(process.env.DB_POOL_MAX || '3', 10);
+const globalPoolMin = parseInt(process.env.DB_POOL_MIN || '0', 10);
+const globalPoolIdleTimeout = parseInt(process.env.DB_POOL_IDLE_TIMEOUT || '15000', 10);
+const globalConnectionTimeout = parseInt(process.env.DB_CONNECTION_TIMEOUT || '10000', 10);
+const globalRequestTimeout = parseInt(process.env.DB_REQUEST_TIMEOUT || '20000', 10);
+
 function buildConfig(
     hostEnv: string,
     portEnv: string,
@@ -71,10 +78,9 @@ function buildConfig(
       trustServerCertificate: process.env[trustEnv] === 'true',
     },
     pool: {
-      // 针对 2核2GiB 服务器优化：降低连接数
-      max: 3,        // 最大连接数（原10，降低到3）
-      min: 0,        // 最小连接数
-      idleTimeoutMillis: 15000,  // 空闲超时（原30秒，降低到15秒）
+      max: globalPoolMax,
+      min: globalPoolMin,
+      idleTimeoutMillis: globalPoolIdleTimeout,
     },
   };
 }
@@ -133,9 +139,8 @@ async function connectWithRetry(
         password: config.password,
         options: config.options,
         pool: config.pool,
-        // 针对 2核2GiB 服务器优化：降低超时时间
-        connectionTimeout: 10000, // 10秒连接超时（原15秒）
-        requestTimeout: 20000,    // 20秒请求超时（原30秒）
+        connectionTimeout: globalConnectionTimeout,
+        requestTimeout: globalRequestTimeout,
       });
 
       const connected = await pool.connect();

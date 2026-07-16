@@ -7,12 +7,16 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { TransformControls } from 'three/examples/jsm/controls/TransformControls.js';
 import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js';
+import { RGBELoader } from 'three/examples/jsm/loaders/RGBELoader.js';
+import { EXRLoader } from 'three/examples/jsm/loaders/EXRLoader.js';
 import { DEFAULT_COMPONENTS } from './ThreejsArchitectureComponents';
 import { MortiseTenonSnapEngine, type SnapPoint, type SnapResult, type RotationConstraint } from './ThreejsMortiseTenonSnapEngine';
 import { SelectionManager } from './ThreejsSelectionManager';
 import { MeasureTool } from './ThreejsMeasureTool';
 import { generateUUID } from '../../utils/uuid';
 import { logResourceAlloc, logResourceRelease, logListenerAdd, logListenerRemove } from '../../utils/memoryLifecycle';
+import { LODSystem, lodSystem } from './LODSystem';
+import { SpatialIndex } from './SpatialIndex';
 
 export interface SceneComponent {
   uuid: string;
@@ -87,6 +91,10 @@ export class SceneManager {
 
   // 榫卯吸附引擎
   private snapEngine: MortiseTenonSnapEngine;
+
+  // 性能优化系统
+  private lodSystem: LODSystem;
+  private spatialIndex: SpatialIndex;
 
   // 交互状态
   private transformMode: TransformMode = 'select';
@@ -197,6 +205,15 @@ export class SceneManager {
   // 变换轴约束
   private axisConstraint: 'X' | 'Y' | 'Z' | 'XY' | 'YZ' | 'XZ' | 'XYZ' = 'XYZ';
 
+  // 背景系统
+  private backgroundType: 'color' | 'image' | 'environment' = 'color';
+  private backgroundTexture: THREE.Texture | null = null;
+  private environmentTexture: THREE.Texture | null = null;
+  private environmentIntensity = 1.0;
+  private textureLoader: THREE.TextureLoader;
+  private rgbeLoader: RGBELoader;
+  private exrLoader: EXRLoader;
+
   constructor(container: HTMLElement) {
     logResourceAlloc('ThreejsSceneManager', 'SceneManager');
     this.container = container;
@@ -209,6 +226,12 @@ export class SceneManager {
     this.snapEngine = new MortiseTenonSnapEngine();
     this.selectionManager = new SelectionManager(this.components);
     this.measureTool = new MeasureTool(this.scene);
+    this.textureLoader = new THREE.TextureLoader();
+    this.rgbeLoader = new RGBELoader();
+    this.exrLoader = new EXRLoader();
+    this.lodSystem = new LODSystem();
+    this.lodSystem.setCamera(this.camera);
+    this.spatialIndex = new SpatialIndex();
 
     this.init();
   }
@@ -366,6 +389,14 @@ export class SceneManager {
 
     this.components.set(comp.uuid, comp);
 
+    // 为高面数构件创建LOD
+    if (mesh.geometry.attributes.position.count > 1000) {
+      this.lodSystem.createLODForComponent(comp.uuid, mesh);
+    }
+
+    // 更新空间索引
+    this.spatialIndex.addOrUpdate(comp.uuid, mesh);
+
     const warnings = this.checkBuildingRules(comp);
     if (warnings.length > 0) {
       this.ruleWarnings.push(...warnings);
@@ -487,6 +518,8 @@ export class SceneManager {
     }
     this.components.delete(uuid);
     this.selectionManager.delete(uuid);
+    this.lodSystem.removeComponent(uuid);
+    this.spatialIndex.remove(uuid);
     this.updateGizmo();
     return true;
   }
@@ -550,6 +583,8 @@ export class SceneManager {
     });
     this.components.clear();
     this.selectionManager.clear();
+    this.lodSystem.clear();
+    this.spatialIndex.clear();
     this.updateGizmo();
   }
 
@@ -956,6 +991,108 @@ export class SceneManager {
     this.ambientLight.intensity = intensity;
   }
 
+  // ============ 背景系统 ============
+
+  getBackgroundType(): 'color' | 'image' | 'environment' {
+    return this.backgroundType;
+  }
+
+  /** 设置背景图片（支持普通图片和全景图） */
+  setBackgroundImage(url: string, isEquirectangular = false): Promise<void> {
+    return new Promise((resolve, reject) => {
+      this.textureLoader.load(
+        url,
+        (texture) => {
+          this.cleanupBackgroundTexture();
+          this.backgroundTexture = texture;
+          if (isEquirectangular) {
+            texture.mapping = THREE.EquirectangularReflectionMapping;
+            this.scene.background = texture;
+            this.scene.environment = texture;
+            this.backgroundType = 'environment';
+          } else {
+            texture.mapping = THREE.UVMapping;
+            this.scene.background = texture;
+            this.scene.environment = null;
+            this.backgroundType = 'image';
+          }
+          resolve();
+        },
+        undefined,
+        (err) => reject(err)
+      );
+    });
+  }
+
+  /** 设置 HDR 环境贴图 */
+  setBackgroundEnvironment(url: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const ext = url.split('.').pop()?.toLowerCase();
+      if (ext === 'exr') {
+        this.exrLoader.load(
+          url,
+          (texture) => {
+            this.cleanupBackgroundTexture();
+            this.environmentTexture = texture;
+            texture.mapping = THREE.EquirectangularReflectionMapping;
+            this.scene.background = texture;
+            this.scene.environment = texture;
+            this.backgroundType = 'environment';
+            resolve();
+          },
+          undefined,
+          (err) => reject(err)
+        );
+      } else {
+        this.rgbeLoader.load(
+          url,
+          (texture) => {
+            this.cleanupBackgroundTexture();
+            this.environmentTexture = texture;
+            texture.mapping = THREE.EquirectangularReflectionMapping;
+            this.scene.background = texture;
+            this.scene.environment = texture;
+            this.backgroundType = 'environment';
+            resolve();
+          },
+          undefined,
+          (err) => reject(err)
+        );
+      }
+    });
+  }
+
+  /** 设置环境贴图强度 */
+  setEnvironmentIntensity(intensity: number): void {
+    this.environmentIntensity = intensity;
+    if (this.scene.environment) {
+      this.scene.environmentIntensity = intensity;
+    }
+  }
+
+  getEnvironmentIntensity(): number {
+    return this.environmentIntensity;
+  }
+
+  /** 清除背景贴图，恢复纯色背景 */
+  clearBackground(): void {
+    this.cleanupBackgroundTexture();
+    this.scene.background = new THREE.Color(0xf5f0e8);
+    this.scene.environment = null;
+    this.backgroundType = 'color';
+  }
+
+  private cleanupBackgroundTexture(): void {
+    if (this.backgroundTexture) {
+      this.backgroundTexture.dispose();
+      this.backgroundTexture = null;
+    }
+    if (this.environmentTexture) {
+      this.environmentTexture.dispose();
+      this.environmentTexture = null;
+    }
+  }
+
   setWireframe(enabled: boolean): void {
     this.wireframeMode = enabled;
     this.components.forEach((comp) => {
@@ -1079,7 +1216,7 @@ export class SceneManager {
 
   // ============ 导入导出 ============
 
-  exportToJSON(): string {
+  exportToJSON(options?: { compress?: boolean; precision?: number }): string {
     const comps = this.getAllComponents().map((c) => {
       let defType = c.type;
       let defCategory = c.category;
@@ -1098,9 +1235,15 @@ export class SceneManager {
         type: defType,
         category: defCategory,
         name: defName,
-        position: { x: c.position.x, y: c.position.y, z: c.position.z },
-        rotation: { x: c.rotation.x, y: c.rotation.y, z: c.rotation.z },
-        scale: { x: c.scale.x, y: c.scale.y, z: c.scale.z },
+        position: options?.precision
+            ? { x: Math.round(c.position.x * options.precision) / options.precision, y: Math.round(c.position.y * options.precision) / options.precision, z: Math.round(c.position.z * options.precision) / options.precision }
+            : { x: c.position.x, y: c.position.y, z: c.position.z },
+        rotation: options?.precision
+            ? { x: Math.round(c.rotation.x * options.precision) / options.precision, y: Math.round(c.rotation.y * options.precision) / options.precision, z: Math.round(c.rotation.z * options.precision) / options.precision }
+            : { x: c.rotation.x, y: c.rotation.y, z: c.rotation.z },
+        scale: options?.precision
+            ? { x: Math.round(c.scale.x * options.precision) / options.precision, y: Math.round(c.scale.y * options.precision) / options.precision, z: Math.round(c.scale.z * options.precision) / options.precision }
+            : { x: c.scale.x, y: c.scale.y, z: c.scale.z },
         material: c.material
             ? {
               type: c.material.type || 'standard',
@@ -1354,6 +1497,8 @@ export class SceneManager {
   private animate = () => {
     this.animationId = requestAnimationFrame(this.animate);
     this.controls.update();
+    // 更新LOD系统
+    this.lodSystem.update();
     this.renderer.render(this.scene, this.camera);
   };
 
@@ -1644,6 +1789,9 @@ export class SceneManager {
     this.removeSelectionBox();
     this.clearScene();
     this.clearMeasurements();
+    this.cleanupBackgroundTexture();
+    this.lodSystem.dispose();
+    this.spatialIndex.clear();
     this.renderer.dispose();
     this.controls.dispose();
     this.transformControl.dispose();

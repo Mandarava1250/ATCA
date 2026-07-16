@@ -12,3 +12,25 @@ declare module 'three/examples/jsm/exporters/GLTFExporter.js' {
     parse(input: Object3D | Object3D[], onCompleted: (gltf: any) => void, onError?: (error: ErrorEvent) => void, options?: { binary?: boolean }): void;
   }
 }
+
+declare module 'three/examples/jsm/loaders/RGBELoader.js' {
+  import { DataTexture, LoadingManager, Texture } from 'three';
+  export class RGBELoader {
+    constructor(manager?: LoadingManager);
+    load(url: string, onLoad: (texture: DataTexture) => void, onProgress?: (event: ProgressEvent) => void, onError?: (event: ErrorEvent) => void): void;
+    parse(buffer: ArrayBuffer): DataTexture;
+    setDataType(type: number): this;
+    setPath(path: string): this;
+  }
+}
+
+declare module 'three/examples/jsm/loaders/EXRLoader.js' {
+  import { DataTexture, LoadingManager, Texture } from 'three';
+  export class EXRLoader {
+    constructor(manager?: LoadingManager);
+    load(url: string, onLoad: (texture: DataTexture) => void, onProgress?: (event: ProgressEvent) => void, onError?: (event: ErrorEvent) => void): void;
+    parse(buffer: ArrayBuffer): DataTexture;
+    setDataType(type: number): this;
+    setPath(path: string): this;
+  }
+}

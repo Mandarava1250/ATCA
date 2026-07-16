@@ -18,8 +18,8 @@ const logger = createLogger('Model3D');
 const idParamSchema = z.object({ id: z.string().regex(/^\d+$/) });
 const saveModelSchema = z.object({
   modelName: z.string().min(1).max(255),
-  modelData: z.string().optional(),
-  thumbnailUrl: z.string().optional(),
+  modelData: z.string().max(50 * 1024 * 1024).optional(), // 最大50MB
+  thumbnailUrl: z.string().max(500 * 1024).optional(), // 最大500KB（base64缩略图）
   isPublic: z.boolean().optional().default(false),
 });
 
@@ -116,10 +116,10 @@ router.post('/', authMiddleware, validateBody(saveModelSchema), asyncHandler(asy
     res.status(201).json({ success: true, data: { modelId: 1, modelName, userId, isPublic }, message: '模型保存成功（Mock）' }); return;
   }
 
-  // thumbnail_url 列最大255字符，超长则截断避免SQL截断错误
-  if (thumbnailUrl.length > 250) {
-    logger.warn('缩略图URL过长，进行截断', { originalLength: thumbnailUrl.length });
-    thumbnailUrl = thumbnailUrl.substring(0, 250);
+  // thumbnail_url 支持 base64 缩略图，最大500KB
+  if (thumbnailUrl && thumbnailUrl.length > 500 * 1024) {
+    logger.warn('缩略图数据过长，进行截断', { originalLength: thumbnailUrl.length });
+    thumbnailUrl = thumbnailUrl.substring(0, 500 * 1024);
   }
 
   let modelId: number;
@@ -132,7 +132,7 @@ router.post('/', authMiddleware, validateBody(saveModelSchema), asyncHandler(asy
         .input('userId', sql.Int, userId)
         .input('modelName', sql.NVarChar(sql.MAX), modelName)
         .input('modelData', sql.NVarChar(sql.MAX), modelData || null)
-        .input('thumbnailUrl', sql.NVarChar(255), thumbnailUrl || null)
+        .input('thumbnailUrl', sql.NVarChar(sql.MAX), thumbnailUrl || null)
         .input('isPublic', sql.Bit, isPublic ? 1 : 0)
         .query(`INSERT INTO dbo.user_models ([user_id], [model_name], [model_data], [thumbnail_url], [is_public]) VALUES (@userId, @modelName, @modelData, @thumbnailUrl, @isPublic); SELECT SCOPE_IDENTITY() AS model_id;`);
 
@@ -152,7 +152,7 @@ router.post('/', authMiddleware, validateBody(saveModelSchema), asyncHandler(asy
             .input('mid', sql.Int, modelId)
             .input('title', sql.NVarChar(255), modelName)
             .input('desc', sql.NVarChar(sql.MAX), modelName)
-            .input('thumb', sql.NVarChar(255), thumbnailUrl || null)
+            .input('thumb', sql.NVarChar(sql.MAX), thumbnailUrl || null)
             .input('btype', sql.NVarChar(50), '用户模型')
             .input('era', sql.NVarChar(50), '现代')
             .query('INSERT INTO dbo.building_shares ([user_id],[username],[model_id],[title],[description],[thumbnail_url],[building_type],[is_featured],[era],[created_at]) VALUES (@uid,@uname,@mid,@title,@desc,@thumb,@btype,0,@era,GETDATE())');
@@ -274,7 +274,7 @@ router.put('/:id', authMiddleware, validateParams(idParamSchema), asyncHandler(a
   const params: any = { id };
   if (modelName !== undefined) { fields.push('[model_name] = @modelName'); params.modelName = modelName; }
   if (isPublic !== undefined) { fields.push('[is_public] = @isPublic'); params.isPublic = isPublic ? 1 : 0; }
-  if (thumbnailUrl !== undefined) { fields.push('[thumbnail_url] = @thumbnailUrl'); params.thumbnailUrl = thumbnailUrl?.length > 250 ? thumbnailUrl.substring(0, 250) : thumbnailUrl; }
+  if (thumbnailUrl !== undefined) { fields.push('[thumbnail_url] = @thumbnailUrl'); params.thumbnailUrl = thumbnailUrl?.length > 500 * 1024 ? thumbnailUrl.substring(0, 500 * 1024) : thumbnailUrl; }
   if (modelData !== undefined) { fields.push('[model_data] = @modelData'); params.modelData = modelData; }
   if (fields.length === 0) { res.json({ success: true }); return; }
 
@@ -314,7 +314,7 @@ router.put('/:id', authMiddleware, validateParams(idParamSchema), asyncHandler(a
             .input('mid', sql.Int, id)
             .input('title', sql.NVarChar(255), finalModelName)
             .input('desc', sql.NVarChar(sql.MAX), finalModelName)
-            .input('thumb', sql.NVarChar(255), finalThumb || null)
+            .input('thumb', sql.NVarChar(sql.MAX), finalThumb || null)
             .input('btype', sql.NVarChar(50), '用户模型')
             .input('era', sql.NVarChar(50), '现代')
             .query('INSERT INTO dbo.building_shares ([model_id],[title],[description],[thumbnail_url],[building_type],[is_featured],[era],[created_at]) VALUES (@mid,@title,@desc,@thumb,@btype,0,@era,GETDATE())');
@@ -327,7 +327,7 @@ router.put('/:id', authMiddleware, validateParams(idParamSchema), asyncHandler(a
             await tx.request()
               .input('mid', sql.Int, id)
               .input('title', sql.NVarChar(255), finalModelName)
-              .input('thumb', sql.NVarChar(255), finalThumb || null)
+              .input('thumb', sql.NVarChar(sql.MAX), finalThumb || null)
               .query('UPDATE dbo.building_shares SET [title]=@title,[thumbnail_url]=@thumb,[updated_at]=GETDATE() WHERE [model_id]=@mid');
           }).catch(() => {});
         }
@@ -390,49 +390,79 @@ router.post('/batch-import', authMiddleware, validateBody(batchImportSchema), as
   const userId = req.user!.userId;
   const { models } = req.body;
   let imported = 0;
-  for (const m of models) {
-    const importType = (m as any).import_type || 'model';
+  const errors: string[] = [];
 
-    if (importType === 'building') {
-      // 建筑/场景类型：插入到 user_models 表
-      await execute('media3d',
-        'INSERT INTO dbo.user_models ([user_id],[model_name],[model_data],[thumbnail_url],[is_public]) VALUES (@userId,@modelName,@modelData,@thumbnailUrl,1)',
-        { userId, modelName: m.model_name, modelData: m.model_data || null, thumbnailUrl: m.thumbnail_url || null }
-      );
-    } else {
-      // 【修复】模型类型：同时插入building_templates（精选）和user_models（官方模型）
-      try {
-        // 1. 插入到building_templates作为精选模型
-        await execute('media3d',
-          'INSERT INTO dbo.building_templates ([template_name],[description],[category],[building_type],[era],[complexity_level],[thumbnail_url],[is_featured],[is_active],[template_structure]) VALUES (@name,@desc,@cat,@btype,@era,@complexity,@thumb,1,1,@struct)',
-          {
-            name: m.model_name,
-            desc: '管理员导入的精选模型',
-            cat: '古建筑',
-            btype: '传统建筑',
-            era: '传统',
-            complexity: 2,
-            thumb: m.thumbnail_url || null,
-            struct: m.model_data || '{}',
+  // 使用事务批量导入，提升性能（减少事务提交次数）
+  try {
+    await transaction('media3d', async (tx) => {
+      for (const m of models) {
+        const importType = (m as any).import_type || 'model';
+        const request = tx.request();
+
+        if (importType === 'building') {
+          // 建筑/场景类型：插入到 user_models 表
+          request
+            .input('userId', sql.Int, userId)
+            .input('modelName', sql.NVarChar(sql.MAX), m.model_name)
+            .input('modelData', sql.NVarChar(sql.MAX), m.model_data || null)
+            .input('thumbnailUrl', sql.NVarChar(sql.MAX), m.thumbnail_url || null);
+          await request.query(
+            'INSERT INTO dbo.user_models ([user_id],[model_name],[model_data],[thumbnail_url],[is_public]) VALUES (@userId,@modelName,@modelData,@thumbnailUrl,1)'
+          );
+        } else {
+          // 模型类型：同时插入building_templates（精选）和user_models（官方模型）
+          try {
+            // 1. 插入到building_templates作为精选模型
+            const templateRequest = tx.request();
+            templateRequest
+              .input('name', sql.NVarChar(255), m.model_name)
+              .input('desc', sql.NVarChar(sql.MAX), '管理员导入的精选模型')
+              .input('cat', sql.NVarChar(50), '古建筑')
+              .input('btype', sql.NVarChar(50), '传统建筑')
+              .input('era', sql.NVarChar(50), '传统')
+              .input('complexity', sql.Int, 2)
+              .input('thumb', sql.NVarChar(sql.MAX), m.thumbnail_url || null)
+              .input('struct', sql.NVarChar(sql.MAX), m.model_data || '{}');
+            await templateRequest.query(
+              'INSERT INTO dbo.building_templates ([template_name],[description],[category],[building_type],[era],[complexity_level],[thumbnail_url],[is_featured],[is_active],[template_structure]) VALUES (@name,@desc,@cat,@btype,@era,@complexity,@thumb,1,1,@struct)'
+            );
+            // 2. 同时插入到user_models作为官方模型
+            const userModelRequest = tx.request();
+            userModelRequest
+              .input('userId', sql.Int, userId)
+              .input('modelName', sql.NVarChar(sql.MAX), '[精选] ' + m.model_name)
+              .input('modelData', sql.NVarChar(sql.MAX), m.model_data || null)
+              .input('thumbnailUrl', sql.NVarChar(sql.MAX), m.thumbnail_url || null);
+            await userModelRequest.query(
+              'INSERT INTO dbo.user_models ([user_id],[model_name],[model_data],[thumbnail_url],[is_public]) VALUES (@userId,@modelName,@modelData,@thumbnailUrl,1)'
+            );
+          } catch (e: any) {
+            logger.warn('[BatchImport] building_templates插入失败，回退到user_models:', e.message);
+            // 回退：仅插入到 user_models
+            const fallbackRequest = tx.request();
+            fallbackRequest
+              .input('userId', sql.Int, userId)
+              .input('modelName', sql.NVarChar(sql.MAX), m.model_name)
+              .input('modelData', sql.NVarChar(sql.MAX), m.model_data || null)
+              .input('thumbnailUrl', sql.NVarChar(sql.MAX), m.thumbnail_url || null);
+            await fallbackRequest.query(
+              'INSERT INTO dbo.user_models ([user_id],[model_name],[model_data],[thumbnail_url],[is_public]) VALUES (@userId,@modelName,@modelData,@thumbnailUrl,1)'
+            );
           }
-        );
-        // 2. 同时插入到user_models作为官方模型
-        await execute('media3d',
-          'INSERT INTO dbo.user_models ([user_id],[model_name],[model_data],[thumbnail_url],[is_public]) VALUES (@userId,@modelName,@modelData,@thumbnailUrl,1)',
-          { userId, modelName: '[精选] ' + m.model_name, modelData: m.model_data || null, thumbnailUrl: m.thumbnail_url || null }
-        );
-      } catch (e: any) {
-        console.warn('[BatchImport] building_templates插入失败:', e.message);
-        // 回退：仅插入到 user_models
-        await execute('media3d',
-          'INSERT INTO dbo.user_models ([user_id],[model_name],[model_data],[thumbnail_url],[is_public]) VALUES (@userId,@modelName,@modelData,@thumbnailUrl,1)',
-          { userId, modelName: m.model_name, modelData: m.model_data || null, thumbnailUrl: m.thumbnail_url || null }
-        );
+        }
+        imported++;
       }
-    }
-    imported++;
+    });
+  } catch (txError: any) {
+    logger.error('[BatchImport] 批量导入事务失败:', txError.message);
+    errors.push(txError.message);
   }
-  res.json({ success: true, data: { imported, total: models.length }, message: `成功导入 ${imported} 个模型` });
+
+  res.json({
+    success: imported > 0,
+    data: { imported, total: models.length, errors: errors.length > 0 ? errors : undefined },
+    message: `成功导入 ${imported}/${models.length} 个模型${errors.length > 0 ? `，${errors.length} 个失败` : ''}`
+  });
 }));
 
 export default router;

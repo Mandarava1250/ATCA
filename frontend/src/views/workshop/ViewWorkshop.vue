@@ -303,7 +303,7 @@
         </div>
 
         <!-- 3D画布 -->
-        <div ref="canvasContainer" class="three-canvas" :class="{ measuring: isMeasureMode }" @drop="onDrop" @dragover.prevent @click="onCanvasClick" @contextmenu="onContextMenu"></div>
+        <div ref="canvasContainer" class="three-canvas" :class="{ measuring: isMeasureMode, 'drag-over': isDragOver }" @drop="onDrop" @dragover.prevent="onDragOverCanvas" @dragenter="onDragEnterCanvas" @dragleave="onDragLeaveCanvas" @click="onCanvasClick" @contextmenu="onContextMenu"></div>
 
         <!-- 画布提示 -->
         <div class="canvas-hints">
@@ -454,9 +454,35 @@
             <span class="collapse-arrow" :class="{ collapsed: sceneCollapsed }">&#9662;</span>
           </div>
           <div v-show="!sceneCollapsed" class="panel-body">
+            <!-- 背景类型选择 -->
             <div class="scene-setting">
+              <label>背景类型</label>
+              <div class="bg-type-selector">
+                <button class="bg-type-btn" :class="{ active: bgType === 'color' }" @click="switchBgType('color')">颜色</button>
+                <button class="bg-type-btn" :class="{ active: bgType === 'image' }" @click="switchBgType('image')">图片</button>
+                <button class="bg-type-btn" :class="{ active: bgType === 'environment' }" @click="switchBgType('environment')">环境</button>
+              </div>
+            </div>
+            <!-- 纯色背景 -->
+            <div v-if="bgType === 'color'" class="scene-setting">
               <label>{{ $t('workshop.bgColor') }}</label>
               <input type="color" v-model="sceneSettings.bgColor" @input="updateBgColor" />
+            </div>
+            <!-- 图片/环境背景上传 -->
+            <div v-if="bgType !== 'color'" class="scene-setting">
+              <label>背景文件</label>
+              <div class="bg-upload-area" @click="bgFileInput?.click()" @dragover.prevent @drop.prevent="onBgFileDrop">
+                <span v-if="!bgFileName">{{ bgType === 'image' ? '点击或拖拽上传图片' : '点击或拖拽上传HDR' }}</span>
+                <span v-else class="bg-file-name">{{ bgFileName }}</span>
+              </div>
+              <input type="file" ref="bgFileInput" :accept="bgType === 'image' ? '.jpg,.jpeg,.png,.webp,.bmp' : '.hdr,.exr'"
+                style="display:none" @change="onBgFileUpload" />
+            </div>
+            <!-- 环境贴图强度 -->
+            <div v-if="bgType === 'environment'" class="scene-setting">
+              <label>环境强度</label>
+              <input type="range" min="0" max="2" step="0.05" v-model.number="sceneSettings.envIntensity" @input="updateEnvIntensity" />
+              <span>{{ sceneSettings.envIntensity.toFixed(2) }}</span>
             </div>
             <div class="scene-setting">
               <label>{{ $t('workshop.gridSize') }}</label>
@@ -556,11 +582,31 @@
     <!-- 保存弹窗 -->
     <div v-if="showSaveModal" class="modal-overlay" @click.self="showSaveModal = false">
       <div class="modal modal-save">
-        <h3>保存模型</h3>
+        <h3>{{ currentModelId ? '保存更新模型' : '保存模型' }}</h3>
         <div class="save-form">
           <div class="form-group full">
             <label>模型名称</label>
             <input v-model="saveForm.modelName" class="atca-input" placeholder="输入模型名称..." @keyup.enter="confirmSave" />
+          </div>
+          <!-- 保存模式选择（仅当更新已有模型时显示） -->
+          <div v-if="currentModelId" class="form-group full">
+            <label>保存方式</label>
+            <div class="save-mode-options">
+              <label class="save-mode-option" :class="{ active: saveMode === 'update' }" @click="saveMode = 'update'">
+                <svg viewBox="0 0 24 24" width="16" height="16"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z" stroke="currentColor" fill="none" stroke-width="1.5"/><polyline points="17 21 17 13 7 13 7 21" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
+                <div>
+                  <strong>更新当前模型</strong>
+                  <span>覆盖原有模型数据</span>
+                </div>
+              </label>
+              <label class="save-mode-option" :class="{ active: saveMode === 'new' }" @click="saveMode = 'new'">
+                <svg viewBox="0 0 24 24" width="16" height="16"><path d="M12 5v14M5 12h14" stroke="currentColor" fill="none" stroke-width="2"/></svg>
+                <div>
+                  <strong>另存为新模型</strong>
+                  <span>创建一份新的副本</span>
+                </div>
+              </label>
+            </div>
           </div>
           <div class="form-group full">
             <label>可见性</label>
@@ -598,6 +644,7 @@
           <button class="btn btn-sec" @click="showSaveModal = false" :disabled="saveAnimating">取消</button>
           <button class="btn btn-pri" @click="confirmSave" :disabled="saveAnimating">
             <span v-if="saveAnimating">保存中...</span>
+            <span v-else-if="currentModelId && saveMode === 'update'">更新保存</span>
             <span v-else>保存</span>
           </button>
         </div>
@@ -895,7 +942,7 @@
       </div>
     </div>
 
-    <input type="file" ref="fileInput" accept=".json,.obj,.fbx,.gltf,.glb,.stl,.ply,.3ds" style="display:none" @change="onFileImport" />
+    <input type="file" ref="fileInput" accept=".json,.obj,.fbx,.gltf,.glb,.stl,.ply,.3ds,.jpg,.jpeg,.png,.webp,.bmp,.hdr,.exr" style="display:none" @change="onFileImport" />
     
     <!-- 右键菜单 -->
     <div v-if="showContextMenu" class="context-menu" :style="{ left: contextMenuPos.x + 'px', top: contextMenuPos.y + 'px' }" @click.self="hideContextMenu">
@@ -1147,6 +1194,13 @@ const currentMaterial = ref('wood');
 const showTemplates = ref(false);
 const showSaveModal = ref(false);
 const saveForm = ref({ modelName: '', isPublic: false });
+const currentModelId = ref<number | null>(null); // 当前加载的模型ID，用于保存更新
+const saveMode = ref<'new' | 'update'>('new');
+// 文件导入辅助：检测是否为背景文件（图片或HDR）
+function isBackgroundFile(file: File): boolean {
+  const name = file.name.toLowerCase();
+  return name.match(/\.(jpg|jpeg|png|webp|bmp|hdr|exr)$/i) !== null;
+}
 const templates = ref<any[]>([]);
 const snapEnabled = ref(true);
 const fileInput = ref<HTMLInputElement>();
@@ -1154,6 +1208,7 @@ const wireframeMode = ref(false);
 const isMeasureMode = ref(false);
 const isSnapMode = ref(false);   // 手动吸附模式开关
 const isSimpleMode = ref(false); // 精简模式开关（默认关闭，显示完整UI）
+const isDragOver = ref(false);   // 拖拽文件到画布时的视觉反馈
 const activeView = ref('perspective');
 const searchQuery = ref('');
 
@@ -1199,7 +1254,11 @@ const sceneSettings = ref({
   gridVisible: true,
   lightIntensity: 1.0,
   ambientIntensity: 0.5,
+  envIntensity: 1.0,
 });
+const bgType = ref<'color' | 'image' | 'environment'>('color');
+const bgFileName = ref('');
+const bgFileInput = ref<HTMLInputElement>();
 
 // 搭建模式：free=自由创建 | real=真实搭建（有古建筑规则约束）
 const buildMode = ref<'free' | 'real'>('free');
@@ -1841,6 +1900,55 @@ function updateGridSize() { sceneManager?.setGridSize(sceneSettings.value.gridSi
 function updateGridVisible() { sceneManager?.toggleGrid(sceneSettings.value.gridVisible); }
 function updateLightIntensity() { sceneManager?.setLightIntensity(sceneSettings.value.lightIntensity); }
 function updateAmbientIntensity() { sceneManager?.setAmbientIntensity(sceneSettings.value.ambientIntensity); }
+function updateEnvIntensity() { sceneManager?.setEnvironmentIntensity(sceneSettings.value.envIntensity); }
+
+// ===== 背景系统 =====
+function switchBgType(type: 'color' | 'image' | 'environment') {
+  bgType.value = type;
+  bgFileName.value = '';
+  if (type === 'color') {
+    sceneManager?.clearBackground();
+    sceneManager?.setBackgroundColor(sceneSettings.value.bgColor);
+  }
+}
+
+function onBgFileUpload(e: Event) {
+  const target = e.target as HTMLInputElement;
+  const file = target.files?.[0];
+  if (!file || !sceneManager) return;
+  loadBackgroundFile(file);
+  target.value = '';
+}
+
+function onBgFileDrop(e: DragEvent) {
+  const file = e.dataTransfer?.files?.[0];
+  if (!file || !sceneManager) return;
+  loadBackgroundFile(file);
+}
+
+function loadBackgroundFile(file: File) {
+  const url = URL.createObjectURL(file);
+  bgFileName.value = file.name;
+  if (bgType.value === 'environment' || file.name.match(/\.(hdr|exr)$/i)) {
+    sceneManager?.setBackgroundEnvironment(url)
+      .then(() => {
+        sceneManager?.setEnvironmentIntensity(sceneSettings.value.envIntensity);
+      })
+      .catch((err) => {
+        console.error('[Background] HDR加载失败:', err);
+        alert('环境贴图加载失败，请确认文件格式正确');
+      });
+  } else {
+    const isEquirectangular = file.name.toLowerCase().includes('panorama') ||
+      file.name.toLowerCase().includes('equirectangular') ||
+      file.name.toLowerCase().includes('360');
+    sceneManager?.setBackgroundImage(url, isEquirectangular)
+      .catch((err) => {
+        console.error('[Background] 图片加载失败:', err);
+        alert('背景图片加载失败');
+      });
+  }
+}
 
 // ===== 相机 =====
 function setCamera(preset: 'perspective' | 'top' | 'front' | 'side' | 'isometric') {
@@ -1855,7 +1963,50 @@ function onDragStart(e: DragEvent, def: ComponentDefinition) {
   e.dataTransfer?.setData('component', JSON.stringify(def));
 }
 
+function onDragOverCanvas(e: DragEvent) {
+  e.preventDefault();
+  // 允许拖拽文件放入
+  if (e.dataTransfer) {
+    e.dataTransfer.dropEffect = 'copy';
+  }
+}
+
+function onDragEnterCanvas(e: DragEvent) {
+  e.preventDefault();
+  if (e.dataTransfer?.types.includes('Files')) {
+    isDragOver.value = true;
+  }
+}
+
+function onDragLeaveCanvas(e: DragEvent) {
+  e.preventDefault();
+  // 只有当离开画布区域时才取消高亮
+  const rect = canvasContainer.value?.getBoundingClientRect();
+  if (rect) {
+    const x = e.clientX, y = e.clientY;
+    if (x <= rect.left || x >= rect.right || y <= rect.top || y >= rect.bottom) {
+      isDragOver.value = false;
+    }
+  } else {
+    isDragOver.value = false;
+  }
+}
+
 function onDrop(e: DragEvent) {
+  isDragOver.value = false;
+  // 检查是否拖入了文件
+  const files = e.dataTransfer?.files;
+  if (files && files.length > 0) {
+    const file = files[0];
+    // 检测是否为背景文件（图片/HDR）
+    if (isBackgroundFile(file)) {
+      e.preventDefault();
+      bgType.value = file.name.match(/\.(hdr|exr)$/i) ? 'environment' : 'image';
+      loadBackgroundFile(file);
+      return;
+    }
+  }
+  // 拖入构件定义
   const data = e.dataTransfer?.getData('component');
   if (!data || !sceneManager) return;
   const def = JSON.parse(data) as ComponentDefinition;
@@ -1917,6 +2068,14 @@ async function onFileImport(e: Event) {
   if (!file || !sceneManager) return;
   const ext = file.name.split('.').pop()?.toLowerCase();
 
+  // 检测背景文件（图片 / HDR）
+  if (isBackgroundFile(file)) {
+    bgType.value = file.name.match(/\.(hdr|exr)$/i) ? 'environment' : 'image';
+    loadBackgroundFile(file);
+    target.value = '';
+    return;
+  }
+
   if (ext === 'json') {
     const reader = new FileReader();
     reader.onload = (ev) => {
@@ -1932,7 +2091,7 @@ async function onFileImport(e: Event) {
     };
     reader.readAsText(file);
   } else if (ext === 'fbx' || ext === 'stl' || ext === 'ply' || ext === '3ds') {
-    alert(ext!.toUpperCase() + ' 格式文件需通过后端解析。请使用 .OBJ 或 .JSON 格式导入。');
+    showToast(ext!.toUpperCase() + ' 格式文件需通过后端解析。请使用 .OBJ 或 .JSON 格式导入。', 'info');
   } else if (ext === 'gltf' || ext === 'glb') {
     const loader = new GLTFLoader();
     try {
@@ -1942,9 +2101,9 @@ async function onFileImport(e: Event) {
       URL.revokeObjectURL(url);
       saveHistory();
       refreshComponents();
-    } catch (e: any) { alert('GLTF导入失败: ' + (e.message || '未知错误')); }
+    } catch (e: any) { showToast('GLTF导入失败: ' + (e.message || '未知错误'), 'error'); }
   } else {
-    alert('不支持的文件格式: .' + ext + '\n支持: .obj, .json, .gltf, .glb');
+    showToast('不支持的文件格式: .' + ext + '\n支持: .obj, .json, .gltf, .glb', 'error');
   }
   target.value = '';
 }
@@ -1964,7 +2123,7 @@ function exportGLTF() {
     a.download = 'model' + ext;
     a.click();
     URL.revokeObjectURL(url);
-  }).catch((err) => { console.error('[Export GLTF]', err); alert('导出GLTF失败: ' + (err.message || '未知错误')); });
+  }).catch((err) => { console.error('[Export GLTF]', err); showToast('导出GLTF失败: ' + (err.message || '未知错误'), 'error'); });
 }
 
 // ===== 保存 =====
@@ -1982,7 +2141,20 @@ function openSaveModal() {
     }
     return;
   }
-  saveForm.value = { modelName: '我的模型', isPublic: false };
+  // 如果当前有加载的模型，预填名称和可见性，默认更新模式
+  if (currentModelId.value) {
+    saveForm.value = { modelName: '我的模型', isPublic: false };
+    saveMode.value = 'update';
+    // 从myModels列表中查找已有模型信息
+    const existing = myModels.value.find((m: any) => m.model_id === currentModelId.value);
+    if (existing) {
+      saveForm.value.modelName = existing.model_name || '我的模型';
+      saveForm.value.isPublic = !!existing.is_public;
+    }
+  } else {
+    saveForm.value = { modelName: '我的模型', isPublic: false };
+    saveMode.value = 'new';
+  }
   showSaveModal.value = true;
 }
 
@@ -2000,6 +2172,99 @@ function trimModelDataForStorage(json: string, maxVertsPerComp: number): string 
     }
     return JSON.stringify(data);
   } catch { return json; }
+}
+
+/** 压缩模型数据：移除mesh引用，截断顶点精度，删除空数据 */
+function compressModelData(json: string): string {
+  try {
+    const data = JSON.parse(json);
+    if (!data.components || !Array.isArray(data.components)) return json;
+    for (const comp of data.components) {
+      // 移除Three.js mesh引用（不可序列化）
+      delete comp.mesh;
+      // 截断浮点数精度到3位小数
+      if (comp.position) {
+        comp.position.x = Math.round(comp.position.x * 1000) / 1000;
+        comp.position.y = Math.round(comp.position.y * 1000) / 1000;
+        comp.position.z = Math.round(comp.position.z * 1000) / 1000;
+      }
+      if (comp.rotation) {
+        comp.rotation.x = Math.round(comp.rotation.x * 1000) / 1000;
+        comp.rotation.y = Math.round(comp.rotation.y * 1000) / 1000;
+        comp.rotation.z = Math.round(comp.rotation.z * 1000) / 1000;
+      }
+      if (comp.scale) {
+        comp.scale.x = Math.round(comp.scale.x * 1000) / 1000;
+        comp.scale.y = Math.round(comp.scale.y * 1000) / 1000;
+        comp.scale.z = Math.round(comp.scale.z * 1000) / 1000;
+      }
+      // 限制顶点数量（最多5000个顶点/组件）
+      if (comp.vertices && Array.isArray(comp.vertices) && comp.vertices.length > 5000) {
+        comp.vertices = comp.vertices.slice(0, 5000);
+      }
+    }
+    return JSON.stringify(data);
+  } catch { return json; }
+}
+
+/** 生成缩略图：截屏后缩放到200x150 JPEG，大小控制在30KB以内 */
+function generateThumbnail(): Promise<string> {
+  return new Promise((resolve) => {
+    try {
+      const dataUrl = sceneManager?.takeScreenshot() || '';
+      if (!dataUrl || dataUrl.length < 100) { resolve(''); return; }
+
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const canvas = document.createElement('canvas');
+          canvas.width = 200;
+          canvas.height = 150;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) { resolve(''); return; }
+          ctx.drawImage(img, 0, 0, 200, 150);
+          // 压缩为JPEG，质量0.7
+          const compressed = canvas.toDataURL('image/jpeg', 0.7);
+          // 如果仍然太大，降低质量到0.4
+          if (compressed.length > 50000) {
+            const smaller = canvas.toDataURL('image/jpeg', 0.4);
+            resolve(smaller);
+          } else {
+            resolve(compressed);
+          }
+        } catch { resolve(''); }
+      };
+      img.onerror = () => resolve('');
+      img.src = dataUrl;
+    } catch { resolve(''); }
+  });
+}
+
+/** Toast 通知 */
+function showToast(message: string, type: 'success' | 'error' | 'info' = 'info') {
+  // 创建 Toast 元素
+  const toast = document.createElement('div');
+  toast.className = `toast-notification toast-${type}`;
+  toast.textContent = message;
+  toast.style.cssText = `
+    position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
+    z-index: 99999; padding: 12px 24px; border-radius: 8px;
+    font-size: 0.875rem; font-weight: 500; font-family: sans-serif;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+    animation: toastSlideIn 0.3s ease-out;
+    max-width: 500px; text-align: center; line-height: 1.5;
+    ${type === 'success' ? 'background: #4a7c6f; color: #fff;' :
+      type === 'error' ? 'background: var(--c-red, #c75c3a); color: #fff;' :
+      'background: var(--bg-card, #2a2520); color: var(--text, #e0d8cc); border: 1px solid var(--border, #3a3528);'}
+  `;
+  document.body.appendChild(toast);
+
+  // 3秒后自动移除
+  setTimeout(() => {
+    toast.style.opacity = '0';
+    toast.style.transition = 'opacity 0.3s ease';
+    setTimeout(() => { if (toast.parentNode) toast.parentNode.removeChild(toast); }, 300);
+  }, 3000);
 }
 
 /** 尝试保存到localStorage，超出配额时自动降级 */
@@ -2025,10 +2290,12 @@ async function confirmSave() {
     let json = sceneManager?.exportToJSON();
     if (!json) { saveAnimating.value = false; alert('模型数据为空'); return; }
 
+    // === 压缩模型数据 ===
+    json = compressModelData(json);
+
     // === 本地存储：处理配额问题 ===
-    const originalSize = json.length;
     const localModel = {
-      model_id: -(Date.now()),
+      model_id: currentModelId.value && saveMode.value === 'update' ? currentModelId.value : -(Date.now()),
       model_name: saveForm.value.modelName.trim(),
       model_data: json,
       thumbnail_url: '',
@@ -2037,71 +2304,84 @@ async function confirmSave() {
       component_count: sceneManager?.getAllComponents().length || 0,
     };
 
-    // 尝试1：完整数据
-    let existing = JSON.parse(localStorage.getItem('atca_local_models') || '[]');
-    existing.unshift(localModel);
-    let localSaved = saveToLocalStorage('atca_local_models', JSON.stringify(existing.slice(0, 20)));
-
-    // 尝试2：截断vertices（每个组件最多5000顶点）
-    if (!localSaved) {
-      const trimmedJson = trimModelDataForStorage(json, 5000);
-      localModel.model_data = trimmedJson;
-      existing = JSON.parse(localStorage.getItem('atca_local_models') || '[]');
-      existing.unshift(localModel);
-      localSaved = saveToLocalStorage('atca_local_models', JSON.stringify(existing.slice(0, 10))); // 减少到10个
-    }
-
-    // 尝试3：只保留模型元信息（不存vertices）
-    if (!localSaved) {
-      const minimalJson = trimModelDataForStorage(json, 500);
-      localModel.model_data = minimalJson;
-      existing = JSON.parse(localStorage.getItem('atca_local_models') || '[]');
-      existing.unshift(localModel);
-      localSaved = saveToLocalStorage('atca_local_models', JSON.stringify(existing.slice(0, 5))); // 减少到5个
-    }
-
-    // 尝试4：清空旧数据后重试
-    if (!localSaved) {
-      console.warn('[Save] localStorage已满，清理旧模型后重试');
-      const trimmedJson = trimModelDataForStorage(json, 500);
-      localModel.model_data = trimmedJson;
-      localSaved = saveToLocalStorage('atca_local_models', JSON.stringify([localModel]));
-      if (!localSaved) {
-        console.error('[Save] localStorage无法使用，跳过本地缓存');
+    // 尝试保存到localStorage
+    let localSaved = false;
+    try {
+      let existing = JSON.parse(localStorage.getItem('atca_local_models') || '[]');
+      // 更新模式下，替换已有的条目
+      if (currentModelId.value && saveMode.value === 'update') {
+        const idx = existing.findIndex((m: any) => m.model_id === currentModelId.value);
+        if (idx >= 0) {
+          existing[idx] = localModel;
+        } else {
+          existing.unshift(localModel);
+        }
+      } else {
+        existing.unshift(localModel);
+      }
+      existing = existing.slice(0, 20);
+      localStorage.setItem('atca_local_models', JSON.stringify(existing));
+      localSaved = true;
+    } catch (e: any) {
+      if (e.name === 'QuotaExceededError' || e.code === 22 || e.code === 1014) {
+        // 配额超限，尝试截断后保存
+        try {
+          const trimmed = trimModelDataForStorage(json, 5000);
+          localModel.model_data = trimmed;
+          const existing = JSON.parse(localStorage.getItem('atca_local_models') || '[]');
+          existing.unshift(localModel);
+          localStorage.setItem('atca_local_models', JSON.stringify(existing.slice(0, 10)));
+          localSaved = true;
+        } catch { /* localStorage不可用，跳过 */ }
       }
     }
 
     // 检查用户是否登录，如果未登录则只保存到本地
     if (!userStore.isLoggedIn) {
       showSaveModal.value = false;
-      alert('已保存到本地存储。登录后可以将模型同步到云端。');
+      showToast('已保存到本地存储。登录后可以将模型同步到云端。', 'info');
       saveAnimating.value = false;
       return;
     }
 
-    // === 登录用户：保存到服务器 ===
-    // thumbnail base64数据过长，截断避免数据库截断
-    let thumbnail = sceneManager?.takeScreenshot() || '';
-    if (thumbnail.length > 250) { thumbnail = thumbnail.substring(0, 250); }
+    // === 生成缩略图 ===
+    const thumbnail = await generateThumbnail();
 
-    // 发送到后端
-    const res = await model3dApi.saveModel({
-      modelName: saveForm.value.modelName.trim(),
-      modelData: json,
-      thumbnailUrl: thumbnail,
-      isPublic: saveForm.value.isPublic,
-    });
+    // === 登录用户：保存到服务器 ===
+    let res: any;
+    if (currentModelId.value && saveMode.value === 'update') {
+      // 更新已有模型
+      res = await model3dApi.updateModel(currentModelId.value, {
+        modelName: saveForm.value.modelName.trim(),
+        modelData: json,
+        thumbnailUrl: thumbnail,
+        isPublic: saveForm.value.isPublic,
+      });
+    } else {
+      // 新建模型
+      res = await model3dApi.saveModel({
+        modelName: saveForm.value.modelName.trim(),
+        modelData: json,
+        thumbnailUrl: thumbnail,
+        isPublic: saveForm.value.isPublic,
+      });
+    }
+
     showSaveModal.value = false;
     if (res.success) {
-      alert('模型保存成功！');
+      // 如果是新建，记录返回的 modelId
+      if (saveMode.value === 'new' && res.data?.modelId) {
+        currentModelId.value = res.data.modelId;
+      }
+      showToast('模型保存成功！', 'success');
       await loadMyModels();
     } else {
       const msg = localSaved ? '服务器保存失败，但已缓存到本地存储' : '服务器保存失败，本地存储空间不足';
-      alert(msg);
+      showToast(msg, 'error');
     }
   } catch (e: any) {
     console.error('[Workshop] 保存失败:', e);
-    alert('保存失败: ' + (e.message || '网络错误'));
+    showToast('保存失败: ' + (e.message || '网络错误'), 'error');
     showSaveModal.value = false;
   } finally {
     saveAnimating.value = false;
@@ -2118,28 +2398,28 @@ async function loadModelFromId(modelId: string) {
     // 处理模板ID (tpl_123)
     if (modelId.startsWith('tpl_')) {
       const tplId = parseInt(modelId.replace('tpl_', ''));
-      if (isNaN(tplId)) { alert('模板ID格式错误'); return; }
+      if (isNaN(tplId)) { showToast('模板ID格式错误', 'error'); return; }
       const res = await model3dApi.getTemplate(tplId);
       if (res.success && res.data) {
         modelData = res.data.model_data || null;
         modelName = res.data.template_name || '精选模型';
       } else {
-        alert('加载模板失败: ' + ((res as any).error?.message || '未知错误')); return;
+        showToast('加载模板失败: ' + ((res as any).error?.message || '未知错误'), 'error'); return;
       }
     } else {
       // 普通模型ID
       const numericId = parseInt(modelId);
-      if (isNaN(numericId)) { alert('模型ID格式错误: ' + modelId); return; }
+      if (isNaN(numericId)) { showToast('模型ID格式错误: ' + modelId, 'error'); return; }
       const res = await model3dApi.getModel(numericId);
       if (res.success && res.data) {
         modelData = res.data.model_data || null;
         modelName = res.data.model_name || '未命名';
       } else {
-        alert('加载模型失败: ' + ((res as any).error?.message || '未知错误')); return;
+        showToast('加载模型失败: ' + ((res as any).error?.message || '未知错误'), 'error'); return;
       }
     }
 
-    if (!modelData) { alert('模型数据为空'); return; }
+    if (!modelData) { showToast('模型数据为空', 'error'); return; }
 
     const jsonStr = typeof modelData === 'string' ? modelData : JSON.stringify(modelData);
 
@@ -2158,7 +2438,12 @@ async function loadModelFromId(modelId: string) {
       // 原生JSON编辑器格式
       sceneManager.importFromJSON(jsonStr);
       const compCount = parsed.components?.length || 0;
-      alert(`已加载模型: ${modelName}${compCount > 0 ? ' (' + compCount + '个构件)' : ''}`);
+      // 记录当前模型ID（用于后续保存更新）
+      if (!modelId.startsWith('tpl_')) {
+        const nid = parseInt(modelId);
+        if (!isNaN(nid)) currentModelId.value = nid;
+      }
+      showToast(`已加载模型: ${modelName}${compCount > 0 ? ' (' + compCount + '个构件)' : ''}`, 'success');
       saveHistory();
       refreshComponents();
     } else if (!isValidJSON && /\nv\s/.test('\n' + jsonStr)) {
@@ -2166,18 +2451,18 @@ async function loadModelFromId(modelId: string) {
       await loadOBJFromText(jsonStr, modelName);
     } else if (!isValidJSON && jsonStr.includes('newmtl')) {
       // MTL材质文件 — 提示用户需要同时导入OBJ
-      alert('检测到MTL材质文件，请同时导入对应的OBJ文件。MTL文件不包含几何数据。');
+      showToast('检测到MTL材质文件，请同时导入对应的OBJ文件。MTL文件不包含几何数据。', 'info');
     } else {
       // 未知格式 — 尝试作为OBJ处理（某些OBJ可能以mtllib等开头）
       if (!isValidJSON && (jsonStr.includes('\nv ') || jsonStr.includes('mtllib') || jsonStr.includes('usemtl'))) {
         await loadOBJFromText(jsonStr, modelName);
       } else {
-        alert('模型数据格式不支持。支持：编辑器JSON格式、Wavefront OBJ格式');
+        showToast('模型数据格式不支持。支持：编辑器JSON格式、Wavefront OBJ格式', 'error');
       }
     }
   } catch (e: any) {
     console.error('[Workshop] 加载模型失败:', e);
-    alert('加载模型失败: ' + (e.message || '未知错误'));
+    showToast('加载模型失败: ' + (e.message || '未知错误'), 'error');
   }
 }
 
@@ -2250,7 +2535,7 @@ async function loadOBJFromText(objText: string, modelName: string) {
 
     if (vCount === 0) {
       document.body.removeChild(progressDiv);
-      alert('OBJ文件中没有找到顶点数据'); return;
+      showToast('OBJ文件中没有找到顶点数据', 'error'); return;
     }
 
     // === 阶段3: 计算包围盒和缩放 ===
@@ -2436,13 +2721,15 @@ async function loadOBJFromText(objText: string, modelName: string) {
 
     const totalTrisAll = components.reduce((sum: number, c: any) => sum + (c.vertices?.length || 0) / 3, 0);
     const groupCount = objectGroups.filter(g => g.faces.length > 0).length;
-    alert(`已加载 OBJ 模型: ${modelName}\n顶点: ${vCount.toLocaleString()} | 三角面: ${Math.floor(totalTrisAll).toLocaleString()} | 原始对象: ${groupCount} | 组件: ${components.length}`);
+    // 清除当前模型ID（新建场景，不再关联旧模型）
+    currentModelId.value = null;
+    showToast(`已加载 OBJ 模型: ${modelName}\n顶点: ${vCount.toLocaleString()} | 三角面: ${Math.floor(totalTrisAll).toLocaleString()} | 原始对象: ${groupCount} | 组件: ${components.length}`, 'success');
     saveHistory();
     refreshComponents();
   } catch (e: any) {
     if (progressDiv.parentNode) document.body.removeChild(progressDiv);
     console.error('[Workshop] OBJ解析失败:', e);
-    alert('OBJ解析失败: ' + (e.message || '未知错误'));
+    showToast('OBJ解析失败: ' + (e.message || '未知错误'), 'error');
   }
 }
 
@@ -2460,6 +2747,7 @@ function clearScene() {
   sceneManager?.clearScene();
   selectedComponent.value = null;
   selectedUuids.value = [];
+  currentModelId.value = null; // 清空场景时清除模型ID关联
   saveHistory();
   refreshComponents();
 }
@@ -3327,15 +3615,21 @@ onUnmounted(() => {
 .tool-btn.active svg { transform: scale(1.1); }
 
 /* ===== 3D画布 ===== */
-.three-canvas { 
-  flex: 1; 
-  min-height: 0; 
+.three-canvas {
+  flex: 1;
+  min-height: 0;
   min-width: 0;
   width: 100%;
   height: 100%;
-  background: linear-gradient(180deg, var(--bg) 0%, var(--bg-light) 100%); 
+  background: linear-gradient(180deg, var(--bg) 0%, var(--bg-light) 100%);
   cursor: crosshair;
   transition: background var(--t);
+  position: relative;
+}
+.three-canvas.drag-over {
+  background: linear-gradient(180deg, rgba(var(--gold-rgb), 0.08) 0%, rgba(var(--gold-rgb), 0.02) 100%);
+  outline: 3px dashed var(--gold);
+  outline-offset: -3px;
 }
 
 .fullscreen-mode .three-canvas {
@@ -3656,12 +3950,12 @@ onUnmounted(() => {
 .empty-props p { font-size: 0.75rem; margin-top: 8px; }
 
 /* ===== 场景设置 ===== */
-.scene-setting { 
-  display: grid; 
-  grid-template-columns: 80px 1fr 40px; 
-  gap: 10px; 
-  align-items: center; 
-  margin-bottom: 12px; 
+.scene-setting {
+  display: grid;
+  grid-template-columns: 80px 1fr 40px;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 12px;
   padding: 8px 10px;
   background: rgba(var(--gold-rgb), 0.03);
   border-radius: var(--r-sm);
@@ -3672,20 +3966,20 @@ onUnmounted(() => {
   background: rgba(var(--gold-rgb), 0.06);
   border-color: rgba(var(--gold-rgb), 0.15);
 }
-.scene-setting label { 
-  font-size: 0.7rem; 
+.scene-setting label {
+  font-size: 0.7rem;
   color: var(--text-muted);
   font-weight: 500;
   letter-spacing: 0.02em;
 }
-.scene-setting span { 
-  font-size: 0.65rem; 
-  color: var(--gold); 
+.scene-setting span {
+  font-size: 0.65rem;
+  color: var(--gold);
   text-align: right;
   font-family: var(--font-mono, monospace);
 }
-.scene-setting input[type="range"] { 
-  width: 100%; 
+.scene-setting input[type="range"] {
+  width: 100%;
   accent-color: var(--gold);
   height: 4px;
   cursor: pointer;
@@ -3703,11 +3997,11 @@ onUnmounted(() => {
   transform: scale(1.2);
   box-shadow: 0 0 8px rgba(var(--gold-rgb), 0.5);
 }
-.scene-setting input[type="color"] { 
-  width: 100%; 
-  height: 26px; 
-  border: 1px solid var(--border); 
-  border-radius: var(--r-sm); 
+.scene-setting input[type="color"] {
+  width: 100%;
+  height: 26px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
   cursor: pointer;
   padding: 2px;
 }
@@ -3718,11 +4012,67 @@ onUnmounted(() => {
   border: none;
   border-radius: 4px;
 }
-.scene-setting input[type="checkbox"] { 
+.scene-setting input[type="checkbox"] {
   accent-color: var(--gold);
   width: 16px;
   height: 16px;
   cursor: pointer;
+}
+
+/* 背景类型选择器 */
+.bg-type-selector {
+  display: flex;
+  gap: 4px;
+  width: 100%;
+}
+.bg-type-btn {
+  flex: 1;
+  padding: 4px 6px;
+  font-size: 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--bg);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all var(--t);
+  text-align: center;
+}
+.bg-type-btn:hover {
+  border-color: var(--gold);
+  color: var(--text);
+}
+.bg-type-btn.active {
+  background: rgba(var(--gold-rgb), 0.15);
+  border-color: var(--gold);
+  color: var(--gold);
+  font-weight: 600;
+}
+
+/* 背景上传区域 */
+.bg-upload-area {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1.5px dashed var(--border);
+  border-radius: var(--r-sm);
+  background: var(--bg-hover);
+  color: var(--text-muted);
+  font-size: 0.65rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all var(--t);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.bg-upload-area:hover {
+  border-color: var(--gold);
+  background: rgba(var(--gold-rgb), 0.04);
+  color: var(--text);
+}
+.bg-file-name {
+  color: var(--gold);
+  font-weight: 500;
+  font-size: 0.7rem;
 }
 
 /* ===== 状态栏 ===== */
@@ -3790,6 +4140,28 @@ onUnmounted(() => {
 /* ===== 保存弹窗 ===== */
 .modal-save { max-width: 420px; }
 .save-form { margin: 16px 0; }
+
+/* 保存模式选择 */
+.save-mode-options { display: flex; gap: 10px; }
+.save-mode-option {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  cursor: pointer;
+  transition: all var(--t);
+}
+.save-mode-option:hover { border-color: var(--border-light); }
+.save-mode-option.active { border-color: var(--c-red); background: rgba(var(--gold-rgb), 0.04); }
+.save-mode-option svg { flex-shrink: 0; color: var(--text-muted); }
+.save-mode-option.active svg { color: var(--c-red); }
+.save-mode-option div { display: flex; flex-direction: column; }
+.save-mode-option strong { font-size: 0.8125rem; font-weight: 500; }
+.save-mode-option span { font-size: 0.6875rem; color: var(--text-muted); }
+
 .visibility-options { display: flex; gap: 10px; }
 .vis-option {
   flex: 1;
@@ -4529,5 +4901,17 @@ onUnmounted(() => {
   border-color: var(--gold);
   color: var(--gold);
   background: rgba(var(--gold-rgb), 0.02);
+}
+
+/* ===== Toast 通知动画 ===== */
+@keyframes toastSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
 }
 </style>

@@ -7,6 +7,7 @@
 import jwt from 'jsonwebtoken';
 import type { SignOptions, Secret } from 'jsonwebtoken';
 import { Request, Response, NextFunction } from 'express';
+import Redis from 'ioredis';
 import { config } from '../config/app';
 import { IService, ServiceState } from '../core';
 import { logInit, logDispose, logListenerAdd } from '../utils/memoryLifecycle';
@@ -41,7 +42,7 @@ class MemoryBlacklistStore implements ITokenBlacklistStore {
 }
 
 class RedisBlacklistStore implements ITokenBlacklistStore {
-  private client: any = null;
+  private client: Redis | null = null;
   private connectionFailed = false;
   private initAttempted = false;
 
@@ -53,10 +54,7 @@ class RedisBlacklistStore implements ITokenBlacklistStore {
     this.initAttempted = true;
 
     try {
-      // @ts-ignore
-      const redisModule = require('ioredis');
-      const RedisClass = redisModule.default || redisModule;
-      this.client = new RedisClass({
+      this.client = new Redis({
         host: process.env.REDIS_HOST || 'localhost',
         port: parseInt(process.env.REDIS_PORT || '6379'),
         password: process.env.REDIS_PASSWORD,

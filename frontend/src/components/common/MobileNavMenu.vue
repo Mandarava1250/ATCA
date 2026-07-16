@@ -426,9 +426,9 @@ defineExpose({
 .mobile-nav-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.65);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(12px) saturate(1.5);
+  -webkit-backdrop-filter: blur(12px) saturate(1.5);
   z-index: 9998;
   cursor: pointer;
   pointer-events: auto;
@@ -438,14 +438,19 @@ defineExpose({
 
 .mobile-nav-menu {
   position: fixed;
-  background: #1A1714;
-  background: linear-gradient(180deg, #24201C 0%, #1A1714 100%);
+  background: var(--bg);
+  background: linear-gradient(180deg, var(--bg-light) 0%, var(--bg) 100%);
+  backdrop-filter: blur(24px) saturate(1.5);
+  -webkit-backdrop-filter: blur(24px) saturate(1.5);
   z-index: 9999;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  box-shadow: -8px 0 40px rgba(0, 0, 0, 0.6);
+  box-shadow: 
+    -8px 0 40px rgba(0, 0, 0, 0.6),
+    inset 0 0 60px rgba(201, 169, 110, 0.03);
   pointer-events: auto;
+  border-left: 1px solid rgba(201, 169, 110, 0.1);
 }
 
 /* 位置变体 */
@@ -699,65 +704,89 @@ defineExpose({
 /* 右侧滑入 */
 .mobile-nav-slide-right-enter-active,
 .mobile-nav-slide-right-leave-active {
-  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: 
+    transform 0.4s cubic-bezier(0.32, 0.72, 0, 1),
+    opacity 0.3s ease,
+    box-shadow 0.4s ease;
 }
 
 .mobile-nav-slide-right-enter-from,
 .mobile-nav-slide-right-leave-to {
   transform: translateX(100%);
+  opacity: 0;
+  box-shadow: none;
 }
 
 .mobile-nav-slide-right-enter-to,
 .mobile-nav-slide-right-leave-from {
   transform: translateX(0);
+  opacity: 1;
 }
 
 /* 左侧滑入 */
 .mobile-nav-slide-left-enter-active,
 .mobile-nav-slide-left-leave-active {
-  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: 
+    transform 0.4s cubic-bezier(0.32, 0.72, 0, 1),
+    opacity 0.3s ease,
+    box-shadow 0.4s ease;
 }
 
 .mobile-nav-slide-left-enter-from,
 .mobile-nav-slide-left-leave-to {
   transform: translateX(-100%);
+  opacity: 0;
+  box-shadow: none;
 }
 
 .mobile-nav-slide-left-enter-to,
 .mobile-nav-slide-left-leave-from {
   transform: translateX(0);
+  opacity: 1;
 }
 
 /* 顶部滑入 */
 .mobile-nav-slide-top-enter-active,
 .mobile-nav-slide-top-leave-active {
-  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: 
+    transform 0.4s cubic-bezier(0.32, 0.72, 0, 1),
+    opacity 0.3s ease,
+    box-shadow 0.4s ease;
 }
 
 .mobile-nav-slide-top-enter-from,
 .mobile-nav-slide-top-leave-to {
   transform: translateY(-100%);
+  opacity: 0;
+  box-shadow: none;
 }
 
 .mobile-nav-slide-top-enter-to,
 .mobile-nav-slide-top-leave-from {
   transform: translateY(0);
+  opacity: 1;
 }
 
 /* 底部滑入 */
 .mobile-nav-slide-bottom-enter-active,
 .mobile-nav-slide-bottom-leave-active {
-  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: 
+    transform 0.4s cubic-bezier(0.32, 0.72, 0, 1),
+    opacity 0.3s ease,
+    box-shadow 0.4s ease;
 }
 
 .mobile-nav-slide-bottom-enter-from,
 .mobile-nav-slide-bottom-leave-to {
   transform: translateY(100%);
+  opacity: 0;
+  box-shadow: none;
 }
 
 .mobile-nav-slide-bottom-enter-to,
 .mobile-nav-slide-bottom-leave-from {
   transform: translateY(0);
+  opacity: 1;
 }
 
 /* 滑入淡入组合 - 右侧 */
