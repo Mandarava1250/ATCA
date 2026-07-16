@@ -682,26 +682,25 @@ router.get('/models', asyncHandler(async (req: any, res) => {
     // 确保 user_models 有 is_featured 列
     await ensureUserModelsFeaturedColumn();
 
-    // 查询管理员上传的（building_templates）
+    // 查询管理员上传的（building_templates）- 不携带分页，在内存中合并后分页
     const adminWhere = search ? " AND t.[template_name] LIKE @search" : '';
     const adminModels = await query('media3d',
-        `SELECT t.[template_id] AS model_id, t.[template_name] AS model_name, 'admin' AS source, 'admin' AS username, t.[thumbnail_url], CAST(ISNULL(t.[is_featured],0) AS BIT) AS is_featured, CAST(1 AS BIT) AS is_public, 0 AS download_count, t.[created_at] FROM dbo.building_templates t WHERE t.[is_active] = 1${adminWhere} ORDER BY t.[created_at] DESC OFFSET ${offset} ROWS FETCH NEXT ${parseInt(limit)} ROWS ONLY`,
+        `SELECT t.[template_id] AS model_id, t.[template_name] AS model_name, 'admin' AS source, 'admin' AS username, t.[thumbnail_url], CAST(ISNULL(t.[is_featured],0) AS BIT) AS is_featured, CAST(1 AS BIT) AS is_public, 0 AS download_count, t.[created_at] FROM dbo.building_templates t WHERE t.[is_active] = 1${adminWhere}`,
         search ? { search: `%${search}%` } : {}
     );
 
-    // 查询用户上传的（user_models）
+    // 查询用户上传的（user_models）- 不携带分页，在内存中合并后分页
     const userWhere = search ? " AND m.[model_name] LIKE @search" : '';
     let userModels: any[] = [];
     try {
       userModels = await query('media3d',
-          `SELECT m.[model_id], m.[model_name], 'user' AS source, ISNULL(u.[username], '未知用户') AS username, m.[thumbnail_url], ISNULL(m.[is_featured],0) AS is_featured, m.[is_public], m.[download_count], m.[created_at] FROM dbo.user_models m LEFT JOIN ATCA_User.dbo.atca_user u ON m.[user_id] = u.[user_id] WHERE 1=1${userWhere} ORDER BY m.[created_at] DESC OFFSET ${offset} ROWS FETCH NEXT ${parseInt(limit)} ROWS ONLY`,
+          `SELECT m.[model_id], m.[model_name], 'user' AS source, ISNULL(u.[username], '未知用户') AS username, m.[thumbnail_url], ISNULL(m.[is_featured],0) AS is_featured, m.[is_public], m.[download_count], m.[created_at] FROM dbo.user_models m LEFT JOIN ATCA_User.dbo.atca_user u ON m.[user_id] = u.[user_id] WHERE 1=1${userWhere}`,
           search ? { search: `%${search}%` } : {}
       );
     } catch (err: any) {
       if (err.message?.includes('is_featured') || err.message?.includes('Invalid column')) {
-        // 回退到不含 is_featured 的查询
         userModels = await query('media3d',
-            `SELECT m.[model_id], m.[model_name], 'user' AS source, ISNULL(u.[username], '未知用户') AS username, m.[thumbnail_url], 0 AS is_featured, m.[is_public], m.[download_count], m.[created_at] FROM dbo.user_models m LEFT JOIN ATCA_User.dbo.atca_user u ON m.[user_id] = u.[user_id] WHERE 1=1${userWhere} ORDER BY m.[created_at] DESC OFFSET ${offset} ROWS FETCH NEXT ${parseInt(limit)} ROWS ONLY`,
+            `SELECT m.[model_id], m.[model_name], 'user' AS source, ISNULL(u.[username], '未知用户') AS username, m.[thumbnail_url], 0 AS is_featured, m.[is_public], m.[download_count], m.[created_at] FROM dbo.user_models m LEFT JOIN ATCA_User.dbo.atca_user u ON m.[user_id] = u.[user_id] WHERE 1=1${userWhere}`,
             search ? { search: `%${search}%` } : {}
         );
       } else {
@@ -709,7 +708,7 @@ router.get('/models', asyncHandler(async (req: any, res) => {
       }
     }
 
-// 合并、过滤、排序
+// 合并、过滤、排序（在内存中完成，避免跨表分页错误）
     let allModels = [
       ...(adminModels as any[]).map(m => ({ ...m, source: m.source || 'admin', source_label: '管理员上传' })),
       ...userModels.map(m => ({ ...m, source: m.source || 'user', source_label: '用户上传' }))
@@ -718,11 +717,15 @@ router.get('/models', asyncHandler(async (req: any, res) => {
     if (source === 'user') allModels = allModels.filter(m => m.source === 'user');
     allModels.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
+    // 内存中分页
+    const total = allModels.length;
+    const paged = allModels.slice(offset, offset + parseInt(limit));
+
     const [countAdmin] = await query('media3d', 'SELECT COUNT(*) as cnt FROM dbo.building_templates WHERE [is_active] = 1');
     const [countUser] = await query('media3d', 'SELECT COUNT(*) as cnt FROM dbo.user_models');
     res.json({
       success: true,
-      data: allModels,
+      data: paged,
       meta: {
         total: ((countAdmin as any)?.cnt || 0) + ((countUser as any)?.cnt || 0),
         page: parseInt(page),
@@ -1138,7 +1141,7 @@ router.post('/daily-challenges/batch-delete', asyncHandler(async (req, res) => {
     }
     try {
       await execute('competition', 'DELETE FROM [daily_challenge] WHERE [challenge_id] = @id', { id });
-      await new Promise(resolve => setTimeout(resolve, BATCH_CONFIG.BATCH_DELAY_MS));
+      
       deleted++;
     } catch (e: any) {
       errors.push({ id, message: e.message || '删除失败' });
@@ -1160,7 +1163,7 @@ router.post('/daily-challenges/batch-delete', asyncHandler(async (req, res) => {
 // ============ 批量操作 ============
 
 /** 批量删除古建筑 */
-router.post('/architectures/batch-delete', adminMiddleware, asyncHandler(async (req, res) => {
+router.post('/architectures/batch-delete', asyncHandler(async (req, res) => {
   const ids = req.body.ids;
   if (!Array.isArray(ids) || ids.length === 0) { res.status(400).json({ success: false, error: { message: '缺少id列表' } }); return; }
   
@@ -1179,7 +1182,7 @@ router.post('/architectures/batch-delete', adminMiddleware, asyncHandler(async (
     }
     try {
       await execute('architecture', 'DELETE FROM [ancient_architecture] WHERE [architecture_id] = @id', { id });
-      await new Promise(resolve => setTimeout(resolve, BATCH_CONFIG.BATCH_DELAY_MS));
+      
       deleted++;
     } catch (e: any) {
       errors.push({ id, message: e.message || '删除失败' });
@@ -1199,7 +1202,7 @@ router.post('/architectures/batch-delete', adminMiddleware, asyncHandler(async (
 }));
 
 /** 批量删除题目 */
-router.post('/questions/batch-delete', adminMiddleware, asyncHandler(async (req, res) => {
+router.post('/questions/batch-delete', asyncHandler(async (req, res) => {
   const ids = req.body.ids;
   if (!Array.isArray(ids) || ids.length === 0) { res.status(400).json({ success: false, error: { message: '缺少id列表' } }); return; }
   
@@ -1218,7 +1221,7 @@ router.post('/questions/batch-delete', adminMiddleware, asyncHandler(async (req,
     }
     try {
       await execute('competition', 'DELETE FROM [question] WHERE [question_id] = @id', { id });
-      await new Promise(resolve => setTimeout(resolve, BATCH_CONFIG.BATCH_DELAY_MS));
+      
       deleted++;
     } catch (e: any) {
       errors.push({ id, message: e.message || '删除失败' });
@@ -1237,37 +1240,39 @@ router.post('/questions/batch-delete', adminMiddleware, asyncHandler(async (req,
   });
 }));
 
-/** 批量删除3D模型 */
-router.post('/models/batch-delete', adminMiddleware, asyncHandler(async (req, res) => {
-  const ids = req.body.ids;
+/** 批量删除3D模型（支持 source 参数区分来源） */
+router.post('/models/batch-delete', asyncHandler(async (req, res) => {
+  const { ids, source } = req.body;
   if (!Array.isArray(ids) || ids.length === 0) { res.status(400).json({ success: false, error: { message: '缺少id列表' } }); return; }
-  
-  // 限制批量操作数量
+
   const safeIds = ids.slice(0, BATCH_CONFIG.MAX_BATCH_SIZE);
   const wasTruncated = ids.length > BATCH_CONFIG.MAX_BATCH_SIZE;
-  
+
   const startTime = Date.now();
   let deleted = 0;
   const errors: { id: number; message: string }[] = [];
-  
+
   for (const id of safeIds) {
     if (Date.now() - startTime > BATCH_CONFIG.BATCH_TIMEOUT_MS) {
       errors.push({ id, message: '操作超时' });
       continue;
     }
     try {
-      await execute('media3d', 'DELETE FROM [user_models] WHERE [model_id] = @id', { id });
-      await new Promise(resolve => setTimeout(resolve, BATCH_CONFIG.BATCH_DELAY_MS));
+      if (source === 'admin') {
+        await execute('media3d', 'DELETE FROM [building_templates] WHERE [template_id] = @id', { id });
+      } else {
+        await execute('media3d', 'DELETE FROM [user_models] WHERE [model_id] = @id', { id });
+      }
       deleted++;
     } catch (e: any) {
       errors.push({ id, message: e.message || '删除失败' });
     }
   }
-  
-  res.json({ 
-    success: true, 
-    data: { 
-      deleted, 
+
+  res.json({
+    success: true,
+    data: {
+      deleted,
       totalRequested: ids.length,
       truncated: wasTruncated,
       duration: Date.now() - startTime
@@ -1315,7 +1320,7 @@ router.post('/users/batch-delete', asyncHandler(async (req, res) => {
         continue;
       }
       await execute('user', 'DELETE FROM [atca_user] WHERE [user_id] = @id', { id });
-      await new Promise(resolve => setTimeout(resolve, BATCH_CONFIG.BATCH_DELAY_MS));
+      
       deleted++;
       results.push({ id, status: 'success' });
     } catch (e: any) {
@@ -1389,7 +1394,7 @@ router.post('/users/batch-update-role', validateBody(z.object({
         continue;
       }
       await execute('user', 'UPDATE [atca_user] SET [role] = @role WHERE [user_id] = @id', { id, role });
-      await new Promise(resolve => setTimeout(resolve, BATCH_CONFIG.BATCH_DELAY_MS));
+      
       updated++;
       results.push({ id, status: 'success' });
     } catch (e: any) {
@@ -1465,7 +1470,7 @@ router.post('/users/batch-update-status', validateBody(z.object({
         continue;
       }
       await execute('user', 'UPDATE [atca_user] SET [is_active] = @is_active WHERE [user_id] = @id', { id, is_active: is_active ? 1 : 0 });
-      await new Promise(resolve => setTimeout(resolve, BATCH_CONFIG.BATCH_DELAY_MS));
+      
       updated++;
       results.push({ id, status: 'success' });
     } catch (e: any) {
@@ -1494,6 +1499,19 @@ router.post('/users/batch-update-status', validateBody(z.object({
 }));
 
 // ============ 活动管理 ============
+
+const activitySchema = z.object({
+  title: z.string().min(1, '标题不能为空'),
+  description: z.string().optional(),
+  activity_type: z.string().optional(),
+  start_date: z.string().optional(),
+  end_date: z.string().optional(),
+  reward_points: z.coerce.number().int().min(0).optional(),
+  max_participants: z.coerce.number().int().min(0).optional(),
+  is_active: z.boolean().optional(),
+  banner_url: z.string().optional(),
+});
+
 router.get('/activities', asyncHandler(async (req: any, res) => {
   const { page = '1', limit = '20', search = '' } = req.query as Record<string, string>;
   const offset = (parseInt(page) - 1) * parseInt(limit);
@@ -1516,7 +1534,7 @@ router.get('/activities', asyncHandler(async (req: any, res) => {
   }
 }));
 
-router.post('/activities', asyncHandler(async (req, res) => {
+router.post('/activities', validateBody(activitySchema), asyncHandler(async (req, res) => {
   const { title, description, activity_type, start_date, end_date, reward_points, max_participants, is_active, banner_url } = req.body;
   if (isMockMode()) { res.json({ success: true, data: { activity_id: Date.now() } }); return; }
   try {
@@ -1528,7 +1546,7 @@ router.post('/activities', asyncHandler(async (req, res) => {
   } catch (err: any) { res.status(500).json({ success: false, error: { message: err.message } }); }
 }));
 
-router.put('/activities/:id', asyncHandler(async (req: any, res) => {
+router.put('/activities/:id', validateBody(activitySchema.partial()), asyncHandler(async (req: any, res) => {
   const { title, description, activity_type, start_date, end_date, reward_points, max_participants, is_active, banner_url } = req.body;
   if (isMockMode()) { res.json({ success: true }); return; }
   try {
