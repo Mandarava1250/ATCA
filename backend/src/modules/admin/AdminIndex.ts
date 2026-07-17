@@ -390,7 +390,11 @@ router.post('/architectures', validateBody(z.object({
 })), asyncHandler(async (req: any, res) => {
   if (isMockMode()) { res.json({ success: true, data: { architecture_id: 999, ...req.body } }); return; }
   try {
-    const result = await execute('architecture', 'INSERT INTO [ancient_architecture] ([name], [type], [founding_dynasty], [location], [coordinates], [protection_level], [brief_description], [full_description], [main_image_url]) OUTPUT INSERTED.* VALUES (@name, @type, @founding_dynasty, @location, @coordinates, @protection_level, @brief_description, @full_description, @main_image_url)', req.body);
+    const allowedFields = ['name', 'type', 'chinese_name', 'founding_dynasty', 'location', 'coordinates', 'protection_level', 'brief_description', 'full_description', 'main_image_url', 'completed_dynasty'];
+    const filteredBody = Object.fromEntries(Object.entries(req.body).filter(([k]) => allowedFields.includes(k)));
+    const columns = Object.keys(filteredBody).map(k => `[${k}]`).join(', ');
+    const params = Object.keys(filteredBody).map(k => `@${k}`).join(', ');
+    const result = await execute('architecture', `INSERT INTO [ancient_architecture] (${columns}) OUTPUT INSERTED.* VALUES (${params})`, filteredBody);
     res.json({ success: true, data: (result.recordset as any[])[0] });
   } catch (e: any) { res.json({ success: false, error: { message: e.message || '添加失败' } }); }
 }));
@@ -420,8 +424,14 @@ router.put('/architectures/:id', validateBody(z.object({
 })), asyncHandler(async (req: any, res) => {
   const { id } = req.params;
   if (isMockMode()) { res.json({ success: true, data: { architecture_id: parseInt(id) } }); return; }
-  try { const fields = Object.keys(req.body).map(k => `[${k}] = @${k}`).join(', '); await execute('architecture', `UPDATE [ancient_architecture] SET ${fields} WHERE [architecture_id] = @id`, { ...req.body, id: parseInt(id) }); res.json({ success: true, data: { architecture_id: parseInt(id) } }); }
-  catch (e: any) { res.json({ success: false, error: { message: e.message || '更新失败' } }); }
+  try { 
+    const allowedFields = ['name', 'type', 'chinese_name', 'founding_dynasty', 'location', 'coordinates', 'protection_level', 'brief_description', 'full_description', 'main_image_url', 'completed_dynasty'];
+    const filteredBody = Object.fromEntries(Object.entries(req.body).filter(([k]) => allowedFields.includes(k)));
+    const fields = Object.keys(filteredBody).map(k => `[${k}] = @${k}`).join(', '); 
+    if (!fields) { res.json({ success: true, data: { architecture_id: parseInt(id) } }); return; }
+    await execute('architecture', `UPDATE [ancient_architecture] SET ${fields} WHERE [architecture_id] = @id`, { ...filteredBody, id: parseInt(id) }); 
+    res.json({ success: true, data: { architecture_id: parseInt(id) } }); 
+  } catch (e: any) { res.json({ success: false, error: { message: e.message || '更新失败' } }); }
 }));
 
 router.delete('/architectures/:id', asyncHandler(async (req: any, res) => {
