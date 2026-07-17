@@ -17,7 +17,7 @@ dotenv.config({ path: '.env.db' });
 import { config } from './config/app';
 import { swaggerSpec } from './config/swagger';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
-import { closeAllPools, setMockMode, isMockMode, preconnectAll } from './config/database';
+import { closeAllPools, setMockMode, isMockMode, preconnectAll, initAllDatabases } from './config/database';
 import { 
   sqlInjectionDetection, 
   securityHeaders, 
@@ -381,8 +381,12 @@ async function startServer() {
   
   try {
     await preconnectAll();
+    
+    if (!isMockMode()) {
+      await initAllDatabases();
+    }
   } catch (error: any) {
-    console.error('[DB] 预连接错误详情:', error.message || error);
+    console.error('[DB] 预连接或初始化错误详情:', error.message || error);
     console.warn('[DB] 所有数据库连接失败，启用 Mock 模式');
     setMockMode(true);
   }

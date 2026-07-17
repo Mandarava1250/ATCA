@@ -329,3 +329,85 @@ export async function closeAllPools(): Promise<void> {
     }
   }
 }
+
+import fs from 'fs';
+import path from 'path';
+
+const sqlScripts: Record<string, string[]> = {
+  user: ['User.sql'],
+  architecture: ['Architecture.sql'],
+  competition: ['Competition.sql'],
+  activity: ['Activity.sql', 'Checkin.sql'],
+  media3d: ['Media_3D.sql'],
+  social: ['Social.sql', 'Community.sql'],
+};
+
+export async function initDatabase(dbName: keyof typeof dbConfigs): Promise<void> {
+  if (mockMode) {
+    console.log(`[DB] Mock模式下跳过数据库${dbName}的初始化`);
+    return;
+  }
+
+  const scripts = sqlScripts[dbName];
+  if (!scripts || scripts.length === 0) {
+    console.log(`[DB] 数据库${dbName}没有配置初始化脚本`);
+    return;
+  }
+
+  const dbScriptsDir = path.resolve(__dirname, './DB');
+  
+  try {
+    const pool = await getPool(dbName);
+    
+    for (const scriptName of scripts) {
+      const scriptPath = path.join(dbScriptsDir, scriptName);
+      if (!fs.existsSync(scriptPath)) {
+        console.warn(`[DB] 初始化脚本不存在: ${scriptPath}`);
+        continue;
+      }
+
+      const sqlContent = fs.readFileSync(scriptPath, 'utf8');
+      const batches = sqlContent.split('GO');
+
+      for (const batch of batches) {
+        const trimmedBatch = batch.trim();
+        if (trimmedBatch && !trimmedBatch.startsWith('--')) {
+          try {
+            await pool.request().query(trimmedBatch);
+          } catch (err: any) {
+            if (!err.message.includes('already exists') && 
+                !err.message.includes('Cannot drop') &&
+                !err.message.includes('Could not find')) {
+              console.warn(`[DB] 执行脚本 ${scriptName} 的部分SQL失败（可能是重复执行）: ${err.message.slice(0, 100)}`);
+            }
+          }
+        }
+      }
+
+      console.log(`[DB] 数据库${dbName}的初始化脚本 ${scriptName} 执行完成`);
+    }
+  } catch (err: any) {
+    console.error(`[DB] 数据库${dbName}初始化失败: ${err.message}`);
+    throw err;
+  }
+}
+
+export async function initAllDatabases(): Promise<void> {
+  console.log('[DB] 开始初始化所有数据库...');
+  const dbNames = Object.keys(dbConfigs) as (keyof typeof dbConfigs)[];
+  
+  for (const dbName of dbNames) {
+    if (failedDbs.has(dbName)) {
+      console.log(`[DB] 跳过连接失败的数据库${dbName}`);
+      continue;
+    }
+    
+    try {
+      await initDatabase(dbName);
+    } catch (err: any) {
+      console.warn(`[DB] 数据库${dbName}初始化失败，但继续启动: ${err.message}`);
+    }
+  }
+  
+  console.log('[DB] 数据库初始化完成');
+}
