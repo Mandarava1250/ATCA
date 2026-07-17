@@ -399,16 +399,34 @@ async function viewArch(arch: any) {
   try {
     const res = await adminApi.getArchitectureById(arch.architecture_id);
     if (res.success && res.data) {
-      form.value = { ...res.data };
+      const data = { ...res.data };
+      if (data.coordinates) {
+        const [lat, lng] = data.coordinates.split(',').map(Number);
+        data.latitude = isNaN(lat) ? null : lat;
+        data.longitude = isNaN(lng) ? null : lng;
+      }
+      form.value = data;
       galleryUrls.value = (res.data.image_gallery || []).join('\n');
     } else {
-      form.value = { ...arch };
+      const data = { ...arch };
+      if (data.coordinates) {
+        const [lat, lng] = data.coordinates.split(',').map(Number);
+        data.latitude = isNaN(lat) ? null : lat;
+        data.longitude = isNaN(lng) ? null : lng;
+      }
+      form.value = data;
       galleryUrls.value = (arch.image_gallery || []).join('\n');
     }
   } catch (e: any) {
     console.error('[Arch] 获取详情失败:', e);
     showMessage('获取建筑详情失败: ' + (e.message || '网络/服务器错误'), 'error');
-    form.value = { ...arch };
+    const data = { ...arch };
+    if (data.coordinates) {
+      const [lat, lng] = data.coordinates.split(',').map(Number);
+      data.latitude = isNaN(lat) ? null : lat;
+      data.longitude = isNaN(lng) ? null : lng;
+    }
+    form.value = data;
     galleryUrls.value = (arch.image_gallery || []).join('\n');
   } finally {
     modalLoading.value = false;
@@ -425,16 +443,34 @@ async function editArch(arch: any) {
   try {
     const res = await adminApi.getArchitectureById(arch.architecture_id);
     if (res.success && res.data) {
-      form.value = { ...res.data };
+      const data = { ...res.data };
+      if (data.coordinates) {
+        const [lat, lng] = data.coordinates.split(',').map(Number);
+        data.latitude = isNaN(lat) ? null : lat;
+        data.longitude = isNaN(lng) ? null : lng;
+      }
+      form.value = data;
       galleryUrls.value = (res.data.image_gallery || []).join('\n');
     } else {
-      form.value = { ...arch };
+      const data = { ...arch };
+      if (data.coordinates) {
+        const [lat, lng] = data.coordinates.split(',').map(Number);
+        data.latitude = isNaN(lat) ? null : lat;
+        data.longitude = isNaN(lng) ? null : lng;
+      }
+      form.value = data;
       galleryUrls.value = (arch.image_gallery || []).join('\n');
     }
   } catch (e: any) {
     console.error('[Arch] 获取详情失败:', e);
     showMessage('获取建筑详情失败: ' + (e.message || '网络/服务器错误'), 'error');
-    form.value = { ...arch };
+    const data = { ...arch };
+    if (data.coordinates) {
+      const [lat, lng] = data.coordinates.split(',').map(Number);
+      data.latitude = isNaN(lat) ? null : lat;
+      data.longitude = isNaN(lng) ? null : lng;
+    }
+    form.value = data;
     galleryUrls.value = (arch.image_gallery || []).join('\n');
   } finally {
     modalLoading.value = false;

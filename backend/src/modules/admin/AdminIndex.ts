@@ -445,11 +445,22 @@ router.put('/architectures/:id', validateBody(z.object({
   try { 
     const allowedFields = ['name', 'type', 'chinese_name', 'founding_dynasty', 'location', 'coordinates', 'protection_level', 'brief_description', 'full_description', 'main_image_url', 'completed_dynasty'];
     const filteredBody = Object.fromEntries(Object.entries(req.body).filter(([k]) => allowedFields.includes(k)));
+    
+    if (req.body.latitude !== undefined && req.body.longitude !== undefined) {
+      filteredBody.coordinates = `${req.body.latitude},${req.body.longitude}`;
+    }
+    
     const fields = Object.keys(filteredBody).map(k => `[${k}] = @${k}`).join(', '); 
     if (!fields) { res.json({ success: true, data: { architecture_id: parseInt(id) } }); return; }
-    await execute('architecture', `UPDATE [ancient_architecture] SET ${fields} WHERE [architecture_id] = @id`, { ...filteredBody, id: parseInt(id) }); 
+    
+    console.log('[Admin Architecture Update] ID:', id, 'Fields:', fields, 'Params:', filteredBody);
+    
+    await execute('architecture', `UPDATE [ancient_architecture] SET ${fields}, [updated_at] = GETDATE() WHERE [architecture_id] = @id`, { ...filteredBody, id: parseInt(id) }); 
     res.json({ success: true, data: { architecture_id: parseInt(id) } }); 
-  } catch (e: any) { res.json({ success: false, error: { message: e.message || '更新失败' } }); }
+  } catch (e: any) { 
+    console.error('[Admin Architecture Update] Failed:', e.message || e);
+    res.json({ success: false, error: { message: e.message || '更新失败' } }); 
+  }
 }));
 
 router.delete('/architectures/:id', asyncHandler(async (req: any, res) => {
