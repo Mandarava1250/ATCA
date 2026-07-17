@@ -1,6 +1,7 @@
 -- ============================================
 -- 华夏营造 - 建筑内容模块数据库
 -- 管理古代建筑信息、历史发展、技术结构和文化意义
+-- 包含翻译管理功能
 -- ============================================
 
 IF NOT EXISTS (SELECT name FROM sys.databases WHERE name = N'Architecture')
@@ -334,7 +335,163 @@ END
 GO
 
 -- ============================================
--- 14. 创建索引
+-- 14. 翻译主表 (translations)
+-- ============================================
+IF OBJECT_ID('dbo.translations', 'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.translations (
+        [translation_id] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        [entity_type] NVARCHAR(50) NOT NULL,
+        [entity_id] INT NOT NULL,
+        [field_name] NVARCHAR(50) NOT NULL,
+        [language_code] NVARCHAR(10) NOT NULL,
+        [source_text] NVARCHAR(MAX) NOT NULL,
+        [translated_text] NVARCHAR(MAX) NOT NULL,
+        [is_machine_translated] BIT DEFAULT 1,
+        [review_status] NVARCHAR(20) DEFAULT 'pending',
+        [quality_score] INT NULL,
+        [review_notes] NVARCHAR(MAX) NULL,
+        [reviewed_by] INT NULL,
+        [reviewed_at] DATETIME NULL,
+        [created_at] DATETIME DEFAULT GETDATE(),
+        [updated_at] DATETIME DEFAULT GETDATE(),
+        CONSTRAINT UQ_translations UNIQUE ([entity_type], [entity_id], [field_name], [language_code])
+    );
+END
+GO
+
+IF OBJECT_ID('dbo.translations', 'U') IS NOT NULL
+BEGIN
+    IF NOT EXISTS (SELECT * FROM sys.columns WHERE name = 'source_text' AND object_id = OBJECT_ID('dbo.translations'))
+        ALTER TABLE dbo.translations ADD [source_text] NVARCHAR(MAX) NOT NULL DEFAULT '';
+    
+    IF NOT EXISTS (SELECT * FROM sys.columns WHERE name = 'review_status' AND object_id = OBJECT_ID('dbo.translations'))
+        ALTER TABLE dbo.translations ADD [review_status] NVARCHAR(20) DEFAULT 'pending';
+    
+    IF NOT EXISTS (SELECT * FROM sys.columns WHERE name = 'quality_score' AND object_id = OBJECT_ID('dbo.translations'))
+        ALTER TABLE dbo.translations ADD [quality_score] INT NULL;
+    
+    IF NOT EXISTS (SELECT * FROM sys.columns WHERE name = 'review_notes' AND object_id = OBJECT_ID('dbo.translations'))
+        ALTER TABLE dbo.translations ADD [review_notes] NVARCHAR(MAX) NULL;
+    
+    IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('dbo.translations') AND name = 'review_status')
+    BEGIN
+        ALTER TABLE dbo.translations ADD [review_status] NVARCHAR(20) DEFAULT 'pending';
+        ALTER TABLE dbo.translations ADD CONSTRAINT CHK_trans_review_status CHECK ([review_status] IN ('pending', 'approved', 'rejected'));
+    END
+END
+GO
+
+-- ============================================
+-- 15. 翻译版本表 (translation_versions)
+-- ============================================
+IF OBJECT_ID('dbo.translation_versions', 'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.translation_versions (
+        [version_id] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        [translation_id] INT NOT NULL,
+        [version_number] INT NOT NULL,
+        [translated_text] NVARCHAR(MAX) NOT NULL,
+        [is_machine_translated] BIT DEFAULT 1,
+        [review_status] NVARCHAR(20) DEFAULT 'pending',
+        [quality_score] INT NULL,
+        [review_notes] NVARCHAR(MAX) NULL,
+        [reviewed_by] INT NULL,
+        [reviewed_at] DATETIME NULL,
+        [edited_by] INT NULL,
+        [edit_reason] NVARCHAR(200) NULL,
+        [created_at] DATETIME DEFAULT GETDATE(),
+        CONSTRAINT FK_translation_versions_translation FOREIGN KEY ([translation_id]) REFERENCES dbo.translations([translation_id]) ON DELETE CASCADE,
+        CONSTRAINT UQ_translation_versions UNIQUE ([translation_id], [version_number])
+    );
+END
+GO
+
+-- ============================================
+-- 16. 翻译审核记录表 (translation_reviews)
+-- ============================================
+IF OBJECT_ID('dbo.translation_reviews', 'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.translation_reviews (
+        [review_id] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        [translation_id] INT NOT NULL,
+        [reviewer_id] INT NOT NULL,
+        [review_status] NVARCHAR(20) NOT NULL,
+        [review_notes] NVARCHAR(500) NULL,
+        [quality_score] INT NULL,
+        [reviewed_at] DATETIME DEFAULT GETDATE(),
+        CONSTRAINT FK_translation_reviews_translation FOREIGN KEY ([translation_id]) REFERENCES dbo.translations([translation_id]),
+        CONSTRAINT CHK_review_status CHECK ([review_status] IN ('pending', 'approved', 'rejected'))
+    );
+END
+GO
+
+-- ============================================
+-- 17. 翻译记忆库表 (translation_memory)
+-- ============================================
+IF OBJECT_ID('dbo.translation_memory', 'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.translation_memory (
+        [memory_id] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        [source_text_hash] NVARCHAR(64) NULL,
+        [source_text] NVARCHAR(MAX) NOT NULL,
+        [target_text] NVARCHAR(MAX) NOT NULL,
+        [source_language] NVARCHAR(10) NOT NULL,
+        [target_language] NVARCHAR(10) NOT NULL,
+        [entity_type] NVARCHAR(50) NULL,
+        [context] NVARCHAR(200) NULL,
+        [usage_count] INT DEFAULT 1,
+        [last_used_at] DATETIME DEFAULT GETDATE(),
+        [quality_score] INT DEFAULT 80,
+        [created_at] DATETIME DEFAULT GETDATE(),
+        CONSTRAINT UQ_translation_memory UNIQUE ([source_text], [target_language]),
+        CONSTRAINT UQ_translation_memory_hash UNIQUE ([source_text_hash], [target_language])
+    );
+END
+GO
+
+-- ============================================
+-- 18. 翻译统计信息表 (translation_stats)
+-- ============================================
+IF OBJECT_ID('dbo.translation_stats', 'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.translation_stats (
+        [stat_id] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        [entity_type] NVARCHAR(50) NOT NULL,
+        [language_code] NVARCHAR(10) NOT NULL,
+        [total_count] INT DEFAULT 0,
+        [pending_count] INT DEFAULT 0,
+        [approved_count] INT DEFAULT 0,
+        [rejected_count] INT DEFAULT 0,
+        [machine_translated_count] INT DEFAULT 0,
+        [human_translated_count] INT DEFAULT 0,
+        [average_quality_score] DECIMAL(5,2) NULL,
+        [last_update] DATETIME DEFAULT GETDATE(),
+        CONSTRAINT UQ_translation_stats UNIQUE ([entity_type], [language_code])
+    );
+END
+GO
+
+-- ============================================
+-- 19. 语言配置表 (supported_languages)
+-- ============================================
+IF OBJECT_ID('dbo.supported_languages', 'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.supported_languages (
+        [language_id] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        [language_code] NVARCHAR(10) NOT NULL UNIQUE,
+        [language_name] NVARCHAR(50) NOT NULL,
+        [native_name] NVARCHAR(50) NOT NULL,
+        [is_active] BIT DEFAULT 1,
+        [is_default] BIT DEFAULT 0,
+        [sort_order] INT DEFAULT 0,
+        [created_at] DATETIME DEFAULT GETDATE()
+    );
+END
+GO
+
+-- ============================================
+-- 20. 创建索引
 -- ============================================
 IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'idx_type' AND object_id = OBJECT_ID('dbo.ancient_architecture'))
     CREATE INDEX [idx_type] ON dbo.ancient_architecture([type]);
@@ -360,10 +517,38 @@ IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'idx_stats_date' AND objec
     CREATE INDEX [idx_stats_date] ON dbo.architecture_daily_stats([stat_date]);
 IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'idx_search_count' AND object_id = OBJECT_ID('dbo.popular_search_terms'))
     CREATE INDEX [idx_search_count] ON dbo.popular_search_terms([search_count] DESC);
+
+-- 翻译相关索引
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'idx_translations_entity' AND object_id = OBJECT_ID('dbo.translations'))
+    CREATE NONCLUSTERED INDEX [idx_translations_entity] ON dbo.translations([entity_type], [entity_id]);
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'idx_translations_language' AND object_id = OBJECT_ID('dbo.translations'))
+    CREATE NONCLUSTERED INDEX [idx_translations_language] ON dbo.translations([language_code]);
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'idx_translations_status' AND object_id = OBJECT_ID('dbo.translations'))
+    CREATE NONCLUSTERED INDEX [idx_translations_status] ON dbo.translations([review_status]);
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'idx_translations_lang' AND object_id = OBJECT_ID('dbo.translations'))
+    CREATE INDEX [idx_translations_lang] ON dbo.translations([language_code]);
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'idx_tv_translation' AND object_id = OBJECT_ID('dbo.translation_versions'))
+    CREATE INDEX [idx_tv_translation] ON dbo.translation_versions([translation_id]);
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'idx_translation_versions_tid' AND object_id = OBJECT_ID('dbo.translation_versions'))
+    CREATE INDEX [idx_translation_versions_tid] ON dbo.translation_versions([translation_id]);
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'idx_tm_source' AND object_id = OBJECT_ID('dbo.translation_memory'))
+    CREATE INDEX [idx_tm_source] ON dbo.translation_memory([source_text], [target_language]);
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'idx_translation_memory_hash' AND object_id = OBJECT_ID('dbo.translation_memory'))
+    CREATE INDEX [idx_translation_memory_hash] ON dbo.translation_memory([source_text_hash]);
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'idx_translation_memory_lang' AND object_id = OBJECT_ID('dbo.translation_memory'))
+    CREATE INDEX [idx_translation_memory_lang] ON dbo.translation_memory([source_language], [target_language]);
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'idx_translation_memory_source' AND object_id = OBJECT_ID('dbo.translation_memory'))
+    CREATE NONCLUSTERED INDEX [idx_translation_memory_source] ON dbo.translation_memory([source_language], [target_language]);
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'idx_translation_stats_entity' AND object_id = OBJECT_ID('dbo.translation_stats'))
+    CREATE NONCLUSTERED INDEX [idx_translation_stats_entity] ON dbo.translation_stats([entity_type]);
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'idx_translation_reviews_status' AND object_id = OBJECT_ID('dbo.translation_reviews'))
+    CREATE INDEX [idx_translation_reviews_status] ON dbo.translation_reviews([review_status]);
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'idx_translation_reviews_tid' AND object_id = OBJECT_ID('dbo.translation_reviews'))
+    CREATE INDEX [idx_translation_reviews_tid] ON dbo.translation_reviews([translation_id]);
 GO
 
 -- ============================================
--- 15. 删除相关建筑级联触发器
+-- 21. 删除相关建筑级联触发器
 -- ============================================
 IF OBJECT_ID('dbo.trg_delete_related_architectures', 'TR') IS NOT NULL
     DROP TRIGGER dbo.trg_delete_related_architectures;
@@ -386,7 +571,7 @@ END
 GO
 
 -- ============================================
--- 16. 更新时间触发器
+-- 22. 更新时间触发器
 -- ============================================
 IF OBJECT_ID('dbo.trg_update_timestamp', 'TR') IS NOT NULL
     DROP TRIGGER dbo.trg_update_timestamp;
@@ -406,7 +591,27 @@ END
 GO
 
 -- ============================================
--- 17. 热门建筑视图
+-- 23. 翻译更新时间触发器
+-- ============================================
+IF OBJECT_ID('tr_translations_updated_at', 'TR') IS NOT NULL
+    DROP TRIGGER tr_translations_updated_at;
+GO
+
+CREATE TRIGGER tr_translations_updated_at
+ON dbo.translations
+AFTER UPDATE
+AS
+BEGIN
+    SET NOCOUNT ON;
+    UPDATE dbo.translations
+    SET [updated_at] = GETDATE()
+    FROM dbo.translations t
+    INNER JOIN inserted i ON t.[translation_id] = i.[translation_id];
+END
+GO
+
+-- ============================================
+-- 24. 热门建筑视图
 -- ============================================
 IF OBJECT_ID('dbo.vw_popular_architectures', 'V') IS NOT NULL
     DROP VIEW dbo.vw_popular_architectures;
@@ -431,7 +636,7 @@ LEFT JOIN dbo.architecture_popularity pop ON a.architecture_id = pop.architectur
 GO
 
 -- ============================================
--- 18. 初始化朝代数据（幂等插入）
+-- 25. 初始化朝代数据（幂等插入）
 -- ============================================
 MERGE INTO dbo.dynasty_year_map AS target
 USING (VALUES
@@ -453,7 +658,23 @@ WHEN NOT MATCHED THEN
 GO
 
 -- ============================================
--- 19. 存储过程
+-- 26. 初始化语言数据（幂等插入）
+-- ============================================
+IF NOT EXISTS (SELECT 1 FROM dbo.supported_languages WHERE [language_code] = 'zh-CN')
+    INSERT INTO dbo.supported_languages ([language_code], [language_name], [native_name], [is_default], [sort_order])
+    VALUES ('zh-CN', N'Chinese (Simplified)', N'简体中文', 1, 1);
+
+IF NOT EXISTS (SELECT 1 FROM dbo.supported_languages WHERE [language_code] = 'en')
+    INSERT INTO dbo.supported_languages ([language_code], [language_name], [native_name], [is_default], [sort_order])
+    VALUES ('en', N'English', N'English', 0, 2);
+
+IF NOT EXISTS (SELECT 1 FROM dbo.supported_languages WHERE [language_code] = 'ja')
+    INSERT INTO dbo.supported_languages ([language_code], [language_name], [native_name], [is_default], [sort_order])
+    VALUES ('ja', N'Japanese', N'日本語', 0, 3);
+GO
+
+-- ============================================
+-- 27. 建筑管理存储过程
 -- ============================================
 
 -- 获取建筑列表
@@ -709,6 +930,1131 @@ AS
 BEGIN
     SET NOCOUNT ON;
     SELECT * FROM dbo.architecture_popularity WHERE [architecture_id] = @architecture_id;
+END
+GO
+
+-- ============================================
+-- 28. 翻译管理存储过程
+-- ============================================
+
+-- 获取实体翻译
+IF OBJECT_ID('dbo.sp_get_translation', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_get_translation;
+GO
+CREATE PROCEDURE dbo.sp_get_translation
+    @entity_type NVARCHAR(50),
+    @entity_id INT,
+    @language_code NVARCHAR(10) = 'en'
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT t.[field_name], t.[translated_text], t.[is_machine_translated]
+    FROM dbo.translations t
+    WHERE t.[entity_type] = @entity_type
+      AND t.[entity_id] = @entity_id
+      AND t.[language_code] = @language_code;
+END
+GO
+
+-- 获取实体所有翻译
+IF OBJECT_ID('dbo.sp_translation_get_by_entity', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_translation_get_by_entity;
+GO
+CREATE PROCEDURE dbo.sp_translation_get_by_entity
+    @entity_type NVARCHAR(50),
+    @entity_id INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT [translation_id], [entity_type], [entity_id], [field_name], [language_code], 
+           [source_text], [translated_text], [is_machine_translated], [review_status], 
+           [quality_score], [reviewed_by], [reviewed_at], [created_at], [updated_at]
+    FROM dbo.translations
+    WHERE [entity_type] = @entity_type AND [entity_id] = @entity_id
+    ORDER BY [language_code], [field_name];
+END
+GO
+
+-- 批量获取翻译（用于列表页）
+IF OBJECT_ID('dbo.sp_get_translations_batch', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_get_translations_batch;
+GO
+CREATE PROCEDURE dbo.sp_get_translations_batch
+    @entity_type NVARCHAR(50),
+    @entity_ids NVARCHAR(MAX),
+    @language_code NVARCHAR(10) = 'en'
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DECLARE @idTable TABLE (id INT);
+    INSERT INTO @idTable
+    SELECT value FROM OPENJSON(@entity_ids);
+
+    SELECT t.[entity_id], t.[field_name], t.[translated_text], t.[is_machine_translated]
+    FROM dbo.translations t
+    INNER JOIN @idTable ids ON t.[entity_id] = ids.id
+    WHERE t.[entity_type] = @entity_type
+      AND t.[language_code] = @language_code;
+END
+GO
+
+-- 批量获取翻译
+IF OBJECT_ID('dbo.sp_translation_batch_get', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_translation_batch_get;
+GO
+CREATE PROCEDURE dbo.sp_translation_batch_get
+    @entity_type NVARCHAR(50),
+    @language_code NVARCHAR(10) = 'en'
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT [entity_id], [field_name], [translated_text], [review_status], [is_machine_translated]
+    FROM dbo.translations
+    WHERE [entity_type] = @entity_type AND [language_code] = @language_code
+    ORDER BY [entity_id], [field_name];
+END
+GO
+
+-- 保存/更新翻译
+IF OBJECT_ID('dbo.sp_upsert_translation', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_upsert_translation;
+GO
+CREATE PROCEDURE dbo.sp_upsert_translation
+    @entity_type NVARCHAR(50),
+    @entity_id INT,
+    @field_name NVARCHAR(50),
+    @language_code NVARCHAR(10),
+    @translated_text NVARCHAR(MAX),
+    @is_machine_translated BIT = 1
+AS
+BEGIN
+    SET NOCOUNT ON;
+    IF EXISTS (
+        SELECT 1 FROM dbo.translations
+        WHERE [entity_type] = @entity_type
+          AND [entity_id] = @entity_id
+          AND [field_name] = @field_name
+          AND [language_code] = @language_code
+    )
+    BEGIN
+        UPDATE dbo.translations
+        SET [translated_text] = @translated_text,
+            [is_machine_translated] = @is_machine_translated,
+            [updated_at] = GETDATE()
+        WHERE [entity_type] = @entity_type
+          AND [entity_id] = @entity_id
+          AND [field_name] = @field_name
+          AND [language_code] = @language_code;
+    END
+    ELSE
+    BEGIN
+        INSERT INTO dbo.translations ([entity_type], [entity_id], [field_name], [language_code], [translated_text], [is_machine_translated])
+        VALUES (@entity_type, @entity_id, @field_name, @language_code, @translated_text, @is_machine_translated);
+    END
+END
+GO
+
+-- 添加/更新翻译（带版本控制）
+IF OBJECT_ID('dbo.sp_translation_upsert', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_translation_upsert;
+GO
+CREATE PROCEDURE dbo.sp_translation_upsert
+    @entity_type NVARCHAR(50),
+    @entity_id INT,
+    @field_name NVARCHAR(50),
+    @language_code NVARCHAR(10),
+    @source_text NVARCHAR(MAX),
+    @translated_text NVARCHAR(MAX),
+    @is_machine_translated BIT = 1,
+    @review_status NVARCHAR(20) = 'pending'
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DECLARE @existing_id INT;
+    DECLARE @version_number INT;
+
+    SELECT @existing_id = [translation_id]
+    FROM dbo.translations
+    WHERE [entity_type] = @entity_type AND [entity_id] = @entity_id 
+      AND [field_name] = @field_name AND [language_code] = @language_code;
+
+    IF @existing_id IS NOT NULL
+    BEGIN
+        SELECT @version_number = COALESCE(MAX([version_number]), 0) + 1
+        FROM dbo.translation_versions
+        WHERE [translation_id] = @existing_id;
+
+        INSERT INTO dbo.translation_versions ([translation_id], [version_number], [translated_text], 
+            [is_machine_translated], [review_status])
+        SELECT @existing_id, @version_number, [translated_text], [is_machine_translated], [review_status]
+        FROM dbo.translations
+        WHERE [translation_id] = @existing_id;
+
+        UPDATE dbo.translations
+        SET [translated_text] = @translated_text, [is_machine_translated] = @is_machine_translated,
+            [review_status] = @review_status, [source_text] = @source_text
+        WHERE [translation_id] = @existing_id;
+    END
+    ELSE
+    BEGIN
+        INSERT INTO dbo.translations ([entity_type], [entity_id], [field_name], [language_code], 
+            [source_text], [translated_text], [is_machine_translated], [review_status])
+        VALUES (@entity_type, @entity_id, @field_name, @language_code, 
+            @source_text, @translated_text, @is_machine_translated, @review_status);
+    END
+END
+GO
+
+-- 获取支持的语言列表
+IF OBJECT_ID('dbo.sp_get_languages', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_get_languages;
+GO
+CREATE PROCEDURE dbo.sp_get_languages
+    @active_only BIT = 1
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT [language_code], [language_name], [native_name], [is_active], [is_default], [sort_order]
+    FROM dbo.supported_languages
+    WHERE (@active_only = 0 OR [is_active] = 1)
+    ORDER BY [sort_order];
+END
+GO
+
+-- 获取翻译统计
+IF OBJECT_ID('dbo.sp_get_translation_stats', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_get_translation_stats;
+GO
+CREATE PROCEDURE dbo.sp_get_translation_stats
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT 
+        COUNT(*) AS total_translations,
+        SUM(CASE WHEN review_status = 'pending' THEN 1 ELSE 0 END) AS pending_reviews,
+        SUM(CASE WHEN review_status = 'approved' THEN 1 ELSE 0 END) AS approved_translations,
+        SUM(CASE WHEN review_status = 'rejected' THEN 1 ELSE 0 END) AS rejected_translations,
+        SUM(CASE WHEN is_machine_translated = 1 THEN 1 ELSE 0 END) AS machine_translations,
+        SUM(CASE WHEN is_machine_translated = 0 THEN 1 ELSE 0 END) AS human_translations,
+        (SELECT COUNT(*) FROM dbo.translation_memory) AS memory_entries,
+        (SELECT COUNT(DISTINCT entity_type) FROM dbo.translations) AS entity_types,
+        (SELECT COUNT(*) FROM dbo.supported_languages WHERE is_active = 1) AS languages
+    FROM dbo.translations;
+END
+GO
+
+-- 获取翻译统计（扩展）
+IF OBJECT_ID('dbo.sp_translation_stats', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_translation_stats;
+GO
+CREATE PROCEDURE dbo.sp_translation_stats
+    @entity_type NVARCHAR(50) = NULL,
+    @language_code NVARCHAR(10) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT 
+        [entity_type],
+        [language_code],
+        COUNT(*) AS total_count,
+        SUM(CASE WHEN [review_status] = 'pending' THEN 1 ELSE 0 END) AS pending_count,
+        SUM(CASE WHEN [review_status] = 'approved' THEN 1 ELSE 0 END) AS approved_count,
+        SUM(CASE WHEN [review_status] = 'rejected' THEN 1 ELSE 0 END) AS rejected_count,
+        SUM(CASE WHEN [is_machine_translated] = 1 THEN 1 ELSE 0 END) AS machine_translated_count,
+        SUM(CASE WHEN [is_machine_translated] = 0 THEN 1 ELSE 0 END) AS human_translated_count,
+        AVG(CAST([quality_score] AS DECIMAL(5,2))) AS average_quality_score
+    FROM dbo.translations
+    WHERE (@entity_type IS NULL OR [entity_type] = @entity_type)
+      AND (@language_code IS NULL OR [language_code] = @language_code)
+    GROUP BY [entity_type], [language_code];
+END
+GO
+
+-- 搜索翻译（支持关键词搜索）
+IF OBJECT_ID('dbo.sp_search_translations', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_search_translations;
+GO
+CREATE PROCEDURE dbo.sp_search_translations
+    @search_text NVARCHAR(100) = NULL,
+    @entity_type NVARCHAR(50) = NULL,
+    @language_code NVARCHAR(10) = NULL,
+    @review_status NVARCHAR(20) = NULL,
+    @page INT = 1,
+    @limit INT = 20
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DECLARE @offset INT = (@page - 1) * @limit;
+    
+    SELECT 
+        t.[translation_id], t.[entity_type], t.[entity_id], t.[field_name],
+        t.[language_code], t.[source_text], t.[translated_text],
+        t.[is_machine_translated], t.[review_status], t.[quality_score],
+        t.[reviewed_by], t.[reviewed_at], t.[created_at], t.[updated_at],
+        (SELECT COUNT(*) FROM dbo.translations WHERE 
+            (@search_text IS NULL OR source_text LIKE '%' + @search_text + '%' OR translated_text LIKE '%' + @search_text + '%')
+            AND (@entity_type IS NULL OR entity_type = @entity_type)
+            AND (@language_code IS NULL OR language_code = @language_code)
+            AND (@review_status IS NULL OR review_status = @review_status)
+        ) AS total
+    FROM dbo.translations t
+    WHERE 
+        (@search_text IS NULL OR t.source_text LIKE '%' + @search_text + '%' OR t.translated_text LIKE '%' + @search_text + '%')
+        AND (@entity_type IS NULL OR t.entity_type = @entity_type)
+        AND (@language_code IS NULL OR t.language_code = @language_code)
+        AND (@review_status IS NULL OR t.review_status = @review_status)
+    ORDER BY t.created_at DESC
+    OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY;
+END
+GO
+
+-- 搜索翻译
+IF OBJECT_ID('dbo.sp_translation_search', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_translation_search;
+GO
+CREATE PROCEDURE dbo.sp_translation_search
+    @keyword NVARCHAR(200),
+    @language_code NVARCHAR(10) = NULL,
+    @review_status NVARCHAR(20) = NULL,
+    @entity_type NVARCHAR(50) = NULL,
+    @page INT = 1,
+    @page_size INT = 20
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DECLARE @offset INT = (@page - 1) * @page_size;
+
+    SELECT [translation_id], [entity_type], [entity_id], [field_name], [language_code],
+           [source_text], [translated_text], [is_machine_translated], [review_status],
+           [quality_score], [reviewed_by], [reviewed_at], [created_at], [updated_at]
+    FROM dbo.translations
+    WHERE ([source_text] LIKE '%' + @keyword + '%' OR [translated_text] LIKE '%' + @keyword + '%')
+      AND (@language_code IS NULL OR [language_code] = @language_code)
+      AND (@review_status IS NULL OR [review_status] = @review_status)
+      AND (@entity_type IS NULL OR [entity_type] = @entity_type)
+    ORDER BY [created_at] DESC
+    OFFSET @offset ROWS FETCH NEXT @page_size ROWS ONLY;
+END
+GO
+
+-- 删除翻译
+IF OBJECT_ID('dbo.sp_delete_translation', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_delete_translation;
+GO
+CREATE PROCEDURE dbo.sp_delete_translation
+    @translation_id INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DELETE FROM dbo.translations
+    WHERE translation_id = @translation_id;
+    SELECT @@ROWCOUNT AS deleted_count;
+END
+GO
+
+-- 删除翻译（级联删除版本和审核记录）
+IF OBJECT_ID('dbo.sp_translation_delete', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_translation_delete;
+GO
+CREATE PROCEDURE dbo.sp_translation_delete
+    @translation_id INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DELETE FROM dbo.translations WHERE [translation_id] = @translation_id;
+    SELECT @@ROWCOUNT AS deleted;
+END
+GO
+
+-- 删除实体的所有翻译
+IF OBJECT_ID('dbo.sp_translation_delete_by_entity', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_translation_delete_by_entity;
+GO
+CREATE PROCEDURE dbo.sp_translation_delete_by_entity
+    @entity_type NVARCHAR(50),
+    @entity_id INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DELETE FROM dbo.translations
+    WHERE [entity_type] = @entity_type AND [entity_id] = @entity_id;
+    SELECT @@ROWCOUNT AS deleted;
+END
+GO
+
+-- 批量删除翻译
+IF OBJECT_ID('dbo.sp_batch_delete_translations', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_batch_delete_translations;
+GO
+CREATE PROCEDURE dbo.sp_batch_delete_translations
+    @translation_ids NVARCHAR(MAX)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DECLARE @idTable TABLE (id INT);
+    INSERT INTO @idTable
+    SELECT value FROM OPENJSON(@translation_ids);
+    
+    DELETE FROM dbo.translations
+    WHERE translation_id IN (SELECT id FROM @idTable);
+    SELECT @@ROWCOUNT AS deleted_count;
+END
+GO
+
+-- 提交翻译审核
+IF OBJECT_ID('dbo.sp_submit_translation_review', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_submit_translation_review;
+GO
+CREATE PROCEDURE dbo.sp_submit_translation_review
+    @translation_id INT,
+    @reviewer_id INT,
+    @review_status NVARCHAR(20),
+    @review_notes NVARCHAR(MAX) = NULL,
+    @quality_score INT = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+    
+    INSERT INTO dbo.translation_reviews (
+        [translation_id], [reviewer_id], [review_status], [review_notes], [quality_score]
+    )
+    VALUES (
+        @translation_id, @reviewer_id, @review_status, @review_notes, @quality_score
+    );
+    
+    UPDATE dbo.translations
+    SET 
+        [review_status] = @review_status,
+        [quality_score] = @quality_score,
+        [reviewed_by] = @reviewer_id,
+        [reviewed_at] = GETDATE(),
+        [is_machine_translated] = 0
+    WHERE [translation_id] = @translation_id;
+    
+    SELECT SCOPE_IDENTITY() AS [review_id];
+END
+GO
+
+-- 审核翻译
+IF OBJECT_ID('dbo.sp_translation_review', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_translation_review;
+GO
+CREATE PROCEDURE dbo.sp_translation_review
+    @translation_id INT,
+    @reviewer_id INT,
+    @review_status NVARCHAR(20),
+    @review_notes NVARCHAR(500) = NULL,
+    @quality_score INT = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+    INSERT INTO dbo.translation_reviews ([translation_id], [reviewer_id], [review_status], [review_notes], [quality_score])
+    VALUES (@translation_id, @reviewer_id, @review_status, @review_notes, @quality_score);
+
+    UPDATE dbo.translations
+    SET [review_status] = @review_status, [review_notes] = @review_notes,
+        [quality_score] = @quality_score, [reviewed_by] = @reviewer_id, [reviewed_at] = GETDATE()
+    WHERE [translation_id] = @translation_id;
+END
+GO
+
+-- 查询待审核翻译列表
+IF OBJECT_ID('dbo.sp_get_pending_reviews', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_get_pending_reviews;
+GO
+CREATE PROCEDURE dbo.sp_get_pending_reviews
+    @entity_type NVARCHAR(50) = NULL,
+    @language_code NVARCHAR(10) = NULL,
+    @page INT = 1,
+    @limit INT = 20
+AS
+BEGIN
+    SET NOCOUNT ON;
+    
+    DECLARE @offset INT = (@page - 1) * @limit;
+    
+    SELECT 
+        t.[translation_id],
+        t.[entity_type],
+        t.[entity_id],
+        t.[field_name],
+        t.[language_code],
+        t.[translated_text],
+        t.[is_machine_translated],
+        t.[created_at],
+        (SELECT COUNT(*) FROM dbo.translation_reviews r WHERE r.[translation_id] = t.[translation_id]) AS [review_count]
+    FROM dbo.translations t
+    WHERE t.[review_status] = 'pending'
+      AND (@entity_type IS NULL OR t.[entity_type] = @entity_type)
+      AND (@language_code IS NULL OR t.[language_code] = @language_code)
+    ORDER BY t.[created_at] DESC
+    OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY;
+    
+    SELECT COUNT(*) AS [total]
+    FROM dbo.translations t
+    WHERE t.[review_status] = 'pending'
+      AND (@entity_type IS NULL OR t.[entity_type] = @entity_type)
+      AND (@language_code IS NULL OR t.[language_code] = @language_code);
+END
+GO
+
+-- 获取翻译历史版本
+IF OBJECT_ID('dbo.sp_get_translation_versions', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_get_translation_versions;
+GO
+CREATE PROCEDURE dbo.sp_get_translation_versions
+    @translation_id INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT 
+        version_id, version_number, translated_text, edited_by, edit_reason, created_at
+    FROM dbo.translation_versions
+    WHERE translation_id = @translation_id
+    ORDER BY version_number DESC;
+END
+GO
+
+-- 获取翻译历史版本（扩展）
+IF OBJECT_ID('dbo.sp_translation_get_versions', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_translation_get_versions;
+GO
+CREATE PROCEDURE dbo.sp_translation_get_versions
+    @translation_id INT,
+    @page INT = 1,
+    @page_size INT = 10
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DECLARE @offset INT = (@page - 1) * @page_size;
+
+    SELECT [version_id], [version_number], [translated_text], [is_machine_translated],
+           [review_status], [quality_score], [review_notes], [reviewed_by], [reviewed_at], [created_at]
+    FROM dbo.translation_versions
+    WHERE [translation_id] = @translation_id
+    ORDER BY [version_number] DESC
+    OFFSET @offset ROWS FETCH NEXT @page_size ROWS ONLY;
+END
+GO
+
+-- 恢复翻译版本
+IF OBJECT_ID('dbo.sp_translation_restore_version', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_translation_restore_version;
+GO
+CREATE PROCEDURE dbo.sp_translation_restore_version
+    @translation_id INT,
+    @version_number INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DECLARE @translated_text NVARCHAR(MAX);
+
+    SELECT @translated_text = [translated_text]
+    FROM dbo.translation_versions
+    WHERE [translation_id] = @translation_id AND [version_number] = @version_number;
+
+    IF @translated_text IS NOT NULL
+    BEGIN
+        UPDATE dbo.translations
+        SET [translated_text] = @translated_text, [review_status] = 'pending', [reviewed_by] = NULL, [reviewed_at] = NULL
+        WHERE [translation_id] = @translation_id;
+    END
+END
+GO
+
+-- 创建翻译版本
+IF OBJECT_ID('dbo.sp_create_translation_version', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_create_translation_version;
+GO
+CREATE PROCEDURE dbo.sp_create_translation_version
+    @translation_id INT,
+    @translated_text NVARCHAR(MAX),
+    @edited_by INT = NULL,
+    @edit_reason NVARCHAR(200) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+    
+    DECLARE @max_version INT;
+    SELECT @max_version = ISNULL(MAX([version_number]), 0) 
+    FROM dbo.translation_versions 
+    WHERE [translation_id] = @translation_id;
+    
+    INSERT INTO dbo.translation_versions (
+        [translation_id], [version_number], [translated_text], [edited_by], [edit_reason]
+    )
+    VALUES (
+        @translation_id, @max_version + 1, @translated_text, @edited_by, @edit_reason
+    );
+    
+    SELECT SCOPE_IDENTITY() AS [version_id], @max_version + 1 AS [version_number];
+END
+GO
+
+-- 添加翻译记忆
+IF OBJECT_ID('dbo.sp_translation_memory_add', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_translation_memory_add;
+GO
+CREATE PROCEDURE dbo.sp_translation_memory_add
+    @source_text NVARCHAR(MAX),
+    @target_text NVARCHAR(MAX),
+    @source_language NVARCHAR(10),
+    @target_language NVARCHAR(10),
+    @entity_type NVARCHAR(50) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+    IF EXISTS (SELECT 1 FROM dbo.translation_memory WHERE [source_text] = @source_text 
+               AND [source_language] = @source_language AND [target_language] = @target_language)
+    BEGIN
+        UPDATE dbo.translation_memory
+        SET [target_text] = @target_text, [usage_count] = [usage_count] + 1, 
+            [last_used_at] = GETDATE()
+        WHERE [source_text] = @source_text AND [source_language] = @source_language 
+          AND [target_language] = @target_language;
+    END
+    ELSE
+    BEGIN
+        INSERT INTO dbo.translation_memory ([source_text], [target_text], [source_language], 
+            [target_language], [entity_type])
+        VALUES (@source_text, @target_text, @source_language, @target_language, @entity_type);
+    END
+END
+GO
+
+-- 查询翻译记忆
+IF OBJECT_ID('dbo.sp_translation_memory_search', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_translation_memory_search;
+GO
+CREATE PROCEDURE dbo.sp_translation_memory_search
+    @source_text NVARCHAR(MAX),
+    @source_language NVARCHAR(10),
+    @target_language NVARCHAR(10),
+    @max_results INT = 5
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT TOP (@max_results) [memory_id], [source_text], [target_text], [quality_score], [usage_count], [last_used_at]
+    FROM dbo.translation_memory
+    WHERE [source_language] = @source_language AND [target_language] = @target_language
+      AND [source_text] LIKE '%' + @source_text + '%'
+    ORDER BY [usage_count] DESC, [quality_score] DESC;
+END
+GO
+
+-- 翻译记忆查询（哈希版）
+IF OBJECT_ID('dbo.sp_lookup_translation_memory', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_lookup_translation_memory;
+GO
+CREATE PROCEDURE dbo.sp_lookup_translation_memory
+    @source_text NVARCHAR(MAX),
+    @target_language NVARCHAR(10)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    
+    DECLARE @hash NVARCHAR(64);
+    SET @hash = CONVERT(NVARCHAR(64), HASHBYTES('SHA2_256', CONVERT(NVARCHAR(MAX), @source_text)), 2);
+    
+    SELECT 
+        m.[memory_id],
+        m.[source_text],
+        m.[translated_text],
+        m.[quality_score],
+        m.[usage_count]
+    FROM dbo.translation_memory m
+    WHERE m.[source_text_hash] = @hash
+      AND m.[target_language] = @target_language
+    ORDER BY m.[quality_score] DESC, m.[usage_count] DESC;
+END
+GO
+
+-- 保存翻译记忆（哈希版）
+IF OBJECT_ID('dbo.sp_upsert_translation_memory', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_upsert_translation_memory;
+GO
+CREATE PROCEDURE dbo.sp_upsert_translation_memory
+    @source_text NVARCHAR(MAX),
+    @source_language NVARCHAR(10),
+    @target_language NVARCHAR(10),
+    @translated_text NVARCHAR(MAX),
+    @quality_score INT = 80,
+    @context NVARCHAR(200) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+    
+    DECLARE @hash NVARCHAR(64);
+    SET @hash = CONVERT(NVARCHAR(64), HASHBYTES('SHA2_256', CONVERT(NVARCHAR(MAX), @source_text)), 2);
+    
+    IF EXISTS (
+        SELECT 1 FROM dbo.translation_memory 
+        WHERE [source_text_hash] = @hash AND [target_language] = @target_language
+    )
+    BEGIN
+        UPDATE dbo.translation_memory
+        SET 
+            [usage_count] = [usage_count] + 1,
+            [last_used_at] = GETDATE(),
+            [quality_score] = CASE WHEN @quality_score > [quality_score] THEN @quality_score ELSE [quality_score] END
+        WHERE [source_text_hash] = @hash AND [target_language] = @target_language;
+    END
+    ELSE
+    BEGIN
+        INSERT INTO dbo.translation_memory (
+            [source_text_hash], [source_text], [source_language], [target_language], 
+            [translated_text], [quality_score], [context]
+        )
+        VALUES (
+            @hash, @source_text, @source_language, @target_language, 
+            @translated_text, @quality_score, @context
+        );
+    END
+END
+GO
+
+-- 批量操作翻译
+IF OBJECT_ID('dbo.sp_translation_batch_update', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_translation_batch_update;
+GO
+CREATE PROCEDURE dbo.sp_translation_batch_update
+    @entity_type NVARCHAR(50),
+    @language_code NVARCHAR(10),
+    @review_status NVARCHAR(20),
+    @entity_ids NVARCHAR(MAX)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DECLARE @idTable TABLE (id INT);
+    INSERT INTO @idTable SELECT value FROM STRING_SPLIT(@entity_ids, ',');
+
+    UPDATE dbo.translations
+    SET [review_status] = @review_status
+    WHERE [entity_type] = @entity_type AND [language_code] = @language_code
+      AND [entity_id] IN (SELECT id FROM @idTable);
+
+    SELECT @@ROWCOUNT AS updated;
+END
+GO
+
+-- ============================================
+-- 16. 同步设备表 (sync_devices)
+-- ============================================
+IF OBJECT_ID('dbo.sync_devices', 'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.sync_devices (
+        [device_id] NVARCHAR(64) NOT NULL PRIMARY KEY,
+        [device_name] NVARCHAR(100) NOT NULL,
+        [device_type] NVARCHAR(50) DEFAULT 'mobile',
+        [user_id] INT NOT NULL,
+        [last_sync_time] DATETIME NULL,
+        [sync_status] NVARCHAR(20) DEFAULT 'active',
+        [last_ip_address] NVARCHAR(45) NULL,
+        [created_at] DATETIME DEFAULT GETDATE(),
+        [updated_at] DATETIME DEFAULT GETDATE()
+    );
+    CREATE INDEX IX_sync_devices_user_id ON dbo.sync_devices([user_id]);
+END
+GO
+
+-- ============================================
+-- 17. 同步冲突表 (sync_conflicts)
+-- ============================================
+IF OBJECT_ID('dbo.sync_conflicts', 'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.sync_conflicts (
+        [conflict_id] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        [sync_id] NVARCHAR(64) NOT NULL,
+        [entity_type] NVARCHAR(50) NOT NULL,
+        [entity_id] INT NOT NULL,
+        [conflict_type] NVARCHAR(20) NOT NULL,
+        [server_version] INT NOT NULL,
+        [client_version] INT NOT NULL,
+        [server_data] NVARCHAR(MAX) NULL,
+        [client_data] NVARCHAR(MAX) NULL,
+        [resolved] BIT DEFAULT 0,
+        [resolved_by] INT NULL,
+        [resolved_at] DATETIME NULL,
+        [resolution_action] NVARCHAR(50) NULL,
+        [created_at] DATETIME DEFAULT GETDATE()
+    );
+    CREATE INDEX IX_sync_conflicts_entity ON dbo.sync_conflicts([entity_type], [entity_id]);
+    CREATE INDEX IX_sync_conflicts_resolved ON dbo.sync_conflicts([resolved]);
+END
+GO
+
+-- ============================================
+-- 18. 同步日志表 (sync_logs)
+-- ============================================
+IF OBJECT_ID('dbo.sync_logs', 'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.sync_logs (
+        [log_id] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        [sync_id] NVARCHAR(64) NOT NULL,
+        [user_id] INT NOT NULL,
+        [device_id] NVARCHAR(64) NULL,
+        [operation_type] NVARCHAR(20) NOT NULL,
+        [entity_type] NVARCHAR(50) NOT NULL,
+        [entity_id] INT NOT NULL,
+        [status] NVARCHAR(20) NOT NULL,
+        [message] NVARCHAR(MAX) NULL,
+        [duration_ms] INT NULL,
+        [created_at] DATETIME DEFAULT GETDATE()
+    );
+    CREATE INDEX IX_sync_logs_sync_id ON dbo.sync_logs([sync_id]);
+    CREATE INDEX IX_sync_logs_user_id ON dbo.sync_logs([user_id]);
+    CREATE INDEX IX_sync_logs_entity ON dbo.sync_logs([entity_type], [entity_id]);
+END
+GO
+
+-- ============================================
+-- 19. 同步统计信息表 (sync_stats)
+-- ============================================
+IF OBJECT_ID('dbo.sync_stats', 'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.sync_stats (
+        [stat_id] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        [user_id] INT NOT NULL,
+        [device_id] NVARCHAR(64) NULL,
+        [date] DATE NOT NULL,
+        [sync_count] INT DEFAULT 0,
+        [data_uploaded_bytes] BIGINT DEFAULT 0,
+        [data_downloaded_bytes] BIGINT DEFAULT 0,
+        [conflict_count] INT DEFAULT 0,
+        [average_sync_duration_ms] INT NULL,
+        [updated_at] DATETIME DEFAULT GETDATE()
+    );
+    CREATE UNIQUE INDEX UQ_sync_stats_user_date ON dbo.sync_stats([user_id], [date]);
+    CREATE INDEX IX_sync_stats_device_id ON dbo.sync_stats([device_id]);
+END
+GO
+
+-- 注册设备
+IF OBJECT_ID('dbo.sp_sync_register_device', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_sync_register_device;
+GO
+CREATE PROCEDURE dbo.sp_sync_register_device
+    @device_id NVARCHAR(64),
+    @device_name NVARCHAR(100),
+    @device_type NVARCHAR(50),
+    @user_id INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    
+    IF EXISTS (SELECT 1 FROM dbo.sync_devices WHERE [device_id] = @device_id)
+    BEGIN
+        UPDATE dbo.sync_devices
+        SET [device_name] = @device_name, [device_type] = @device_type, [updated_at] = GETDATE()
+        WHERE [device_id] = @device_id;
+    END
+    ELSE
+    BEGIN
+        INSERT INTO dbo.sync_devices ([device_id], [device_name], [device_type], [user_id])
+        VALUES (@device_id, @device_name, @device_type, @user_id);
+    END
+END
+GO
+
+-- 记录同步日志
+IF OBJECT_ID('dbo.sp_sync_log_add', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_sync_log_add;
+GO
+CREATE PROCEDURE dbo.sp_sync_log_add
+    @sync_id NVARCHAR(64),
+    @user_id INT,
+    @device_id NVARCHAR(64),
+    @operation_type NVARCHAR(20),
+    @entity_type NVARCHAR(50),
+    @entity_id INT,
+    @status NVARCHAR(20),
+    @message NVARCHAR(MAX) = NULL,
+    @duration_ms INT = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+    INSERT INTO dbo.sync_logs (
+        [sync_id], [user_id], [device_id], [operation_type], [entity_type], 
+        [entity_id], [status], [message], [duration_ms]
+    )
+    VALUES (
+        @sync_id, @user_id, @device_id, @operation_type, @entity_type, 
+        @entity_id, @status, @message, @duration_ms
+    );
+END
+GO
+
+-- 记录同步冲突
+IF OBJECT_ID('dbo.sp_sync_conflict_add', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_sync_conflict_add;
+GO
+CREATE PROCEDURE dbo.sp_sync_conflict_add
+    @sync_id NVARCHAR(64),
+    @entity_type NVARCHAR(50),
+    @entity_id INT,
+    @conflict_type NVARCHAR(20),
+    @server_version INT,
+    @client_version INT,
+    @server_data NVARCHAR(MAX) = NULL,
+    @client_data NVARCHAR(MAX) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+    INSERT INTO dbo.sync_conflicts (
+        [sync_id], [entity_type], [entity_id], [conflict_type], 
+        [server_version], [client_version], [server_data], [client_data]
+    )
+    VALUES (
+        @sync_id, @entity_type, @entity_id, @conflict_type, 
+        @server_version, @client_version, @server_data, @client_data
+    );
+END
+GO
+
+-- 解决冲突
+IF OBJECT_ID('dbo.sp_sync_conflict_resolve', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_sync_conflict_resolve;
+GO
+CREATE PROCEDURE dbo.sp_sync_conflict_resolve
+    @conflict_id INT,
+    @resolved_by INT,
+    @resolution_action NVARCHAR(50)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    UPDATE dbo.sync_conflicts
+    SET [resolved] = 1, [resolved_by] = @resolved_by, [resolved_at] = GETDATE(), [resolution_action] = @resolution_action
+    WHERE [conflict_id] = @conflict_id;
+END
+GO
+
+-- 获取用户待解决冲突
+IF OBJECT_ID('dbo.sp_sync_get_user_conflicts', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_sync_get_user_conflicts;
+GO
+CREATE PROCEDURE dbo.sp_sync_get_user_conflicts
+    @user_id INT,
+    @limit INT = 50
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT TOP (@limit) [conflict_id], [sync_id], [entity_type], [entity_id], [conflict_type],
+           [server_version], [client_version], [server_data], [client_data], [created_at]
+    FROM dbo.sync_conflicts
+    WHERE [resolved] = 0
+    ORDER BY [created_at] DESC;
+END
+GO
+
+-- 更新同步统计
+IF OBJECT_ID('dbo.sp_sync_stats_update', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_sync_stats_update;
+GO
+CREATE PROCEDURE dbo.sp_sync_stats_update
+    @user_id INT,
+    @device_id NVARCHAR(64) = NULL,
+    @data_uploaded_bytes BIGINT = 0,
+    @data_downloaded_bytes BIGINT = 0,
+    @conflict_count INT = 0,
+    @duration_ms INT = 0
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DECLARE @today DATE = GETDATE();
+    
+    IF EXISTS (SELECT 1 FROM dbo.sync_stats WHERE [user_id] = @user_id AND [date] = @today)
+    BEGIN
+        UPDATE dbo.sync_stats
+        SET 
+            [sync_count] = [sync_count] + 1,
+            [data_uploaded_bytes] = [data_uploaded_bytes] + @data_uploaded_bytes,
+            [data_downloaded_bytes] = [data_downloaded_bytes] + @data_downloaded_bytes,
+            [conflict_count] = [conflict_count] + @conflict_count,
+            [average_sync_duration_ms] = ([average_sync_duration_ms] * ([sync_count]) + @duration_ms) / ([sync_count] + 1),
+            [updated_at] = GETDATE()
+        WHERE [user_id] = @user_id AND [date] = @today;
+    END
+    ELSE
+    BEGIN
+        INSERT INTO dbo.sync_stats (
+            [user_id], [device_id], [date], [sync_count], 
+            [data_uploaded_bytes], [data_downloaded_bytes], 
+            [conflict_count], [average_sync_duration_ms]
+        )
+        VALUES (
+            @user_id, @device_id, @today, 1, 
+            @data_uploaded_bytes, @data_downloaded_bytes, 
+            @conflict_count, @duration_ms
+        );
+    END
+END
+GO
+
+-- 更新设备最后同步时间
+IF OBJECT_ID('dbo.sp_sync_update_device_last_sync', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_sync_update_device_last_sync;
+GO
+CREATE PROCEDURE dbo.sp_sync_update_device_last_sync
+    @device_id NVARCHAR(64),
+    @sync_status NVARCHAR(20) = 'success'
+AS
+BEGIN
+    SET NOCOUNT ON;
+    UPDATE dbo.sync_devices
+    SET [last_sync_time] = GETDATE(), [sync_status] = @sync_status, [updated_at] = GETDATE()
+    WHERE [device_id] = @device_id;
+END
+GO
+
+-- ============================================
+-- 20. AI知识图谱数据表
+-- 防止AI幻觉，确保回答准确率
+-- ============================================
+-- 知识主题表
+IF OBJECT_ID('dbo.kg_topics', 'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.kg_topics (
+        [topic_id] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        [topic_key] NVARCHAR(100) NOT NULL UNIQUE,
+        [topic_name] NVARCHAR(200) NOT NULL,
+        [category] NVARCHAR(50) NOT NULL,
+        [content_zh] NVARCHAR(MAX) NOT NULL,
+        [content_en] NVARCHAR(MAX) NULL,
+        [source] NVARCHAR(200) NOT NULL,
+        [confidence] DECIMAL(3,2) DEFAULT 0.95,
+        [verified] BIT DEFAULT 0,
+        [created_at] DATETIME DEFAULT GETDATE(),
+        [updated_at] DATETIME DEFAULT GETDATE()
+    );
+END
+GO
+
+-- 知识关键词关联表（用于快速匹配）
+IF OBJECT_ID('dbo.kg_keywords', 'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.kg_keywords (
+        [keyword_id] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        [topic_id] INT NOT NULL,
+        [keyword] NVARCHAR(100) NOT NULL,
+        [weight] DECIMAL(3,2) DEFAULT 1.0,
+        [language] NVARCHAR(10) DEFAULT 'zh',
+        CONSTRAINT FK_kg_keywords_topic FOREIGN KEY ([topic_id]) REFERENCES dbo.kg_topics([topic_id]) ON DELETE CASCADE,
+        CONSTRAINT UQ_kg_keywords UNIQUE ([topic_id], [keyword], [language])
+    );
+END
+GO
+
+-- 知识关系表（主题之间的关联）
+IF OBJECT_ID('dbo.kg_relations', 'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.kg_relations (
+        [relation_id] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        [from_topic_id] INT NOT NULL,
+        [to_topic_id] INT NOT NULL,
+        [relation_type] NVARCHAR(50) NOT NULL,
+        [description] NVARCHAR(500) NULL,
+        CONSTRAINT FK_kg_rel_from FOREIGN KEY ([from_topic_id]) REFERENCES dbo.kg_topics([topic_id]),
+        CONSTRAINT FK_kg_rel_to FOREIGN KEY ([to_topic_id]) REFERENCES dbo.kg_topics([topic_id]),
+        CONSTRAINT UQ_kg_relations UNIQUE ([from_topic_id], [to_topic_id], [relation_type])
+    );
+END
+GO
+
+-- AI回答验证记录表（追踪AI回答质量）
+IF OBJECT_ID('dbo.kg_verifications', 'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.kg_verifications (
+        [verification_id] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        [question] NVARCHAR(MAX) NOT NULL,
+        [ai_answer] NVARCHAR(MAX) NOT NULL,
+        [ai_provider] NVARCHAR(50) NOT NULL,
+        [matched_topic_id] INT NULL,
+        [match_score] DECIMAL(5,2) NULL,
+        [is_accurate] BIT NULL,
+        [feedback] NVARCHAR(MAX) NULL,
+        [created_at] DATETIME DEFAULT GETDATE()
+    );
+END
+GO
+
+-- 创建索引
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'idx_kg_topics_category' AND object_id = OBJECT_ID('dbo.kg_topics'))
+    CREATE INDEX [idx_kg_topics_category] ON dbo.kg_topics([category]);
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'idx_kg_topics_key' AND object_id = OBJECT_ID('dbo.kg_topics'))
+    CREATE INDEX [idx_kg_topics_key] ON dbo.kg_topics([topic_key]);
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'idx_kg_keywords_word' AND object_id = OBJECT_ID('dbo.kg_keywords'))
+    CREATE INDEX [idx_kg_keywords_word] ON dbo.kg_keywords([keyword]);
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'idx_kg_verifications_topic' AND object_id = OBJECT_ID('dbo.kg_verifications'))
+    CREATE INDEX [idx_kg_verifications_topic] ON dbo.kg_verifications([matched_topic_id]);
+GO
+
+-- 根据关键词查询知识
+IF OBJECT_ID('dbo.sp_kg_query', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_kg_query;
+GO
+CREATE PROCEDURE dbo.sp_kg_query
+    @keywords NVARCHAR(MAX),
+    @language NVARCHAR(10) = 'zh',
+    @max_results INT = 5
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DECLARE @keywordTable TABLE (word NVARCHAR(100));
+    INSERT INTO @keywordTable
+    SELECT value FROM STRING_SPLIT(@keywords, ',');
+    SELECT TOP (@max_results)
+        t.[topic_id], t.[topic_key], t.[topic_name], t.[category],
+        CASE WHEN @language = 'en' AND t.[content_en] IS NOT NULL THEN t.[content_en] ELSE t.[content_zh] END AS [content],
+        t.[source], t.[confidence], t.[verified],
+        COUNT(DISTINCT kw.[keyword_id]) AS [match_count],
+        SUM(kw.[weight]) AS [total_weight]
+    FROM dbo.kg_topics t
+    INNER JOIN dbo.kg_keywords kw ON t.[topic_id] = kw.[topic_id]
+    INNER JOIN @keywordTable kt ON kw.[keyword] LIKE '%' + kt.word + '%' OR kt.word LIKE '%' + kw.[keyword] + '%'
+    GROUP BY t.[topic_id], t.[topic_key], t.[topic_name], t.[category],
+             t.[content_zh], t.[content_en], t.[source], t.[confidence], t.[verified]
+    ORDER BY [total_weight] DESC, t.[confidence] DESC, t.[verified] DESC;
+END
+GO
+
+-- 记录验证结果
+IF OBJECT_ID('dbo.sp_kg_log_verification', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_kg_log_verification;
+GO
+CREATE PROCEDURE dbo.sp_kg_log_verification
+    @question NVARCHAR(MAX),
+    @ai_answer NVARCHAR(MAX),
+    @ai_provider NVARCHAR(50),
+    @matched_topic_id INT = NULL,
+    @match_score DECIMAL(5,2) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+    INSERT INTO dbo.kg_verifications ([question], [ai_answer], [ai_provider], [matched_topic_id], [match_score])
+    VALUES (@question, @ai_answer, @ai_provider, @matched_topic_id, @match_score);
+    SELECT SCOPE_IDENTITY() AS [verification_id];
+END
+GO
+
+-- 查询实体的直接邻居（关系查询）
+IF OBJECT_ID('dbo.sp_kg_get_neighbors', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_kg_get_neighbors;
+GO
+CREATE PROCEDURE dbo.sp_kg_get_neighbors
+    @topic_id INT,
+    @relation_type NVARCHAR(50) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT 
+        r.relation_id, r.to_topic_id AS neighbor_id, t.topic_name AS neighbor_name,
+        t.category AS neighbor_category, r.relation_type, r.description AS relation_description
+    FROM dbo.kg_relations r
+    INNER JOIN dbo.kg_topics t ON r.to_topic_id = t.topic_id
+    WHERE r.from_topic_id = @topic_id AND (@relation_type IS NULL OR r.relation_type = @relation_type)
+    UNION ALL
+    SELECT 
+        r.relation_id, r.from_topic_id AS neighbor_id, t.topic_name AS neighbor_name,
+        t.category AS neighbor_category, r.relation_type, r.description AS relation_description
+    FROM dbo.kg_relations r
+    INNER JOIN dbo.kg_topics t ON r.from_topic_id = t.topic_id
+    WHERE r.to_topic_id = @topic_id AND (@relation_type IS NULL OR r.relation_type = @relation_type);
+END
+GO
+
+-- 根据主题名称查询主题ID
+IF OBJECT_ID('dbo.sp_kg_find_topic', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_kg_find_topic;
+GO
+CREATE PROCEDURE dbo.sp_kg_find_topic
+    @topic_name NVARCHAR(200)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SELECT * FROM dbo.kg_topics 
+    WHERE topic_name LIKE '%' + @topic_name + '%' OR topic_key LIKE '%' + @topic_name + '%';
+END
+GO
+
+-- 查询所有实体（支持分页和过滤）
+IF OBJECT_ID('dbo.sp_kg_get_topics', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_kg_get_topics;
+GO
+CREATE PROCEDURE dbo.sp_kg_get_topics
+    @category NVARCHAR(50) = NULL,
+    @page INT = 1,
+    @page_size INT = 20
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DECLARE @offset INT = (@page - 1) * @page_size;
+    SELECT * FROM dbo.kg_topics
+    WHERE (@category IS NULL OR category = @category)
+    ORDER BY topic_id
+    OFFSET @offset ROWS FETCH NEXT @page_size ROWS ONLY;
+    SELECT COUNT(*) AS total FROM dbo.kg_topics
+    WHERE (@category IS NULL OR category = @category);
 END
 GO
 

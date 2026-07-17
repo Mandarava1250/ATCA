@@ -337,9 +337,9 @@ const sqlScripts: Record<string, string[]> = {
   user: ['User.sql'],
   architecture: ['Architecture.sql'],
   competition: ['Competition.sql'],
-  activity: ['Activity.sql', 'Checkin.sql'],
+  activity: ['Activity.sql'],
   media3d: ['Media_3D.sql'],
-  social: ['Social.sql', 'Community.sql'],
+  social: ['Community.sql'],
 };
 
 export async function initDatabase(dbName: keyof typeof dbConfigs): Promise<void> {
