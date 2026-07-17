@@ -102,6 +102,11 @@
             <button class="form-tab" :class="{ active: activeTab === 'basic' }" @click="activeTab = 'basic'">基本信息</button>
             <button class="form-tab" :class="{ active: activeTab === 'detail' }" @click="activeTab = 'detail'">详细介绍</button>
             <button class="form-tab" :class="{ active: activeTab === 'media' }" @click="activeTab = 'media'">图片与标签</button>
+            <button class="form-tab" :class="{ active: activeTab === 'history' }" @click="loadSubTableData('history')">历史发展</button>
+            <button class="form-tab" :class="{ active: activeTab === 'structure' }" @click="loadSubTableData('structure')">技术结构</button>
+            <button class="form-tab" :class="{ active: activeTab === 'features' }" @click="loadSubTableData('features')">建筑特色</button>
+            <button class="form-tab" :class="{ active: activeTab === 'culture' }" @click="loadSubTableData('culture')">文化意义</button>
+            <button class="form-tab" :class="{ active: activeTab === 'experts' }" @click="loadSubTableData('experts')">专家观点</button>
           </div>
 
           <!-- 基本信息 -->
@@ -234,6 +239,221 @@
             </div>
           </div>
 
+          <!-- 子表管理：历史发展 -->
+          <div v-show="activeTab === 'history'" class="form-panel">
+            <div class="subtable-header">
+              <button v-if="!viewMode" class="atca-btn atca-btn-sm atca-btn-primary" @click="openSubTableForm('history')">
+                <svg viewBox="0 0 24 24" width="14" height="14"><path d="M12 4v16m8-8H4" stroke="currentColor" fill="none" stroke-width="2"/></svg>
+                添加历史发展
+              </button>
+              <button v-if="!viewMode && subTableSelection['history'].length > 0" class="atca-btn atca-btn-sm atca-btn-danger" @click="batchDeleteSubTable('history')">
+                批量删除 ({{ subTableSelection['history'].length }})
+              </button>
+            </div>
+            <div v-if="subTableLoading" class="mini-loading">
+              <div class="mini-spinner"></div>
+            </div>
+            <div v-else-if="subTableData['history'].length === 0" class="empty-subtable">
+              <svg viewBox="0 0 24 24" width="32" height="32"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
+              <p>暂无历史发展数据</p>
+            </div>
+            <table v-else class="subtable">
+              <thead>
+                <tr>
+                  <th class="col-check"><input type="checkbox" :checked="isSubTableAllSelected('history')" @change="toggleSubTableSelectAll('history')" /></th>
+                  <th>朝代时期</th>
+                  <th>标题</th>
+                  <th>内容摘要</th>
+                  <th>{{ $t('admin.actions') || '操作' }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="item in subTableData['history']" :key="item.development_id">
+                  <td class="col-check"><input type="checkbox" :value="item.development_id" v-model="subTableSelection['history']" /></td>
+                  <td>{{ item.dynasty_period || '--' }}</td>
+                  <td>{{ item.development_title }}</td>
+                  <td>{{ item.development_content?.substring(0, 50) }}{{ item.development_content?.length > 50 ? '...' : '' }}</td>
+                  <td>
+                    <button v-if="!viewMode" class="btn-text" @click="editSubTableItem('history', item)">编辑</button>
+                    <button v-if="!viewMode" class="btn-text danger" @click="deleteSubTableItem('history', item.development_id)">删除</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- 子表管理：技术结构 -->
+          <div v-show="activeTab === 'structure'" class="form-panel">
+            <div class="subtable-header">
+              <button v-if="!viewMode" class="atca-btn atca-btn-sm atca-btn-primary" @click="openSubTableForm('structure')">
+                <svg viewBox="0 0 24 24" width="14" height="14"><path d="M12 4v16m8-8H4" stroke="currentColor" fill="none" stroke-width="2"/></svg>
+                添加技术结构
+              </button>
+              <button v-if="!viewMode && subTableSelection['structure'].length > 0" class="atca-btn atca-btn-sm atca-btn-danger" @click="batchDeleteSubTable('structure')">
+                批量删除 ({{ subTableSelection['structure'].length }})
+              </button>
+            </div>
+            <div v-if="subTableLoading" class="mini-loading">
+              <div class="mini-spinner"></div>
+            </div>
+            <div v-else-if="subTableData['structure'].length === 0" class="empty-subtable">
+              <svg viewBox="0 0 24 24" width="32" height="32"><path d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
+              <p>暂无技术结构数据</p>
+            </div>
+            <table v-else class="subtable">
+              <thead>
+                <tr>
+                  <th class="col-check"><input type="checkbox" :checked="isSubTableAllSelected('structure')" @change="toggleSubTableSelectAll('structure')" /></th>
+                  <th>结构名称</th>
+                  <th>分类</th>
+                  <th>描述摘要</th>
+                  <th>{{ $t('admin.actions') || '操作' }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="item in subTableData['structure']" :key="item.structure_id">
+                  <td class="col-check"><input type="checkbox" :value="item.structure_id" v-model="subTableSelection['structure']" /></td>
+                  <td>{{ item.structure_name }}</td>
+                  <td>{{ item.technical_category }}</td>
+                  <td>{{ item.technical_description?.substring(0, 50) }}{{ item.technical_description?.length > 50 ? '...' : '' }}</td>
+                  <td>
+                    <button v-if="!viewMode" class="btn-text" @click="editSubTableItem('structure', item)">编辑</button>
+                    <button v-if="!viewMode" class="btn-text danger" @click="deleteSubTableItem('structure', item.structure_id)">删除</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- 子表管理：建筑特色 -->
+          <div v-show="activeTab === 'features'" class="form-panel">
+            <div class="subtable-header">
+              <button v-if="!viewMode" class="atca-btn atca-btn-sm atca-btn-primary" @click="openSubTableForm('features')">
+                <svg viewBox="0 0 24 24" width="14" height="14"><path d="M12 4v16m8-8H4" stroke="currentColor" fill="none" stroke-width="2"/></svg>
+                添加建筑特色
+              </button>
+              <button v-if="!viewMode && subTableSelection['features'].length > 0" class="atca-btn atca-btn-sm atca-btn-danger" @click="batchDeleteSubTable('features')">
+                批量删除 ({{ subTableSelection['features'].length }})
+              </button>
+            </div>
+            <div v-if="subTableLoading" class="mini-loading">
+              <div class="mini-spinner"></div>
+            </div>
+            <div v-else-if="subTableData['features'].length === 0" class="empty-subtable">
+              <svg viewBox="0 0 24 24" width="32" height="32"><path d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
+              <p>暂无建筑特色数据</p>
+            </div>
+            <table v-else class="subtable">
+              <thead>
+                <tr>
+                  <th class="col-check"><input type="checkbox" :checked="isSubTableAllSelected('features')" @change="toggleSubTableSelectAll('features')" /></th>
+                  <th>特色名称</th>
+                  <th>设计理念</th>
+                  <th>空间组织</th>
+                  <th>{{ $t('admin.actions') || '操作' }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="item in subTableData['features']" :key="item.feature_id">
+                  <td class="col-check"><input type="checkbox" :value="item.feature_id" v-model="subTableSelection['features']" /></td>
+                  <td>{{ item.feature_name }}</td>
+                  <td>{{ item.design_philosophy?.substring(0, 30) }}{{ item.design_philosophy?.length > 30 ? '...' : '' }}</td>
+                  <td>{{ item.spatial_organization?.substring(0, 30) }}{{ item.spatial_organization?.length > 30 ? '...' : '' }}</td>
+                  <td>
+                    <button v-if="!viewMode" class="btn-text" @click="editSubTableItem('features', item)">编辑</button>
+                    <button v-if="!viewMode" class="btn-text danger" @click="deleteSubTableItem('features', item.feature_id)">删除</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- 子表管理：文化意义 -->
+          <div v-show="activeTab === 'culture'" class="form-panel">
+            <div class="subtable-header">
+              <button v-if="!viewMode" class="atca-btn atca-btn-sm atca-btn-primary" @click="openSubTableForm('culture')">
+                <svg viewBox="0 0 24 24" width="14" height="14"><path d="M12 4v16m8-8H4" stroke="currentColor" fill="none" stroke-width="2"/></svg>
+                添加文化意义
+              </button>
+              <button v-if="!viewMode && subTableSelection['culture'].length > 0" class="atca-btn atca-btn-sm atca-btn-danger" @click="batchDeleteSubTable('culture')">
+                批量删除 ({{ subTableSelection['culture'].length }})
+              </button>
+            </div>
+            <div v-if="subTableLoading" class="mini-loading">
+              <div class="mini-spinner"></div>
+            </div>
+            <div v-else-if="subTableData['culture'].length === 0" class="empty-subtable">
+              <svg viewBox="0 0 24 24" width="32" height="32"><path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
+              <p>暂无文化意义数据</p>
+            </div>
+            <table v-else class="subtable">
+              <thead>
+                <tr>
+                  <th class="col-check"><input type="checkbox" :checked="isSubTableAllSelected('culture')" @change="toggleSubTableSelectAll('culture')" /></th>
+                  <th>意义方面</th>
+                  <th>文化解读</th>
+                  <th>当代价值</th>
+                  <th>{{ $t('admin.actions') || '操作' }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="item in subTableData['culture']" :key="item.significance_id">
+                  <td class="col-check"><input type="checkbox" :value="item.significance_id" v-model="subTableSelection['culture']" /></td>
+                  <td>{{ item.significance_aspect }}</td>
+                  <td>{{ item.cultural_interpretation?.substring(0, 30) }}{{ item.cultural_interpretation?.length > 30 ? '...' : '' }}</td>
+                  <td>{{ item.contemporary_value?.substring(0, 30) }}{{ item.contemporary_value?.length > 30 ? '...' : '' }}</td>
+                  <td>
+                    <button v-if="!viewMode" class="btn-text" @click="editSubTableItem('culture', item)">编辑</button>
+                    <button v-if="!viewMode" class="btn-text danger" @click="deleteSubTableItem('culture', item.significance_id)">删除</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- 子表管理：专家观点 -->
+          <div v-show="activeTab === 'experts'" class="form-panel">
+            <div class="subtable-header">
+              <button v-if="!viewMode" class="atca-btn atca-btn-sm atca-btn-primary" @click="openSubTableForm('experts')">
+                <svg viewBox="0 0 24 24" width="14" height="14"><path d="M12 4v16m8-8H4" stroke="currentColor" fill="none" stroke-width="2"/></svg>
+                添加专家观点
+              </button>
+              <button v-if="!viewMode && subTableSelection['experts'].length > 0" class="atca-btn atca-btn-sm atca-btn-danger" @click="batchDeleteSubTable('experts')">
+                批量删除 ({{ subTableSelection['experts'].length }})
+              </button>
+            </div>
+            <div v-if="subTableLoading" class="mini-loading">
+              <div class="mini-spinner"></div>
+            </div>
+            <div v-else-if="subTableData['experts'].length === 0" class="empty-subtable">
+              <svg viewBox="0 0 24 24" width="32" height="32"><path d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
+              <p>暂无专家观点数据</p>
+            </div>
+            <table v-else class="subtable">
+              <thead>
+                <tr>
+                  <th class="col-check"><input type="checkbox" :checked="isSubTableAllSelected('experts')" @change="toggleSubTableSelectAll('experts')" /></th>
+                  <th>专家姓名</th>
+                  <th>职称</th>
+                  <th>观点摘要</th>
+                  <th>{{ $t('admin.actions') || '操作' }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="item in subTableData['experts']" :key="item.quote_id">
+                  <td class="col-check"><input type="checkbox" :value="item.quote_id" v-model="subTableSelection['experts']" /></td>
+                  <td>{{ item.expert_name }}</td>
+                  <td>{{ item.expert_title || '--' }}</td>
+                  <td>{{ item.quote_content?.substring(0, 50) }}{{ item.quote_content?.length > 50 ? '...' : '' }}</td>
+                  <td>
+                    <button v-if="!viewMode" class="btn-text" @click="editSubTableItem('experts', item)">编辑</button>
+                    <button v-if="!viewMode" class="btn-text danger" @click="deleteSubTableItem('experts', item.quote_id)">删除</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
           <div class="modal-actions" v-if="!viewMode">
             <button class="atca-btn atca-btn-secondary" @click="closeModal">{{ $t('common.cancel') || '取消' }}</button>
             <button class="atca-btn atca-btn-primary" :disabled="saving" @click="saveArch">
@@ -248,12 +468,172 @@
         </template>
       </div>
     </div>
+
+    <!-- 子表编辑弹窗 -->
+    <div v-if="showSubTableModal" class="modal-overlay" @click.self="closeSubTableModal">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h3>{{ subTableModalTitle }}</h3>
+          <button class="modal-close" @click="closeSubTableModal">
+            <svg viewBox="0 0 24 24" width="20" height="20"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" fill="currentColor"/></svg>
+          </button>
+        </div>
+        <div class="subtable-form">
+          <!-- 历史发展表单 -->
+          <template v-if="currentSubTable === 'history'">
+            <div class="form-grid single-col">
+              <div class="form-group">
+                <label>朝代时期 *</label>
+                <input v-model="subTableForm.dynasty_period" class="atca-input" required placeholder="如: 明朝" />
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>起始年份</label>
+                  <input v-model.number="subTableForm.start_year" type="number" class="atca-input" placeholder="如: 1406" />
+                </div>
+                <div class="form-group">
+                  <label>结束年份</label>
+                  <input v-model.number="subTableForm.end_year" type="number" class="atca-input" placeholder="如: 1420" />
+                </div>
+              </div>
+              <div class="form-group">
+                <label>发展标题 *</label>
+                <input v-model="subTableForm.development_title" class="atca-input" required placeholder="如: 始建时期" />
+              </div>
+              <div class="form-group">
+                <label>发展内容 *</label>
+                <textarea v-model="subTableForm.development_content" class="atca-input" rows="4" required placeholder="详细描述这一时期的发展..."></textarea>
+              </div>
+              <div class="form-group">
+                <label>建筑变化</label>
+                <textarea v-model="subTableForm.architectural_changes" class="atca-input" rows="2" placeholder="描述建筑在此时期的变化..."></textarea>
+              </div>
+              <div class="form-group">
+                <label>历史背景</label>
+                <textarea v-model="subTableForm.historical_context" class="atca-input" rows="2" placeholder="相关历史背景..."></textarea>
+              </div>
+            </div>
+          </template>
+
+          <!-- 技术结构表单 -->
+          <template v-if="currentSubTable === 'structure'">
+            <div class="form-grid single-col">
+              <div class="form-group">
+                <label>结构名称 *</label>
+                <input v-model="subTableForm.structure_name" class="atca-input" required placeholder="如: 抬梁式结构" />
+              </div>
+              <div class="form-group">
+                <label>技术分类 *</label>
+                <input v-model="subTableForm.technical_category" class="atca-input" required placeholder="如: 木构架" />
+              </div>
+              <div class="form-group">
+                <label>技术描述 *</label>
+                <textarea v-model="subTableForm.technical_description" class="atca-input" rows="4" required placeholder="详细描述该技术结构..."></textarea>
+              </div>
+              <div class="form-group">
+                <label>技术原理</label>
+                <textarea v-model="subTableForm.technical_principles" class="atca-input" rows="2" placeholder="技术原理说明..."></textarea>
+              </div>
+              <div class="form-group">
+                <label>历史价值</label>
+                <textarea v-model="subTableForm.historical_value" class="atca-input" rows="2" placeholder="历史价值说明..."></textarea>
+              </div>
+              <div class="form-group">
+                <label>遗产状态</label>
+                <input v-model="subTableForm.heritage_status" class="atca-input" placeholder="如: 保存完好" />
+              </div>
+            </div>
+          </template>
+
+          <!-- 建筑特色表单 -->
+          <template v-if="currentSubTable === 'features'">
+            <div class="form-grid single-col">
+              <div class="form-group">
+                <label>特色名称 *</label>
+                <input v-model="subTableForm.feature_name" class="atca-input" required placeholder="如: 重檐庑殿顶" />
+              </div>
+              <div class="form-group">
+                <label>设计理念</label>
+                <textarea v-model="subTableForm.design_philosophy" class="atca-input" rows="3" placeholder="设计理念说明..."></textarea>
+              </div>
+              <div class="form-group">
+                <label>空间组织</label>
+                <textarea v-model="subTableForm.spatial_organization" class="atca-input" rows="3" placeholder="空间布局描述..."></textarea>
+              </div>
+              <div class="form-group">
+                <label>美学特征</label>
+                <textarea v-model="subTableForm.aesthetic_characteristics" class="atca-input" rows="3" placeholder="美学特征描述..."></textarea>
+              </div>
+              <div class="form-group">
+                <label>功能方面</label>
+                <textarea v-model="subTableForm.functional_aspects" class="atca-input" rows="3" placeholder="功能描述..."></textarea>
+              </div>
+            </div>
+          </template>
+
+          <!-- 文化意义表单 -->
+          <template v-if="currentSubTable === 'culture'">
+            <div class="form-grid single-col">
+              <div class="form-group">
+                <label>意义方面 *</label>
+                <input v-model="subTableForm.significance_aspect" class="atca-input" required placeholder="如: 皇权象征" />
+              </div>
+              <div class="form-group">
+                <label>哲学基础</label>
+                <textarea v-model="subTableForm.philosophical_basis" class="atca-input" rows="2" placeholder="哲学基础说明..."></textarea>
+              </div>
+              <div class="form-group">
+                <label>文化解读 *</label>
+                <textarea v-model="subTableForm.cultural_interpretation" class="atca-input" rows="4" required placeholder="文化解读内容..."></textarea>
+              </div>
+              <div class="form-group">
+                <label>社会影响</label>
+                <textarea v-model="subTableForm.social_influence" class="atca-input" rows="2" placeholder="社会影响描述..."></textarea>
+              </div>
+              <div class="form-group">
+                <label>当代价值</label>
+                <textarea v-model="subTableForm.contemporary_value" class="atca-input" rows="2" placeholder="当代价值说明..."></textarea>
+              </div>
+            </div>
+          </template>
+
+          <!-- 专家观点表单 -->
+          <template v-if="currentSubTable === 'experts'">
+            <div class="form-grid single-col">
+              <div class="form-group">
+                <label>专家姓名 *</label>
+                <input v-model="subTableForm.expert_name" class="atca-input" required placeholder="如: 梁思成" />
+              </div>
+              <div class="form-group">
+                <label>职称</label>
+                <input v-model="subTableForm.expert_title" class="atca-input" placeholder="如: 建筑学家" />
+              </div>
+              <div class="form-group">
+                <label>观点内容 *</label>
+                <textarea v-model="subTableForm.quote_content" class="atca-input" rows="4" required placeholder="专家观点内容..."></textarea>
+              </div>
+              <div class="form-group">
+                <label>来源</label>
+                <input v-model="subTableForm.source" class="atca-input" placeholder="如: 《中国建筑史》" />
+              </div>
+            </div>
+          </template>
+        </div>
+        <div class="modal-actions">
+          <button class="atca-btn atca-btn-secondary" @click="closeSubTableModal">{{ $t('common.cancel') || '取消' }}</button>
+          <button class="atca-btn atca-btn-primary" :disabled="subTableSaving" @click="saveSubTableItem">
+            <span v-if="subTableSaving" class="btn-loading"><div class="mini-spinner"></div></span>
+            {{ subTableSaving ? '保存中...' : ($t('common.save') || '保存') }}
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed } from 'vue';
-import { adminApi, http } from '@/services/api';
+import { adminApi, http, archSubTableApi } from '@/services/api';
 import { useMemoryTrack } from '@/composables/useMemoryTrack';
 
 const memTrack = useMemoryTrack('AdminArchitecture');
@@ -540,6 +920,288 @@ async function deleteArch(id: number, name: string) {
   }
 }
 
+// ============ 子表管理功能 ============
+type SubTableType = 'history' | 'structure' | 'features' | 'culture' | 'experts';
+
+const subTableData = ref<Record<SubTableType, any[]>>({
+  history: [],
+  structure: [],
+  features: [],
+  culture: [],
+  experts: [],
+});
+
+const subTableSelection = ref<Record<SubTableType, number[]>>({
+  history: [],
+  structure: [],
+  features: [],
+  culture: [],
+  experts: [],
+});
+
+const subTableLoading = ref(false);
+const showSubTableModal = ref(false);
+const currentSubTable = ref<SubTableType>('history');
+const subTableEditingId = ref<number | null>(null);
+const subTableSaving = ref(false);
+
+const subTableForm = ref<any>({});
+
+const subTableModalTitle = computed(() => {
+  const titles: Record<SubTableType, string> = {
+    history: subTableEditingId.value ? '编辑历史发展' : '添加历史发展',
+    structure: subTableEditingId.value ? '编辑技术结构' : '添加技术结构',
+    features: subTableEditingId.value ? '编辑建筑特色' : '添加建筑特色',
+    culture: subTableEditingId.value ? '编辑文化意义' : '添加文化意义',
+    experts: subTableEditingId.value ? '编辑专家观点' : '添加专家观点',
+  };
+  return titles[currentSubTable.value];
+});
+
+async function loadSubTableData(type: SubTableType) {
+  if (!editingId.value) return;
+  subTableLoading.value = true;
+  try {
+    let res;
+    switch (type) {
+      case 'history':
+        res = await archSubTableApi.getHistory(editingId.value);
+        break;
+      case 'structure':
+        res = await archSubTableApi.getStructure(editingId.value);
+        break;
+      case 'features':
+        res = await archSubTableApi.getFeatures(editingId.value);
+        break;
+      case 'culture':
+        res = await archSubTableApi.getCulture(editingId.value);
+        break;
+      case 'experts':
+        res = await archSubTableApi.getExperts(editingId.value);
+        break;
+    }
+    if (res?.success) {
+      subTableData.value[type] = res.data || [];
+    }
+  } catch (e: any) {
+    console.error(`[SubTable] 加载${type}数据失败:`, e);
+    showMessage('加载数据失败: ' + (e.message || '网络/服务器错误'), 'error');
+  } finally {
+    subTableLoading.value = false;
+  }
+}
+
+function isSubTableAllSelected(type: SubTableType): boolean {
+  return subTableData.value[type].length > 0 && subTableSelection.value[type].length === subTableData.value[type].length;
+}
+
+function toggleSubTableSelectAll(type: SubTableType) {
+  if (isSubTableAllSelected(type)) {
+    subTableSelection.value[type] = [];
+  } else {
+    subTableSelection.value[type] = subTableData.value[type].map(item => {
+      const idKeys = ['development_id', 'structure_id', 'feature_id', 'significance_id', 'quote_id'];
+      for (const key of idKeys) {
+        if (item[key] !== undefined) return item[key];
+      }
+      return 0;
+    }).filter(id => id !== 0);
+  }
+}
+
+function openSubTableForm(type: SubTableType) {
+  currentSubTable.value = type;
+  subTableEditingId.value = null;
+  subTableForm.value = getEmptySubTableForm(type);
+  showSubTableModal.value = true;
+}
+
+function getEmptySubTableForm(type: SubTableType): any {
+  switch (type) {
+    case 'history':
+      return { dynasty_period: '', start_year: null, end_year: null, development_title: '', development_content: '', architectural_changes: '', historical_context: '' };
+    case 'structure':
+      return { structure_name: '', technical_category: '', technical_description: '', technical_principles: '', historical_value: '', heritage_status: '' };
+    case 'features':
+      return { feature_name: '', design_philosophy: '', spatial_organization: '', aesthetic_characteristics: '', functional_aspects: '' };
+    case 'culture':
+      return { significance_aspect: '', philosophical_basis: '', cultural_interpretation: '', social_influence: '', contemporary_value: '' };
+    case 'experts':
+      return { expert_name: '', expert_title: '', quote_content: '', source: '' };
+    default:
+      return {};
+  }
+}
+
+function editSubTableItem(type: SubTableType, item: any) {
+  currentSubTable.value = type;
+  subTableEditingId.value = getItemId(item);
+  subTableForm.value = { ...item };
+  showSubTableModal.value = true;
+}
+
+function getItemId(item: any): number | null {
+  const idKeys = ['development_id', 'structure_id', 'feature_id', 'significance_id', 'quote_id'];
+  for (const key of idKeys) {
+    if (item[key] !== undefined) return item[key];
+  }
+  return null;
+}
+
+function closeSubTableModal() {
+  showSubTableModal.value = false;
+  subTableEditingId.value = null;
+  subTableForm.value = {};
+}
+
+async function saveSubTableItem() {
+  if (!editingId.value) return;
+  
+  const requiredFields: Record<SubTableType, string[]> = {
+    history: ['dynasty_period', 'development_title', 'development_content'],
+    structure: ['structure_name', 'technical_category', 'technical_description'],
+    features: ['feature_name'],
+    culture: ['significance_aspect', 'cultural_interpretation'],
+    experts: ['expert_name', 'quote_content'],
+  };
+
+  const missing = requiredFields[currentSubTable.value].filter(field => !subTableForm.value[field]?.trim());
+  if (missing.length > 0) {
+    showMessage(`请填写必填字段: ${missing.join('、')}`, 'error');
+    return;
+  }
+
+  subTableSaving.value = true;
+  try {
+    const payload = { ...subTableForm.value };
+    let res;
+
+    if (subTableEditingId.value) {
+      switch (currentSubTable.value) {
+        case 'history':
+          res = await archSubTableApi.updateHistory(editingId.value, subTableEditingId.value, payload);
+          break;
+        case 'structure':
+          res = await archSubTableApi.updateStructure(editingId.value, subTableEditingId.value, payload);
+          break;
+        case 'features':
+          res = await archSubTableApi.updateFeature(editingId.value, subTableEditingId.value, payload);
+          break;
+        case 'culture':
+          res = await archSubTableApi.updateCulture(editingId.value, subTableEditingId.value, payload);
+          break;
+        case 'experts':
+          res = await archSubTableApi.updateExpert(editingId.value, subTableEditingId.value, payload);
+          break;
+      }
+    } else {
+      switch (currentSubTable.value) {
+        case 'history':
+          res = await archSubTableApi.createHistory(editingId.value, payload);
+          break;
+        case 'structure':
+          res = await archSubTableApi.createStructure(editingId.value, payload);
+          break;
+        case 'features':
+          res = await archSubTableApi.createFeature(editingId.value, payload);
+          break;
+        case 'culture':
+          res = await archSubTableApi.createCulture(editingId.value, payload);
+          break;
+        case 'experts':
+          res = await archSubTableApi.createExpert(editingId.value, payload);
+          break;
+      }
+    }
+
+    if (res?.success) {
+      showMessage(subTableEditingId.value ? '更新成功' : '添加成功');
+      closeSubTableModal();
+      await loadSubTableData(currentSubTable.value);
+    } else {
+      showMessage('保存失败: ' + (res?.error?.message || '未知错误'), 'error');
+    }
+  } catch (e: any) {
+    console.error(`[SubTable] 保存${currentSubTable.value}失败:`, e);
+    showMessage('保存失败: ' + (e.message || '网络/服务器错误'), 'error');
+  } finally {
+    subTableSaving.value = false;
+  }
+}
+
+async function deleteSubTableItem(type: SubTableType, id: number) {
+  if (!editingId.value) return;
+  if (!confirm('确认删除此项？此操作不可恢复。')) return;
+
+  try {
+    let res;
+    switch (type) {
+      case 'history':
+        res = await archSubTableApi.deleteHistory(editingId.value, id);
+        break;
+      case 'structure':
+        res = await archSubTableApi.deleteStructure(editingId.value, id);
+        break;
+      case 'features':
+        res = await archSubTableApi.deleteFeature(editingId.value, id);
+        break;
+      case 'culture':
+        res = await archSubTableApi.deleteCulture(editingId.value, id);
+        break;
+      case 'experts':
+        res = await archSubTableApi.deleteExpert(editingId.value, id);
+        break;
+    }
+
+    if (res?.success) {
+      showMessage('删除成功');
+      await loadSubTableData(type);
+    } else {
+      showMessage('删除失败: ' + (res?.error?.message || '未知错误'), 'error');
+    }
+  } catch (e: any) {
+    console.error(`[SubTable] 删除${type}失败:`, e);
+    showMessage('删除失败: ' + (e.message || '网络/服务器错误'), 'error');
+  }
+}
+
+async function batchDeleteSubTable(type: SubTableType) {
+  if (!editingId.value || subTableSelection.value[type].length === 0) return;
+  if (!confirm(`确认删除选中的 ${subTableSelection.value[type].length} 项？此操作不可恢复。`)) return;
+
+  try {
+    let res;
+    switch (type) {
+      case 'history':
+        res = await archSubTableApi.batchDeleteHistory(editingId.value, subTableSelection.value[type]);
+        break;
+      case 'structure':
+        res = await archSubTableApi.batchDeleteStructure(editingId.value, subTableSelection.value[type]);
+        break;
+      case 'features':
+        res = await archSubTableApi.batchDeleteFeatures(editingId.value, subTableSelection.value[type]);
+        break;
+      case 'culture':
+        res = await archSubTableApi.batchDeleteCulture(editingId.value, subTableSelection.value[type]);
+        break;
+      case 'experts':
+        res = await archSubTableApi.batchDeleteExperts(editingId.value, subTableSelection.value[type]);
+        break;
+    }
+
+    if (res?.success) {
+      showMessage('批量删除成功');
+      subTableSelection.value[type] = [];
+      await loadSubTableData(type);
+    } else {
+      showMessage('批量删除失败: ' + (res?.error?.message || '未知错误'), 'error');
+    }
+  } catch (e: any) {
+    console.error(`[SubTable] 批量删除${type}失败:`, e);
+    showMessage('批量删除失败: ' + (e.message || '网络/服务器错误'), 'error');
+  }
+}
+
 function handleRouteChange() { loadData(); }
 window.addEventListener('admin-route-change', handleRouteChange);
 memTrack.trackListener('admin-route-change', 'window');
@@ -647,5 +1309,91 @@ onMounted(loadData);
 .form-panel :deep(.atca-input:disabled:focus) {
   outline: none;
   box-shadow: none;
+}
+
+/* ===== 子表管理样式 ===== */
+
+/* 子表头部 */
+.subtable-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  gap: 12px;
+}
+
+/* 子表表格 */
+.subtable {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--bg-card);
+  border-radius: var(--r-md);
+  overflow: hidden;
+}
+.subtable thead {
+  background: var(--bg-hover);
+}
+.subtable th,
+.subtable td {
+  padding: 12px 16px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.875rem;
+}
+.subtable th {
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.subtable tbody tr:hover {
+  background: var(--bg-hover);
+}
+.subtable tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* 子表空状态 */
+.empty-subtable {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--text-muted);
+}
+.empty-subtable svg {
+  margin-bottom: 12px;
+  opacity: 0.5;
+}
+.empty-subtable p {
+  font-size: 0.875rem;
+  margin: 0;
+}
+
+/* 子表加载状态 */
+.mini-loading {
+  display: flex;
+  justify-content: center;
+  padding: 40px;
+}
+.mini-loading .mini-spinner {
+  width: 24px;
+  height: 24px;
+  border-color: var(--border);
+  border-top-color: var(--gold);
+}
+
+/* 子表表单 */
+.subtable-form {
+  padding: 8px 0;
+}
+
+/* 表单行布局 */
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+/* 表单网格单列 */
+.form-grid.single-col {
+  grid-template-columns: 1fr;
 }
 </style>

@@ -1723,4 +1723,682 @@ router.delete('/activities/:id', asyncHandler(async (req: any, res) => {
   try { await execute('activity', 'DELETE FROM [activity] WHERE [activity_id] = @id', { id: req.params.id }); res.json({ success: true }); }
   catch (err: any) { res.status(500).json({ success: false, error: { message: err.message } }); }
 }));
+
+// ============================================
+// 古建筑详情页子表管理 API
+// ============================================
+
+// 操作日志记录函数
+async function logAdminAction(action: string, targetType: string, targetId: number, userId: number, details: string) {
+  try {
+    await execute('architecture', `
+      INSERT INTO [admin_operation_logs] ([action], [target_type], [target_id], [user_id], [details], [created_at])
+      VALUES (@action, @targetType, @targetId, @userId, @details, GETDATE())
+    `, { action, targetType, targetId, userId, details });
+  } catch (e: any) {
+    console.error('[Admin Log] 记录操作日志失败:', e.message);
+  }
+}
+
+// 确保操作日志表存在
+async function ensureOperationLogTable() {
+  try {
+    await execute('architecture', `
+      IF OBJECT_ID('dbo.admin_operation_logs', 'U') IS NULL
+      BEGIN
+        CREATE TABLE dbo.admin_operation_logs (
+          [log_id] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+          [action] NVARCHAR(50) NOT NULL,
+          [target_type] NVARCHAR(50) NOT NULL,
+          [target_id] INT NOT NULL,
+          [user_id] INT NULL,
+          [details] NVARCHAR(MAX) NULL,
+          [created_at] DATETIME DEFAULT GETDATE()
+        );
+      END
+    `);
+  } catch (e: any) {
+    console.error('[Admin Log] 创建操作日志表失败:', e.message);
+  }
+}
+
+// ============ 历史发展管理 (historical_development) ============
+
+const historicalDevelopmentSchema = z.object({
+  architecture_id: z.number().min(1),
+  dynasty_period: z.string().min(1),
+  start_year: z.number().nullable().optional(),
+  end_year: z.number().nullable().optional(),
+  development_title: z.string().min(1),
+  development_content: z.string().min(1),
+  architectural_changes: z.string().nullable().optional(),
+  historical_context: z.string().nullable().optional(),
+});
+
+router.get('/architectures/:id/history', asyncHandler(async (req: any, res) => {
+  const { id } = req.params;
+  try {
+    const history = await query('architecture',
+      'SELECT * FROM [historical_development] WHERE [architecture_id] = @id ORDER BY [start_year] ASC, [development_id] ASC',
+      { id: parseInt(id) }
+    );
+    res.json({ success: true, data: history || [] });
+  } catch (err: any) {
+    console.error('[Admin History] 查询失败:', err.message || err);
+    res.status(500).json({ success: false, error: { message: '获取历史发展数据失败: ' + (err.message || '服务器错误') } });
+  }
+}));
+
+router.post('/architectures/:id/history', validateBody(historicalDevelopmentSchema), asyncHandler(async (req: any, res) => {
+  const { id } = req.params;
+  if (isMockMode()) { res.json({ success: true, data: { development_id: Date.now(), ...req.body } }); return; }
+  try {
+    const body = { ...req.body, architecture_id: parseInt(id) };
+    const result = await execute('architecture',
+      `INSERT INTO [historical_development] ([architecture_id], [dynasty_period], [start_year], [end_year], [development_title], [development_content], [architectural_changes], [historical_context])
+       OUTPUT INSERTED.* VALUES (@architecture_id, @dynasty_period, @start_year, @end_year, @development_title, @development_content, @architectural_changes, @historical_context)`,
+      body
+    );
+    await ensureOperationLogTable();
+    await logAdminAction('create', 'history', parseInt(id), (req as any).user?.user_id || 0, JSON.stringify(body));
+    res.json({ success: true, data: (result.recordset as any[])[0] });
+  } catch (e: any) {
+    console.error('[Admin History] 添加失败:', e.message || e);
+    res.status(500).json({ success: false, error: { message: e.message || '添加失败' } });
+  }
+}));
+
+router.put('/architectures/:id/history/:historyId', validateBody(historicalDevelopmentSchema.partial()), asyncHandler(async (req: any, res) => {
+  const { id, historyId } = req.params;
+  if (isMockMode()) { res.json({ success: true, data: { development_id: parseInt(historyId) } }); return; }
+  try {
+    const allowedFields = ['dynasty_period', 'start_year', 'end_year', 'development_title', 'development_content', 'architectural_changes', 'historical_context'];
+    const filteredBody: Record<string, any> = {};
+    for (const key of allowedFields) {
+      if (req.body[key] !== undefined) {
+        filteredBody[key] = req.body[key];
+      }
+    }
+    if (Object.keys(filteredBody).length === 0) {
+      res.status(400).json({ success: false, error: { message: '没有要更新的字段' } });
+      return;
+    }
+    const fields = Object.keys(filteredBody).map(k => `[${k}] = @${k}`).join(', ');
+    await execute('architecture',
+      `UPDATE [historical_development] SET ${fields} WHERE [development_id] = @historyId AND [architecture_id] = @id`,
+      { ...filteredBody, historyId: parseInt(historyId), id: parseInt(id) }
+    );
+    await ensureOperationLogTable();
+    await logAdminAction('update', 'history', parseInt(historyId), (req as any).user?.user_id || 0, JSON.stringify(filteredBody));
+    res.json({ success: true, data: { development_id: parseInt(historyId) } });
+  } catch (e: any) {
+    console.error('[Admin History] 更新失败:', e.message || e);
+    res.status(500).json({ success: false, error: { message: e.message || '更新失败' } });
+  }
+}));
+
+router.delete('/architectures/:id/history/:historyId', asyncHandler(async (req: any, res) => {
+  const { id, historyId } = req.params;
+  if (isMockMode()) { res.json({ success: true }); return; }
+  try {
+    await execute('architecture',
+      'DELETE FROM [historical_development] WHERE [development_id] = @historyId AND [architecture_id] = @id',
+      { historyId: parseInt(historyId), id: parseInt(id) }
+    );
+    await ensureOperationLogTable();
+    await logAdminAction('delete', 'history', parseInt(historyId), (req as any).user?.user_id || 0, `architecture_id: ${id}`);
+    res.json({ success: true });
+  } catch (e: any) {
+    console.error('[Admin History] 删除失败:', e.message || e);
+    res.status(500).json({ success: false, error: { message: e.message || '删除失败' } });
+  }
+}));
+
+// ============ 技术结构管理 (technical_structure) ============
+
+const technicalStructureSchema = z.object({
+  architecture_id: z.number().min(1),
+  structure_name: z.string().min(1),
+  technical_category: z.string().min(1),
+  technical_description: z.string().min(1),
+  technical_principles: z.string().nullable().optional(),
+  historical_value: z.string().nullable().optional(),
+  heritage_status: z.string().nullable().optional(),
+});
+
+router.get('/architectures/:id/structure', asyncHandler(async (req: any, res) => {
+  const { id } = req.params;
+  try {
+    const structures = await query('architecture',
+      'SELECT * FROM [technical_structure] WHERE [architecture_id] = @id ORDER BY [structure_id] ASC',
+      { id: parseInt(id) }
+    );
+    res.json({ success: true, data: structures || [] });
+  } catch (err: any) {
+    console.error('[Admin Structure] 查询失败:', err.message || err);
+    res.status(500).json({ success: false, error: { message: '获取技术结构数据失败: ' + (err.message || '服务器错误') } });
+  }
+}));
+
+router.post('/architectures/:id/structure', validateBody(technicalStructureSchema), asyncHandler(async (req: any, res) => {
+  const { id } = req.params;
+  if (isMockMode()) { res.json({ success: true, data: { structure_id: Date.now(), ...req.body } }); return; }
+  try {
+    const body = { ...req.body, architecture_id: parseInt(id) };
+    const result = await execute('architecture',
+      `INSERT INTO [technical_structure] ([architecture_id], [structure_name], [technical_category], [technical_description], [technical_principles], [historical_value], [heritage_status])
+       OUTPUT INSERTED.* VALUES (@architecture_id, @structure_name, @technical_category, @technical_description, @technical_principles, @historical_value, @heritage_status)`,
+      body
+    );
+    await ensureOperationLogTable();
+    await logAdminAction('create', 'structure', parseInt(id), (req as any).user?.user_id || 0, JSON.stringify(body));
+    res.json({ success: true, data: (result.recordset as any[])[0] });
+  } catch (e: any) {
+    console.error('[Admin Structure] 添加失败:', e.message || e);
+    res.status(500).json({ success: false, error: { message: e.message || '添加失败' } });
+  }
+}));
+
+router.put('/architectures/:id/structure/:structureId', validateBody(technicalStructureSchema.partial()), asyncHandler(async (req: any, res) => {
+  const { id, structureId } = req.params;
+  if (isMockMode()) { res.json({ success: true, data: { structure_id: parseInt(structureId) } }); return; }
+  try {
+    const allowedFields = ['structure_name', 'technical_category', 'technical_description', 'technical_principles', 'historical_value', 'heritage_status'];
+    const filteredBody: Record<string, any> = {};
+    for (const key of allowedFields) {
+      if (req.body[key] !== undefined) {
+        filteredBody[key] = req.body[key];
+      }
+    }
+    if (Object.keys(filteredBody).length === 0) {
+      res.status(400).json({ success: false, error: { message: '没有要更新的字段' } });
+      return;
+    }
+    const fields = Object.keys(filteredBody).map(k => `[${k}] = @${k}`).join(', ');
+    await execute('architecture',
+      `UPDATE [technical_structure] SET ${fields} WHERE [structure_id] = @structureId AND [architecture_id] = @id`,
+      { ...filteredBody, structureId: parseInt(structureId), id: parseInt(id) }
+    );
+    await ensureOperationLogTable();
+    await logAdminAction('update', 'structure', parseInt(structureId), (req as any).user?.user_id || 0, JSON.stringify(filteredBody));
+    res.json({ success: true, data: { structure_id: parseInt(structureId) } });
+  } catch (e: any) {
+    console.error('[Admin Structure] 更新失败:', e.message || e);
+    res.status(500).json({ success: false, error: { message: e.message || '更新失败' } });
+  }
+}));
+
+router.delete('/architectures/:id/structure/:structureId', asyncHandler(async (req: any, res) => {
+  const { id, structureId } = req.params;
+  if (isMockMode()) { res.json({ success: true }); return; }
+  try {
+    await execute('architecture',
+      'DELETE FROM [technical_structure] WHERE [structure_id] = @structureId AND [architecture_id] = @id',
+      { structureId: parseInt(structureId), id: parseInt(id) }
+    );
+    await ensureOperationLogTable();
+    await logAdminAction('delete', 'structure', parseInt(structureId), (req as any).user?.user_id || 0, `architecture_id: ${id}`);
+    res.json({ success: true });
+  } catch (e: any) {
+    console.error('[Admin Structure] 删除失败:', e.message || e);
+    res.status(500).json({ success: false, error: { message: e.message || '删除失败' } });
+  }
+}));
+
+// ============ 建筑特色管理 (architectural_features) ============
+
+const architecturalFeaturesSchema = z.object({
+  architecture_id: z.number().min(1),
+  feature_name: z.string().min(1),
+  design_philosophy: z.string().nullable().optional(),
+  spatial_organization: z.string().nullable().optional(),
+  aesthetic_characteristics: z.string().nullable().optional(),
+  functional_aspects: z.string().nullable().optional(),
+});
+
+router.get('/architectures/:id/features', asyncHandler(async (req: any, res) => {
+  const { id } = req.params;
+  try {
+    const features = await query('architecture',
+      'SELECT * FROM [architectural_features] WHERE [architecture_id] = @id ORDER BY [feature_id] ASC',
+      { id: parseInt(id) }
+    );
+    res.json({ success: true, data: features || [] });
+  } catch (err: any) {
+    console.error('[Admin Features] 查询失败:', err.message || err);
+    res.status(500).json({ success: false, error: { message: '获取建筑特色数据失败: ' + (err.message || '服务器错误') } });
+  }
+}));
+
+router.post('/architectures/:id/features', validateBody(architecturalFeaturesSchema), asyncHandler(async (req: any, res) => {
+  const { id } = req.params;
+  if (isMockMode()) { res.json({ success: true, data: { feature_id: Date.now(), ...req.body } }); return; }
+  try {
+    const body = { ...req.body, architecture_id: parseInt(id) };
+    const result = await execute('architecture',
+      `INSERT INTO [architectural_features] ([architecture_id], [feature_name], [design_philosophy], [spatial_organization], [aesthetic_characteristics], [functional_aspects])
+       OUTPUT INSERTED.* VALUES (@architecture_id, @feature_name, @design_philosophy, @spatial_organization, @aesthetic_characteristics, @functional_aspects)`,
+      body
+    );
+    await ensureOperationLogTable();
+    await logAdminAction('create', 'features', parseInt(id), (req as any).user?.user_id || 0, JSON.stringify(body));
+    res.json({ success: true, data: (result.recordset as any[])[0] });
+  } catch (e: any) {
+    console.error('[Admin Features] 添加失败:', e.message || e);
+    res.status(500).json({ success: false, error: { message: e.message || '添加失败' } });
+  }
+}));
+
+router.put('/architectures/:id/features/:featureId', validateBody(architecturalFeaturesSchema.partial()), asyncHandler(async (req: any, res) => {
+  const { id, featureId } = req.params;
+  if (isMockMode()) { res.json({ success: true, data: { feature_id: parseInt(featureId) } }); return; }
+  try {
+    const allowedFields = ['feature_name', 'design_philosophy', 'spatial_organization', 'aesthetic_characteristics', 'functional_aspects'];
+    const filteredBody: Record<string, any> = {};
+    for (const key of allowedFields) {
+      if (req.body[key] !== undefined) {
+        filteredBody[key] = req.body[key];
+      }
+    }
+    if (Object.keys(filteredBody).length === 0) {
+      res.status(400).json({ success: false, error: { message: '没有要更新的字段' } });
+      return;
+    }
+    const fields = Object.keys(filteredBody).map(k => `[${k}] = @${k}`).join(', ');
+    await execute('architecture',
+      `UPDATE [architectural_features] SET ${fields} WHERE [feature_id] = @featureId AND [architecture_id] = @id`,
+      { ...filteredBody, featureId: parseInt(featureId), id: parseInt(id) }
+    );
+    await ensureOperationLogTable();
+    await logAdminAction('update', 'features', parseInt(featureId), (req as any).user?.user_id || 0, JSON.stringify(filteredBody));
+    res.json({ success: true, data: { feature_id: parseInt(featureId) } });
+  } catch (e: any) {
+    console.error('[Admin Features] 更新失败:', e.message || e);
+    res.status(500).json({ success: false, error: { message: e.message || '更新失败' } });
+  }
+}));
+
+router.delete('/architectures/:id/features/:featureId', asyncHandler(async (req: any, res) => {
+  const { id, featureId } = req.params;
+  if (isMockMode()) { res.json({ success: true }); return; }
+  try {
+    await execute('architecture',
+      'DELETE FROM [architectural_features] WHERE [feature_id] = @featureId AND [architecture_id] = @id',
+      { featureId: parseInt(featureId), id: parseInt(id) }
+    );
+    await ensureOperationLogTable();
+    await logAdminAction('delete', 'features', parseInt(featureId), (req as any).user?.user_id || 0, `architecture_id: ${id}`);
+    res.json({ success: true });
+  } catch (e: any) {
+    console.error('[Admin Features] 删除失败:', e.message || e);
+    res.status(500).json({ success: false, error: { message: e.message || '删除失败' } });
+  }
+}));
+
+// ============ 文化意义管理 (cultural_significance) ============
+
+const culturalSignificanceSchema = z.object({
+  architecture_id: z.number().min(1),
+  significance_aspect: z.string().min(1),
+  philosophical_basis: z.string().nullable().optional(),
+  cultural_interpretation: z.string().min(1),
+  social_influence: z.string().nullable().optional(),
+  contemporary_value: z.string().nullable().optional(),
+});
+
+router.get('/architectures/:id/culture', asyncHandler(async (req: any, res) => {
+  const { id } = req.params;
+  try {
+    const cultures = await query('architecture',
+      'SELECT * FROM [cultural_significance] WHERE [architecture_id] = @id ORDER BY [significance_id] ASC',
+      { id: parseInt(id) }
+    );
+    res.json({ success: true, data: cultures || [] });
+  } catch (err: any) {
+    console.error('[Admin Culture] 查询失败:', err.message || err);
+    res.status(500).json({ success: false, error: { message: '获取文化意义数据失败: ' + (err.message || '服务器错误') } });
+  }
+}));
+
+router.post('/architectures/:id/culture', validateBody(culturalSignificanceSchema), asyncHandler(async (req: any, res) => {
+  const { id } = req.params;
+  if (isMockMode()) { res.json({ success: true, data: { significance_id: Date.now(), ...req.body } }); return; }
+  try {
+    const body = { ...req.body, architecture_id: parseInt(id) };
+    const result = await execute('architecture',
+      `INSERT INTO [cultural_significance] ([architecture_id], [significance_aspect], [philosophical_basis], [cultural_interpretation], [social_influence], [contemporary_value])
+       OUTPUT INSERTED.* VALUES (@architecture_id, @significance_aspect, @philosophical_basis, @cultural_interpretation, @social_influence, @contemporary_value)`,
+      body
+    );
+    await ensureOperationLogTable();
+    await logAdminAction('create', 'culture', parseInt(id), (req as any).user?.user_id || 0, JSON.stringify(body));
+    res.json({ success: true, data: (result.recordset as any[])[0] });
+  } catch (e: any) {
+    console.error('[Admin Culture] 添加失败:', e.message || e);
+    res.status(500).json({ success: false, error: { message: e.message || '添加失败' } });
+  }
+}));
+
+router.put('/architectures/:id/culture/:cultureId', validateBody(culturalSignificanceSchema.partial()), asyncHandler(async (req: any, res) => {
+  const { id, cultureId } = req.params;
+  if (isMockMode()) { res.json({ success: true, data: { significance_id: parseInt(cultureId) } }); return; }
+  try {
+    const allowedFields = ['significance_aspect', 'philosophical_basis', 'cultural_interpretation', 'social_influence', 'contemporary_value'];
+    const filteredBody: Record<string, any> = {};
+    for (const key of allowedFields) {
+      if (req.body[key] !== undefined) {
+        filteredBody[key] = req.body[key];
+      }
+    }
+    if (Object.keys(filteredBody).length === 0) {
+      res.status(400).json({ success: false, error: { message: '没有要更新的字段' } });
+      return;
+    }
+    const fields = Object.keys(filteredBody).map(k => `[${k}] = @${k}`).join(', ');
+    await execute('architecture',
+      `UPDATE [cultural_significance] SET ${fields} WHERE [significance_id] = @cultureId AND [architecture_id] = @id`,
+      { ...filteredBody, cultureId: parseInt(cultureId), id: parseInt(id) }
+    );
+    await ensureOperationLogTable();
+    await logAdminAction('update', 'culture', parseInt(cultureId), (req as any).user?.user_id || 0, JSON.stringify(filteredBody));
+    res.json({ success: true, data: { significance_id: parseInt(cultureId) } });
+  } catch (e: any) {
+    console.error('[Admin Culture] 更新失败:', e.message || e);
+    res.status(500).json({ success: false, error: { message: e.message || '更新失败' } });
+  }
+}));
+
+router.delete('/architectures/:id/culture/:cultureId', asyncHandler(async (req: any, res) => {
+  const { id, cultureId } = req.params;
+  if (isMockMode()) { res.json({ success: true }); return; }
+  try {
+    await execute('architecture',
+      'DELETE FROM [cultural_significance] WHERE [significance_id] = @cultureId AND [architecture_id] = @id',
+      { cultureId: parseInt(cultureId), id: parseInt(id) }
+    );
+    await ensureOperationLogTable();
+    await logAdminAction('delete', 'culture', parseInt(cultureId), (req as any).user?.user_id || 0, `architecture_id: ${id}`);
+    res.json({ success: true });
+  } catch (e: any) {
+    console.error('[Admin Culture] 删除失败:', e.message || e);
+    res.status(500).json({ success: false, error: { message: e.message || '删除失败' } });
+  }
+}));
+
+// ============ 专家观点管理 (expert_quotes) ============
+
+const expertQuotesSchema = z.object({
+  architecture_id: z.number().min(1),
+  expert_name: z.string().min(1),
+  expert_title: z.string().nullable().optional(),
+  quote_content: z.string().min(1),
+  source: z.string().nullable().optional(),
+});
+
+router.get('/architectures/:id/experts', asyncHandler(async (req: any, res) => {
+  const { id } = req.params;
+  try {
+    const experts = await query('architecture',
+      'SELECT * FROM [expert_quotes] WHERE [architecture_id] = @id ORDER BY [quote_id] ASC',
+      { id: parseInt(id) }
+    );
+    res.json({ success: true, data: experts || [] });
+  } catch (err: any) {
+    console.error('[Admin Experts] 查询失败:', err.message || err);
+    res.status(500).json({ success: false, error: { message: '获取专家观点数据失败: ' + (err.message || '服务器错误') } });
+  }
+}));
+
+router.post('/architectures/:id/experts', validateBody(expertQuotesSchema), asyncHandler(async (req: any, res) => {
+  const { id } = req.params;
+  if (isMockMode()) { res.json({ success: true, data: { quote_id: Date.now(), ...req.body } }); return; }
+  try {
+    const body = { ...req.body, architecture_id: parseInt(id) };
+    const result = await execute('architecture',
+      `INSERT INTO [expert_quotes] ([architecture_id], [expert_name], [expert_title], [quote_content], [source])
+       OUTPUT INSERTED.* VALUES (@architecture_id, @expert_name, @expert_title, @quote_content, @source)`,
+      body
+    );
+    await ensureOperationLogTable();
+    await logAdminAction('create', 'experts', parseInt(id), (req as any).user?.user_id || 0, JSON.stringify(body));
+    res.json({ success: true, data: (result.recordset as any[])[0] });
+  } catch (e: any) {
+    console.error('[Admin Experts] 添加失败:', e.message || e);
+    res.status(500).json({ success: false, error: { message: e.message || '添加失败' } });
+  }
+}));
+
+router.put('/architectures/:id/experts/:expertId', validateBody(expertQuotesSchema.partial()), asyncHandler(async (req: any, res) => {
+  const { id, expertId } = req.params;
+  if (isMockMode()) { res.json({ success: true, data: { quote_id: parseInt(expertId) } }); return; }
+  try {
+    const allowedFields = ['expert_name', 'expert_title', 'quote_content', 'source'];
+    const filteredBody: Record<string, any> = {};
+    for (const key of allowedFields) {
+      if (req.body[key] !== undefined) {
+        filteredBody[key] = req.body[key];
+      }
+    }
+    if (Object.keys(filteredBody).length === 0) {
+      res.status(400).json({ success: false, error: { message: '没有要更新的字段' } });
+      return;
+    }
+    const fields = Object.keys(filteredBody).map(k => `[${k}] = @${k}`).join(', ');
+    await execute('architecture',
+      `UPDATE [expert_quotes] SET ${fields} WHERE [quote_id] = @expertId AND [architecture_id] = @id`,
+      { ...filteredBody, expertId: parseInt(expertId), id: parseInt(id) }
+    );
+    await ensureOperationLogTable();
+    await logAdminAction('update', 'experts', parseInt(expertId), (req as any).user?.user_id || 0, JSON.stringify(filteredBody));
+    res.json({ success: true, data: { quote_id: parseInt(expertId) } });
+  } catch (e: any) {
+    console.error('[Admin Experts] 更新失败:', e.message || e);
+    res.status(500).json({ success: false, error: { message: e.message || '更新失败' } });
+  }
+}));
+
+router.delete('/architectures/:id/experts/:expertId', asyncHandler(async (req: any, res) => {
+  const { id, expertId } = req.params;
+  if (isMockMode()) { res.json({ success: true }); return; }
+  try {
+    await execute('architecture',
+      'DELETE FROM [expert_quotes] WHERE [quote_id] = @expertId AND [architecture_id] = @id',
+      { expertId: parseInt(expertId), id: parseInt(id) }
+    );
+    await ensureOperationLogTable();
+    await logAdminAction('delete', 'experts', parseInt(expertId), (req as any).user?.user_id || 0, `architecture_id: ${id}`);
+    res.json({ success: true });
+  } catch (e: any) {
+    console.error('[Admin Experts] 删除失败:', e.message || e);
+    res.status(500).json({ success: false, error: { message: e.message || '删除失败' } });
+  }
+}));
+
+// ============ 批量操作 API ============
+
+router.post('/architectures/:id/history/batch-delete', asyncHandler(async (req: any, res) => {
+  const { id } = req.params;
+  const { ids } = req.body;
+  if (!Array.isArray(ids) || ids.length === 0) { res.status(400).json({ success: false, error: { message: '缺少id列表' } }); return; }
+  
+  const safeIds = ids.slice(0, BATCH_CONFIG.MAX_BATCH_SIZE);
+  let deleted = 0;
+  const errors: { id: number; message: string }[] = [];
+  
+  for (const historyId of safeIds) {
+    try {
+      await execute('architecture',
+        'DELETE FROM [historical_development] WHERE [development_id] = @historyId AND [architecture_id] = @id',
+        { historyId, id: parseInt(id) }
+      );
+      deleted++;
+    } catch (e: any) {
+      errors.push({ id: historyId, message: e.message || '删除失败' });
+    }
+  }
+  
+  await ensureOperationLogTable();
+  await logAdminAction('batch_delete', 'history', parseInt(id), (req as any).user?.user_id || 0, `ids: ${JSON.stringify(safeIds)}`);
+  
+  res.json({ 
+    success: true, 
+    data: { deleted, totalRequested: ids.length },
+    errors: errors.length > 0 ? errors : undefined
+  });
+}));
+
+router.post('/architectures/:id/structure/batch-delete', asyncHandler(async (req: any, res) => {
+  const { id } = req.params;
+  const { ids } = req.body;
+  if (!Array.isArray(ids) || ids.length === 0) { res.status(400).json({ success: false, error: { message: '缺少id列表' } }); return; }
+  
+  const safeIds = ids.slice(0, BATCH_CONFIG.MAX_BATCH_SIZE);
+  let deleted = 0;
+  const errors: { id: number; message: string }[] = [];
+  
+  for (const structureId of safeIds) {
+    try {
+      await execute('architecture',
+        'DELETE FROM [technical_structure] WHERE [structure_id] = @structureId AND [architecture_id] = @id',
+        { structureId, id: parseInt(id) }
+      );
+      deleted++;
+    } catch (e: any) {
+      errors.push({ id: structureId, message: e.message || '删除失败' });
+    }
+  }
+  
+  await ensureOperationLogTable();
+  await logAdminAction('batch_delete', 'structure', parseInt(id), (req as any).user?.user_id || 0, `ids: ${JSON.stringify(safeIds)}`);
+  
+  res.json({ 
+    success: true, 
+    data: { deleted, totalRequested: ids.length },
+    errors: errors.length > 0 ? errors : undefined
+  });
+}));
+
+router.post('/architectures/:id/features/batch-delete', asyncHandler(async (req: any, res) => {
+  const { id } = req.params;
+  const { ids } = req.body;
+  if (!Array.isArray(ids) || ids.length === 0) { res.status(400).json({ success: false, error: { message: '缺少id列表' } }); return; }
+  
+  const safeIds = ids.slice(0, BATCH_CONFIG.MAX_BATCH_SIZE);
+  let deleted = 0;
+  const errors: { id: number; message: string }[] = [];
+  
+  for (const featureId of safeIds) {
+    try {
+      await execute('architecture',
+        'DELETE FROM [architectural_features] WHERE [feature_id] = @featureId AND [architecture_id] = @id',
+        { featureId, id: parseInt(id) }
+      );
+      deleted++;
+    } catch (e: any) {
+      errors.push({ id: featureId, message: e.message || '删除失败' });
+    }
+  }
+  
+  await ensureOperationLogTable();
+  await logAdminAction('batch_delete', 'features', parseInt(id), (req as any).user?.user_id || 0, `ids: ${JSON.stringify(safeIds)}`);
+  
+  res.json({ 
+    success: true, 
+    data: { deleted, totalRequested: ids.length },
+    errors: errors.length > 0 ? errors : undefined
+  });
+}));
+
+router.post('/architectures/:id/culture/batch-delete', asyncHandler(async (req: any, res) => {
+  const { id } = req.params;
+  const { ids } = req.body;
+  if (!Array.isArray(ids) || ids.length === 0) { res.status(400).json({ success: false, error: { message: '缺少id列表' } }); return; }
+  
+  const safeIds = ids.slice(0, BATCH_CONFIG.MAX_BATCH_SIZE);
+  let deleted = 0;
+  const errors: { id: number; message: string }[] = [];
+  
+  for (const cultureId of safeIds) {
+    try {
+      await execute('architecture',
+        'DELETE FROM [cultural_significance] WHERE [significance_id] = @cultureId AND [architecture_id] = @id',
+        { cultureId, id: parseInt(id) }
+      );
+      deleted++;
+    } catch (e: any) {
+      errors.push({ id: cultureId, message: e.message || '删除失败' });
+    }
+  }
+  
+  await ensureOperationLogTable();
+  await logAdminAction('batch_delete', 'culture', parseInt(id), (req as any).user?.user_id || 0, `ids: ${JSON.stringify(safeIds)}`);
+  
+  res.json({ 
+    success: true, 
+    data: { deleted, totalRequested: ids.length },
+    errors: errors.length > 0 ? errors : undefined
+  });
+}));
+
+router.post('/architectures/:id/experts/batch-delete', asyncHandler(async (req: any, res) => {
+  const { id } = req.params;
+  const { ids } = req.body;
+  if (!Array.isArray(ids) || ids.length === 0) { res.status(400).json({ success: false, error: { message: '缺少id列表' } }); return; }
+  
+  const safeIds = ids.slice(0, BATCH_CONFIG.MAX_BATCH_SIZE);
+  let deleted = 0;
+  const errors: { id: number; message: string }[] = [];
+  
+  for (const expertId of safeIds) {
+    try {
+      await execute('architecture',
+        'DELETE FROM [expert_quotes] WHERE [quote_id] = @expertId AND [architecture_id] = @id',
+        { expertId, id: parseInt(id) }
+      );
+      deleted++;
+    } catch (e: any) {
+      errors.push({ id: expertId, message: e.message || '删除失败' });
+    }
+  }
+  
+  await ensureOperationLogTable();
+  await logAdminAction('batch_delete', 'experts', parseInt(id), (req as any).user?.user_id || 0, `ids: ${JSON.stringify(safeIds)}`);
+  
+  res.json({ 
+    success: true, 
+    data: { deleted, totalRequested: ids.length },
+    errors: errors.length > 0 ? errors : undefined
+  });
+}));
+
+// ============ 操作日志查询 ============
+
+router.get('/operation-logs', asyncHandler(async (req: any, res) => {
+  const { page = '1', limit = '20', action = '', target_type = '' } = req.query as Record<string, string>;
+  const offset = (parseInt(page) - 1) * parseInt(limit);
+  
+  try {
+    let whereClause = 'WHERE 1=1';
+    const params: any = {};
+    if (action) { whereClause += ' AND [action] = @action'; params.action = action; }
+    if (target_type) { whereClause += ' AND [target_type] = @target_type'; params.target_type = target_type; }
+    
+    const logs = await query('architecture',
+      `SELECT * FROM [admin_operation_logs] ${whereClause} ORDER BY [created_at] DESC OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY`,
+      { ...params, offset, limit: parseInt(limit) }
+    );
+    
+    const [countRes] = await query('architecture', `SELECT COUNT(*) as total FROM [admin_operation_logs] ${whereClause}`, params);
+    
+    res.json({ 
+      success: true, 
+      data: logs || [], 
+      meta: { total: (countRes as any)?.total || 0, page: parseInt(page), limit: parseInt(limit) } 
+    });
+  } catch (err: any) {
+    console.error('[Admin OperationLogs] 查询失败:', err.message || err);
+    res.json({ success: true, data: [], meta: { total: 0 } });
+  }
+}));
+
 export default router;

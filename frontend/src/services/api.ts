@@ -492,6 +492,69 @@ export const activityApi = {
       http.get<{ success: boolean; data: any[] }>('/activities/checkin/calendar', params),
 };
 
+// 古建筑子表管理API（详情页子数据）
+export const archSubTableApi = {
+  // 历史发展 (historical_development)
+  getHistory: (architectureId: number) =>
+      http.get<{ success: boolean; data: any[] }>(`/admin/architectures/${architectureId}/history`),
+  createHistory: (architectureId: number, data: any) =>
+      http.post<{ success: boolean; data: any }>(`/admin/architectures/${architectureId}/history`, data),
+  updateHistory: (architectureId: number, historyId: number, data: any) =>
+      http.put<{ success: boolean; data: any }>(`/admin/architectures/${architectureId}/history/${historyId}`, data),
+  deleteHistory: (architectureId: number, historyId: number) =>
+      http.delete<{ success: boolean }>(`/admin/architectures/${architectureId}/history/${historyId}`),
+  batchDeleteHistory: (architectureId: number, ids: number[]) =>
+      http.post<{ success: boolean; data: any }>(`/admin/architectures/${architectureId}/history/batch-delete`, { ids }),
+
+  // 技术结构 (technical_structure)
+  getStructure: (architectureId: number) =>
+      http.get<{ success: boolean; data: any[] }>(`/admin/architectures/${architectureId}/structure`),
+  createStructure: (architectureId: number, data: any) =>
+      http.post<{ success: boolean; data: any }>(`/admin/architectures/${architectureId}/structure`, data),
+  updateStructure: (architectureId: number, structureId: number, data: any) =>
+      http.put<{ success: boolean; data: any }>(`/admin/architectures/${architectureId}/structure/${structureId}`, data),
+  deleteStructure: (architectureId: number, structureId: number) =>
+      http.delete<{ success: boolean }>(`/admin/architectures/${architectureId}/structure/${structureId}`),
+  batchDeleteStructure: (architectureId: number, ids: number[]) =>
+      http.post<{ success: boolean; data: any }>(`/admin/architectures/${architectureId}/structure/batch-delete`, { ids }),
+
+  // 建筑特色 (architectural_features)
+  getFeatures: (architectureId: number) =>
+      http.get<{ success: boolean; data: any[] }>(`/admin/architectures/${architectureId}/features`),
+  createFeature: (architectureId: number, data: any) =>
+      http.post<{ success: boolean; data: any }>(`/admin/architectures/${architectureId}/features`, data),
+  updateFeature: (architectureId: number, featureId: number, data: any) =>
+      http.put<{ success: boolean; data: any }>(`/admin/architectures/${architectureId}/features/${featureId}`, data),
+  deleteFeature: (architectureId: number, featureId: number) =>
+      http.delete<{ success: boolean }>(`/admin/architectures/${architectureId}/features/${featureId}`),
+  batchDeleteFeatures: (architectureId: number, ids: number[]) =>
+      http.post<{ success: boolean; data: any }>(`/admin/architectures/${architectureId}/features/batch-delete`, { ids }),
+
+  // 文化意义 (cultural_significance)
+  getCulture: (architectureId: number) =>
+      http.get<{ success: boolean; data: any[] }>(`/admin/architectures/${architectureId}/culture`),
+  createCulture: (architectureId: number, data: any) =>
+      http.post<{ success: boolean; data: any }>(`/admin/architectures/${architectureId}/culture`, data),
+  updateCulture: (architectureId: number, cultureId: number, data: any) =>
+      http.put<{ success: boolean; data: any }>(`/admin/architectures/${architectureId}/culture/${cultureId}`, data),
+  deleteCulture: (architectureId: number, cultureId: number) =>
+      http.delete<{ success: boolean }>(`/admin/architectures/${architectureId}/culture/${cultureId}`),
+  batchDeleteCulture: (architectureId: number, ids: number[]) =>
+      http.post<{ success: boolean; data: any }>(`/admin/architectures/${architectureId}/culture/batch-delete`, { ids }),
+
+  // 专家观点 (expert_quotes)
+  getExperts: (architectureId: number) =>
+      http.get<{ success: boolean; data: any[] }>(`/admin/architectures/${architectureId}/experts`),
+  createExpert: (architectureId: number, data: any) =>
+      http.post<{ success: boolean; data: any }>(`/admin/architectures/${architectureId}/experts`, data),
+  updateExpert: (architectureId: number, expertId: number, data: any) =>
+      http.put<{ success: boolean; data: any }>(`/admin/architectures/${architectureId}/experts/${expertId}`, data),
+  deleteExpert: (architectureId: number, expertId: number) =>
+      http.delete<{ success: boolean }>(`/admin/architectures/${architectureId}/experts/${expertId}`),
+  batchDeleteExperts: (architectureId: number, ids: number[]) =>
+      http.post<{ success: boolean; data: any }>(`/admin/architectures/${architectureId}/experts/batch-delete`, { ids }),
+};
+
 // 知识库API
 export const knowledgeApi = {
   getAll: (category?: string) =>
