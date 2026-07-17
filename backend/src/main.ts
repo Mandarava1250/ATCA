@@ -261,6 +261,18 @@ app.use('/uploads', express.static(uploadsPath, {
   },
 }));
 
+// 0.1. favicon 处理 — 避免浏览器 favicon 请求被 SPA 路由捕获导致 500
+app.get('/favicon.ico', (req, res) => {
+  const faviconPath = path.resolve(__dirname, '../../frontend/dist/favicon.ico');
+  if (require('fs').existsSync(faviconPath)) {
+    res.sendFile(faviconPath);
+  } else {
+    // 返回空白的 1x1 透明图标（inline base64），避免浏览器持续请求
+    res.setHeader('Content-Type', 'image/x-icon');
+    res.status(204).end();
+  }
+});
+
 // 1. 健康检查
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString(), version: '1.0.0' });
