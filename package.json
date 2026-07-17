@@ -7,17 +7,25 @@
     "install:all": "npm install && npm run install:frontend && npm run install:backend",
     "install:frontend": "npm install --prefix frontend",
     "install:backend": "npm install --prefix backend",
+    "build": "npm run build:frontend && npm run build:backend",
+    "build:frontend": "npm run build --prefix frontend",
+    "build:backend": "npm run build --prefix backend",
     "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
     "dev:frontend": "npm run dev --prefix frontend",
     "dev:backend": "npm run dev --prefix backend",
-    "build": "npm run build --prefix frontend && npm run build --prefix backend",
     "start": "npm start --prefix backend",
+    "start:all": "npm run install:all && npm run build && npm run start:sequential",
+    "start:sequential": "run-p start:backend-background start:wait-and-frontend",
+    "start:backend-background": "npm run dev:backend",
+    "start:wait-and-frontend": "wait-on http://localhost:3000/health --timeout 60000 && npm run dev:frontend",
     "docker:up": "docker-compose up -d",
     "docker:down": "docker-compose down",
     "docker:build": "docker-compose build",
     "docker:logs": "docker-compose logs -f"
   },
   "devDependencies": {
-    "concurrently": "^8.2.2"
+    "concurrently": "^8.2.2",
+    "npm-run-all": "^4.1.5",
+    "wait-on": "^9.0.10"
   }
 }
