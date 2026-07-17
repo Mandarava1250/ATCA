@@ -416,6 +416,7 @@ export const adminApi = {
   batchUpdateUserRole: (ids: number[], role: string) => http.post('/admin/users/batch-update-role', { ids, role }),
   batchUpdateUserStatus: (ids: number[], is_active: boolean) => http.post('/admin/users/batch-update-status', { ids, is_active }),
   getArchitectures: (params?: any) => http.get<{ success: boolean; data: any[]; meta?: any }>('/admin/architectures', params),
+  getArchitectureById: (id: number) => http.get<{ success: boolean; data: any }>(`/admin/architectures/${id}`),
   batchDeleteArchitectures: (ids: number[]) => http.post('/admin/architectures/batch-delete', { ids }),
   createArchitecture: (data: any) => http.post('/admin/architectures', data),
   updateArchitecture: (id: number, data: any) => http.put(`/admin/architectures/${id}`, data),

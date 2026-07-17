@@ -364,6 +364,24 @@ router.get('/architectures', asyncHandler(async (req: any, res) => {
   } catch (err: any) { console.error('[Admin Architectures] 查询失败:', err.message || err); res.json({ success: true, data: [], meta: { total: 0 } }); }
 }));
 
+router.get('/architectures/:id', asyncHandler(async (req: any, res) => {
+  const { id } = req.params;
+  if (isMockMode()) {
+    const arch = mockArchitectures.find((a: any) => a.architecture_id === parseInt(id));
+    if (!arch) { res.status(404).json({ success: false, error: { message: '未找到该建筑' } }); return; }
+    res.json({ success: true, data: arch });
+    return;
+  }
+  try {
+    const [arch] = await query('architecture', 'SELECT * FROM [ancient_architecture] WHERE [architecture_id] = @id', { id: parseInt(id) });
+    if (!arch) { res.status(404).json({ success: false, error: { message: '未找到该建筑' } }); return; }
+    res.json({ success: true, data: mapArchNames([arch])[0] });
+  } catch (err: any) {
+    console.error('[Admin Architecture Detail] 查询失败:', err.message || err);
+    res.status(500).json({ success: false, error: { message: '获取建筑详情失败: ' + (err.message || '服务器错误') } });
+  }
+}));
+
 router.post('/architectures', validateBody(z.object({
   name: z.string().min(1),
   type: z.string().min(1),
