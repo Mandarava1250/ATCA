@@ -141,14 +141,21 @@ img{max-width:100%;height:auto;display:block}
 .btn-solid-gold:hover{background:var(--gold-light);border-color:var(--gold-light)}
 
 /* === atca 按钮系统（全局） === */
-.atca-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:10px 22px;border-radius:var(--r-md);font-size:0.875rem;font-weight:500;letter-spacing:0.04em;transition:all var(--t-fast);cursor:pointer;border:1.5px solid transparent;text-decoration:none;font-family:inherit}
+.atca-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:10px 22px;border-radius:var(--r-md);font-size:0.875rem;font-weight:500;letter-spacing:0.04em;transition:all var(--t-fast);cursor:pointer;border:1.5px solid transparent;text-decoration:none;font-family:inherit;position:relative;overflow:hidden}
 .atca-btn-primary{background:linear-gradient(135deg,var(--gold) 0%,var(--gold-light) 100%);color:#1A1714;border-color:var(--gold);font-weight:600;box-shadow:var(--shadow-gold)}
 .atca-btn-primary:hover{background:linear-gradient(135deg,var(--gold-light) 0%,#E0C88A 100%);transform:translateY(-2px);box-shadow:var(--shadow-gold-lg)}
-.atca-btn-secondary{background:linear-gradient(135deg,var(--bg-light) 0%,var(--bg-hover) 100%);color:var(--text);border-color:var(--border);box-shadow:var(--shadow-sm)}
-.atca-btn-secondary:hover{background:linear-gradient(135deg,var(--bg-hover) 0%,rgba(201,169,110,0.08) 100%);border-color:var(--gold-dim);color:var(--gold);transform:translateY(-2px);box-shadow:var(--shadow-md)}
-.atca-btn-danger{background:rgba(139,58,58,0.15);color:#C27B7B;border:1px solid rgba(139,58,58,0.3)}
-.atca-btn-danger:hover{background:rgba(139,58,58,0.25)}
-.atca-btn-sm{padding:5px 12px;font-size:0.75rem}
+.atca-btn-primary:active{transform:translateY(0)}
+.atca-btn-secondary{background:linear-gradient(135deg,var(--bg-light) 0%,var(--bg-hover) 100%);color:var(--text);border-color:var(--border-light);box-shadow:var(--shadow-sm)}
+.atca-btn-secondary:hover{background:linear-gradient(135deg,var(--bg-hover) 0%,rgba(201,169,110,0.12) 100%);border-color:var(--gold-dim);color:var(--gold);transform:translateY(-2px);box-shadow:var(--shadow-md)}
+.atca-btn-secondary:active{transform:translateY(0)}
+.atca-btn-danger{background:linear-gradient(135deg,rgba(194,123,123,0.15) 0%,rgba(139,58,58,0.2) 100%);color:#E8A8A8;border:1.5px solid rgba(194,123,123,0.4);font-weight:500;box-shadow:0 2px 8px rgba(139,58,58,0.15)}
+.atca-btn-danger:hover{background:linear-gradient(135deg,rgba(194,123,123,0.25) 0%,rgba(194,123,123,0.35) 100%);border-color:#C27B7B;color:#F0C8C8;transform:translateY(-2px);box-shadow:0 4px 16px rgba(194,123,123,0.3)}
+.atca-btn-danger:active{transform:translateY(0)}
+.atca-btn-success{background:linear-gradient(135deg,rgba(123,194,181,0.15) 0%,rgba(90,123,108,0.2) 100%);color:#95D4C7;border:1.5px solid rgba(123,194,181,0.4);font-weight:500;box-shadow:0 2px 8px rgba(90,123,108,0.15)}
+.atca-btn-success:hover{background:linear-gradient(135deg,rgba(123,194,181,0.25) 0%,rgba(123,194,181,0.35) 100%);border-color:#7BC2B5;color:#B5E0D6;transform:translateY(-2px);box-shadow:0 4px 16px rgba(123,194,181,0.3)}
+.atca-btn-success:active{transform:translateY(0)}
+.atca-btn-sm{padding:6px 14px;font-size:0.75rem;font-weight:500;border-width:1px;border-radius:var(--r-sm)}
+.atca-btn-sm:active{transform:translateY(0)}
 
 /* === 标签 === */
 .tag{display:inline-flex;padding:2px 10px;border-radius:var(--r-sm);font-size:0.75rem;font-family:var(--font-serif);background:rgba(var(--gold-rgb),0.08);color:var(--gold);border:1px solid rgba(var(--gold-rgb),0.2)}
@@ -265,26 +272,62 @@ img{max-width:100%;height:auto;display:block}
 
 /* 操作按钮 */
 .data-table .btn-text {
-  background: none;
-  border: none;
-  color: var(--gold-dim);
+  background: rgba(201, 169, 110, 0.08);
+  border: 1px solid rgba(201, 169, 110, 0.2);
+  color: var(--gold);
   font-size: 0.75rem;
+  font-weight: 500;
   cursor: pointer;
-  padding: 3px 8px;
-  border-radius: var(--r-sm);
-  transition: all var(--t);
-  margin-right: 4px;
+  padding: 4px 10px;
+  border-radius: var(--r-md);
+  transition: all var(--t-fast);
+  margin-right: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 .data-table .btn-text:hover {
-  color: var(--gold);
-  background: rgba(201, 169, 110, 0.08);
+  color: #1A1714;
+  background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 100%);
+  border-color: var(--gold);
+  box-shadow: 0 2px 8px rgba(201, 169, 110, 0.3);
+  transform: translateY(-1px);
+}
+.data-table .btn-text:active {
+  transform: translateY(0);
 }
 .data-table .btn-text.danger {
-  color: #8B5A5A;
+  background: rgba(194, 123, 123, 0.08);
+  border: 1px solid rgba(194, 123, 123, 0.25);
+  color: #D49595;
 }
 .data-table .btn-text.danger:hover {
-  color: #C27B7B;
-  background: rgba(139, 58, 58, 0.08);
+  color: #fff;
+  background: linear-gradient(135deg, #C27B7B 0%, #D49595 100%);
+  border-color: #C27B7B;
+  box-shadow: 0 2px 8px rgba(194, 123, 123, 0.35);
+}
+.data-table .btn-text.success {
+  background: rgba(123, 194, 181, 0.08);
+  border: 1px solid rgba(123, 194, 181, 0.25);
+  color: #7BC2B5;
+}
+.data-table .btn-text.success:hover {
+  color: #1A1714;
+  background: linear-gradient(135deg, #7BC2B5 0%, #95D4C7 100%);
+  border-color: #7BC2B5;
+  box-shadow: 0 2px 8px rgba(123, 194, 181, 0.35);
+}
+.data-table .btn-text.info {
+  background: rgba(123, 158, 194, 0.08);
+  border: 1px solid rgba(123, 158, 194, 0.25);
+  color: #7B9EC2;
+}
+.data-table .btn-text.info:hover {
+  color: #fff;
+  background: linear-gradient(135deg, #7B9EC2 0%, #95B5D4 100%);
+  border-color: #7B9EC2;
+  box-shadow: 0 2px 8px rgba(123, 158, 194, 0.35);
 }
 
 .empty-table {
@@ -427,12 +470,16 @@ img{max-width:100%;height:auto;display:block}
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 6px 12px;
-  background: rgba(201, 169, 110, 0.06);
-  border: 1px solid var(--border);
+  padding: 8px 14px;
+  background: linear-gradient(135deg, rgba(201, 169, 110, 0.08) 0%, rgba(201, 169, 110, 0.04) 100%);
+  border: 1px solid rgba(201, 169, 110, 0.2);
   border-radius: var(--r-md);
   font-size: 0.8125rem;
-  color: var(--text-muted);
+  color: var(--text);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+.batch-bar .atca-btn-sm {
+  font-weight: 500;
 }
 
 /* === 动画 === */
