@@ -344,6 +344,19 @@ function mapArchNames(items: any[]): any[] {
 }
 
 // ============ 古建筑管理 ============
+function parseImageGallery(item: any): any {
+  if (item.image_gallery) {
+    try {
+      item.image_gallery = JSON.parse(item.image_gallery);
+    } catch {
+      item.image_gallery = [];
+    }
+  } else {
+    item.image_gallery = [];
+  }
+  return item;
+}
+
 router.get('/architectures', asyncHandler(async (req: any, res) => {
   const { page = '1', limit = '20', search = '' } = req.query as Record<string, string>;
   const offset = (parseInt(page) - 1) * parseInt(limit);
@@ -356,9 +369,9 @@ router.get('/architectures', asyncHandler(async (req: any, res) => {
 
   try {
     let whereClause = 'WHERE 1=1'; const params: any = {};
-    if (search) { whereClause += ' AND ([name] LIKE @search OR [location] LIKE @search)'; params.search = `%${search}%`; }
-    const arches = await query('architecture', `SELECT [architecture_id], [name], [chinese_name], [type], [founding_dynasty], [completed_dynasty], [location], [coordinates], [protection_level], [brief_description], [full_description], [main_image_url], [created_at] FROM [ancient_architecture] ${whereClause} ORDER BY [architecture_id] DESC OFFSET ${offset} ROWS FETCH NEXT ${parseInt(limit)} ROWS ONLY`, params);
-    const mappedArches = mapArchNames(arches as any[]);
+    if (search) { whereClause += ' AND ([name] LIKE @search OR [location] LIKE @search OR [chinese_name] LIKE @search)'; params.search = `%${search}%`; }
+    const arches = await query('architecture', `SELECT * FROM [ancient_architecture] ${whereClause} ORDER BY [architecture_id] DESC OFFSET ${offset} ROWS FETCH NEXT ${parseInt(limit)} ROWS ONLY`, params);
+    const mappedArches = mapArchNames(arches as any[]).map(parseImageGallery);
     const [countRes] = await query('architecture', `SELECT COUNT(*) as total FROM [ancient_architecture] ${whereClause}`, params);
     res.json({ success: true, data: mappedArches, meta: { total: (countRes as any)?.total || 0, page: parseInt(page), limit: parseInt(limit) } });
   } catch (err: any) { console.error('[Admin Architectures] 查询失败:', err.message || err); res.json({ success: true, data: [], meta: { total: 0 } }); }
@@ -375,7 +388,7 @@ router.get('/architectures/:id', asyncHandler(async (req: any, res) => {
   try {
     const [arch] = await query('architecture', 'SELECT * FROM [ancient_architecture] WHERE [architecture_id] = @id', { id: parseInt(id) });
     if (!arch) { res.status(404).json({ success: false, error: { message: '未找到该建筑' } }); return; }
-    res.json({ success: true, data: mapArchNames([arch])[0] });
+    res.json({ success: true, data: parseImageGallery(mapArchNames([arch])[0]) });
   } catch (err: any) {
     console.error('[Admin Architecture Detail] 查询失败:', err.message || err);
     res.status(500).json({ success: false, error: { message: '获取建筑详情失败: ' + (err.message || '服务器错误') } });
@@ -387,6 +400,7 @@ router.post('/architectures', validateBody(z.object({
   type: z.string().min(1),
   chinese_name: z.string().optional(),
   founding_dynasty: z.string().optional(),
+  completed_dynasty: z.string().optional(),
   location: z.string().optional(),
   coordinates: z.string().optional(),
   latitude: z.coerce.number().optional(),
@@ -402,18 +416,37 @@ router.post('/architectures', validateBody(z.object({
   current_status: z.string().optional(),
   main_image_url: z.string().optional(),
   tags: z.string().optional(),
-  image_gallery: z.string().optional(),
+  image_gallery: z.union([z.string(), z.array(z.string())]).optional(),
   model_3d_url: z.string().optional(),
   vr_panorama_url: z.string().optional(),
 })), asyncHandler(async (req: any, res) => {
   if (isMockMode()) { res.json({ success: true, data: { architecture_id: 999, ...req.body } }); return; }
   try {
-    const allowedFields = ['name', 'type', 'chinese_name', 'founding_dynasty', 'location', 'coordinates', 'protection_level', 'brief_description', 'full_description', 'main_image_url', 'completed_dynasty'];
-    const filteredBody = Object.fromEntries(Object.entries(req.body).filter(([k]) => allowedFields.includes(k)));
+    const allowedFields = ['name', 'type', 'chinese_name', 'founding_dynasty', 'completed_dynasty', 'location', 'coordinates', 'protection_level', 'brief_description', 'full_description', 'main_image_url', 'structural_features', 'historical_significance', 'current_status', 'tags', 'image_gallery', 'model_3d_url', 'vr_panorama_url', 'construction_date', 'architect', 'is_featured'];
+    const filteredBody: Record<string, any> = {};
+    
+    for (const key of allowedFields) {
+      if (req.body[key] !== undefined && req.body[key] !== null) {
+        if (key === 'is_featured') {
+          filteredBody[key] = req.body[key];
+        } else if (req.body[key] !== '') {
+          filteredBody[key] = req.body[key];
+        }
+      }
+    }
+    
+    if (req.body.latitude !== undefined && req.body.longitude !== undefined) {
+      filteredBody.coordinates = `${req.body.latitude},${req.body.longitude}`;
+    }
+    
+    if (Array.isArray(filteredBody.image_gallery)) {
+      filteredBody.image_gallery = JSON.stringify(filteredBody.image_gallery);
+    }
+    
     const columns = Object.keys(filteredBody).map(k => `[${k}]`).join(', ');
     const params = Object.keys(filteredBody).map(k => `@${k}`).join(', ');
     const result = await execute('architecture', `INSERT INTO [ancient_architecture] (${columns}) OUTPUT INSERTED.* VALUES (${params})`, filteredBody);
-    res.json({ success: true, data: (result.recordset as any[])[0] });
+    res.json({ success: true, data: parseImageGallery((result.recordset as any[])[0]) });
   } catch (e: any) { res.json({ success: false, error: { message: e.message || '添加失败' } }); }
 }));
 
@@ -461,15 +494,29 @@ router.put('/architectures/:id', asyncHandler(async (req: any, res) => {
     return;
   }
   
-  const validatedBody = validationResult.data;
+  const validatedBody = validationResult.data as Record<string, any>;
   console.log('[Admin Architecture Update] After validation - validatedBody:', JSON.stringify(validatedBody));
   
   try { 
-    const allowedFields = ['name', 'type', 'chinese_name', 'founding_dynasty', 'location', 'coordinates', 'protection_level', 'brief_description', 'full_description', 'main_image_url', 'completed_dynasty'];
-    const filteredBody = Object.fromEntries(Object.entries(validatedBody).filter(([k]) => allowedFields.includes(k)));
+    const allowedFields = ['name', 'type', 'chinese_name', 'founding_dynasty', 'completed_dynasty', 'location', 'coordinates', 'protection_level', 'brief_description', 'full_description', 'main_image_url', 'structural_features', 'historical_significance', 'current_status', 'tags', 'image_gallery', 'model_3d_url', 'vr_panorama_url', 'construction_date', 'architect', 'is_featured'];
+    const filteredBody: Record<string, any> = {};
+    
+    for (const key of allowedFields) {
+      if (validatedBody[key] !== undefined && validatedBody[key] !== null) {
+        if (key === 'is_featured') {
+          filteredBody[key] = validatedBody[key];
+        } else if (validatedBody[key] !== '') {
+          filteredBody[key] = validatedBody[key];
+        }
+      }
+    }
     
     if (validatedBody.latitude !== undefined && validatedBody.longitude !== undefined) {
       filteredBody.coordinates = `${validatedBody.latitude},${validatedBody.longitude}`;
+    }
+    
+    if (Array.isArray(filteredBody.image_gallery)) {
+      filteredBody.image_gallery = JSON.stringify(filteredBody.image_gallery);
     }
     
     const fields = Object.keys(filteredBody).map(k => `[${k}] = @${k}`).join(', '); 

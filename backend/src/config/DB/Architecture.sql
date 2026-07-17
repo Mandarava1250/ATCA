@@ -30,9 +30,79 @@ BEGIN
         [brief_description] NVARCHAR(MAX) NULL,
         [full_description] NVARCHAR(MAX) NULL,
         [main_image_url] NVARCHAR(255) NULL,
+        [structural_features] NVARCHAR(MAX) NULL,
+        [historical_significance] NVARCHAR(MAX) NULL,
+        [current_status] NVARCHAR(MAX) NULL,
+        [tags] NVARCHAR(500) NULL,
+        [image_gallery] NVARCHAR(MAX) NULL,
+        [model_3d_url] NVARCHAR(255) NULL,
+        [vr_panorama_url] NVARCHAR(255) NULL,
+        [construction_date] NVARCHAR(50) NULL,
+        [architect] NVARCHAR(100) NULL,
+        [is_featured] BIT DEFAULT 0,
         [created_at] DATETIME DEFAULT GETDATE(),
         [updated_at] DATETIME DEFAULT GETDATE()
     );
+END
+GO
+
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE name = 'structural_features' AND object_id = OBJECT_ID('ancient_architecture'))
+BEGIN
+    ALTER TABLE [ancient_architecture] ADD [structural_features] NVARCHAR(MAX) NULL;
+END
+GO
+
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE name = 'historical_significance' AND object_id = OBJECT_ID('ancient_architecture'))
+BEGIN
+    ALTER TABLE [ancient_architecture] ADD [historical_significance] NVARCHAR(MAX) NULL;
+END
+GO
+
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE name = 'current_status' AND object_id = OBJECT_ID('ancient_architecture'))
+BEGIN
+    ALTER TABLE [ancient_architecture] ADD [current_status] NVARCHAR(MAX) NULL;
+END
+GO
+
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE name = 'tags' AND object_id = OBJECT_ID('ancient_architecture'))
+BEGIN
+    ALTER TABLE [ancient_architecture] ADD [tags] NVARCHAR(500) NULL;
+END
+GO
+
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE name = 'image_gallery' AND object_id = OBJECT_ID('ancient_architecture'))
+BEGIN
+    ALTER TABLE [ancient_architecture] ADD [image_gallery] NVARCHAR(MAX) NULL;
+END
+GO
+
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE name = 'model_3d_url' AND object_id = OBJECT_ID('ancient_architecture'))
+BEGIN
+    ALTER TABLE [ancient_architecture] ADD [model_3d_url] NVARCHAR(255) NULL;
+END
+GO
+
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE name = 'vr_panorama_url' AND object_id = OBJECT_ID('ancient_architecture'))
+BEGIN
+    ALTER TABLE [ancient_architecture] ADD [vr_panorama_url] NVARCHAR(255) NULL;
+END
+GO
+
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE name = 'construction_date' AND object_id = OBJECT_ID('ancient_architecture'))
+BEGIN
+    ALTER TABLE [ancient_architecture] ADD [construction_date] NVARCHAR(50) NULL;
+END
+GO
+
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE name = 'architect' AND object_id = OBJECT_ID('ancient_architecture'))
+BEGIN
+    ALTER TABLE [ancient_architecture] ADD [architect] NVARCHAR(100) NULL;
+END
+GO
+
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE name = 'is_featured' AND object_id = OBJECT_ID('ancient_architecture'))
+BEGIN
+    ALTER TABLE [ancient_architecture] ADD [is_featured] BIT DEFAULT 0;
 END
 GO
 
@@ -436,16 +506,30 @@ CREATE PROCEDURE dbo.sp_architecture_add
     @protection_level NVARCHAR(100) = NULL,
     @brief_description NVARCHAR(MAX) = NULL,
     @full_description NVARCHAR(MAX) = NULL,
-    @main_image_url NVARCHAR(255) = NULL
+    @main_image_url NVARCHAR(255) = NULL,
+    @structural_features NVARCHAR(MAX) = NULL,
+    @historical_significance NVARCHAR(MAX) = NULL,
+    @current_status NVARCHAR(MAX) = NULL,
+    @tags NVARCHAR(500) = NULL,
+    @image_gallery NVARCHAR(MAX) = NULL,
+    @model_3d_url NVARCHAR(255) = NULL,
+    @vr_panorama_url NVARCHAR(255) = NULL,
+    @construction_date NVARCHAR(50) = NULL,
+    @architect NVARCHAR(100) = NULL,
+    @is_featured BIT = 0
 AS
 BEGIN
     SET NOCOUNT ON;
     INSERT INTO dbo.ancient_architecture ([name], [chinese_name], [location], [coordinates], [type],
         [founding_dynasty], [completed_dynasty], [protection_level], [brief_description],
-        [full_description], [main_image_url])
+        [full_description], [main_image_url], [structural_features], [historical_significance],
+        [current_status], [tags], [image_gallery], [model_3d_url], [vr_panorama_url],
+        [construction_date], [architect], [is_featured])
     VALUES (@name, @chinese_name, @location, @coordinates, @type,
         @founding_dynasty, @completed_dynasty, @protection_level, @brief_description,
-        @full_description, @main_image_url);
+        @full_description, @main_image_url, @structural_features, @historical_significance,
+        @current_status, @tags, @image_gallery, @model_3d_url, @vr_panorama_url,
+        @construction_date, @architect, @is_featured);
     SELECT SCOPE_IDENTITY() AS [architecture_id];
 END
 GO
@@ -465,7 +549,17 @@ CREATE PROCEDURE dbo.sp_architecture_update
     @protection_level NVARCHAR(100) = NULL,
     @brief_description NVARCHAR(MAX) = NULL,
     @full_description NVARCHAR(MAX) = NULL,
-    @main_image_url NVARCHAR(255) = NULL
+    @main_image_url NVARCHAR(255) = NULL,
+    @structural_features NVARCHAR(MAX) = NULL,
+    @historical_significance NVARCHAR(MAX) = NULL,
+    @current_status NVARCHAR(MAX) = NULL,
+    @tags NVARCHAR(500) = NULL,
+    @image_gallery NVARCHAR(MAX) = NULL,
+    @model_3d_url NVARCHAR(255) = NULL,
+    @vr_panorama_url NVARCHAR(255) = NULL,
+    @construction_date NVARCHAR(50) = NULL,
+    @architect NVARCHAR(100) = NULL,
+    @is_featured BIT = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -480,7 +574,17 @@ BEGIN
         [protection_level] = COALESCE(@protection_level, [protection_level]),
         [brief_description] = COALESCE(@brief_description, [brief_description]),
         [full_description] = COALESCE(@full_description, [full_description]),
-        [main_image_url] = COALESCE(@main_image_url, [main_image_url])
+        [main_image_url] = COALESCE(@main_image_url, [main_image_url]),
+        [structural_features] = COALESCE(@structural_features, [structural_features]),
+        [historical_significance] = COALESCE(@historical_significance, [historical_significance]),
+        [current_status] = COALESCE(@current_status, [current_status]),
+        [tags] = COALESCE(@tags, [tags]),
+        [image_gallery] = COALESCE(@image_gallery, [image_gallery]),
+        [model_3d_url] = COALESCE(@model_3d_url, [model_3d_url]),
+        [vr_panorama_url] = COALESCE(@vr_panorama_url, [vr_panorama_url]),
+        [construction_date] = COALESCE(@construction_date, [construction_date]),
+        [architect] = COALESCE(@architect, [architect]),
+        [is_featured] = COALESCE(@is_featured, [is_featured])
     WHERE [architecture_id] = @architecture_id;
 END
 GO
