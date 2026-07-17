@@ -30,14 +30,14 @@ BEGIN
         [protection_level] NVARCHAR(100) NULL,
         [brief_description] NVARCHAR(MAX) NULL,
         [full_description] NVARCHAR(MAX) NULL,
-        [main_image_url] NVARCHAR(255) NULL,
+        [main_image_url] NVARCHAR(MAX) NULL,
         [structural_features] NVARCHAR(MAX) NULL,
         [historical_significance] NVARCHAR(MAX) NULL,
         [current_status] NVARCHAR(MAX) NULL,
         [tags] NVARCHAR(500) NULL,
         [image_gallery] NVARCHAR(MAX) NULL,
-        [model_3d_url] NVARCHAR(255) NULL,
-        [vr_panorama_url] NVARCHAR(255) NULL,
+        [model_3d_url] NVARCHAR(MAX) NULL,
+        [vr_panorama_url] NVARCHAR(MAX) NULL,
         [construction_date] NVARCHAR(50) NULL,
         [architect] NVARCHAR(100) NULL,
         [is_featured] BIT DEFAULT 0,
@@ -79,13 +79,31 @@ GO
 
 IF NOT EXISTS (SELECT * FROM sys.columns WHERE name = 'model_3d_url' AND object_id = OBJECT_ID('ancient_architecture'))
 BEGIN
-    ALTER TABLE [ancient_architecture] ADD [model_3d_url] NVARCHAR(255) NULL;
+    ALTER TABLE [ancient_architecture] ADD [model_3d_url] NVARCHAR(MAX) NULL;
+END
+ELSE
+BEGIN
+    ALTER TABLE [ancient_architecture] ALTER COLUMN [model_3d_url] NVARCHAR(MAX) NULL;
 END
 GO
 
 IF NOT EXISTS (SELECT * FROM sys.columns WHERE name = 'vr_panorama_url' AND object_id = OBJECT_ID('ancient_architecture'))
 BEGIN
-    ALTER TABLE [ancient_architecture] ADD [vr_panorama_url] NVARCHAR(255) NULL;
+    ALTER TABLE [ancient_architecture] ADD [vr_panorama_url] NVARCHAR(MAX) NULL;
+END
+ELSE
+BEGIN
+    ALTER TABLE [ancient_architecture] ALTER COLUMN [vr_panorama_url] NVARCHAR(MAX) NULL;
+END
+GO
+
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE name = 'main_image_url' AND object_id = OBJECT_ID('ancient_architecture'))
+BEGIN
+    ALTER TABLE [ancient_architecture] ADD [main_image_url] NVARCHAR(MAX) NULL;
+END
+ELSE
+BEGIN
+    ALTER TABLE [ancient_architecture] ALTER COLUMN [main_image_url] NVARCHAR(MAX) NULL;
 END
 GO
 
@@ -727,14 +745,14 @@ CREATE PROCEDURE dbo.sp_architecture_add
     @protection_level NVARCHAR(100) = NULL,
     @brief_description NVARCHAR(MAX) = NULL,
     @full_description NVARCHAR(MAX) = NULL,
-    @main_image_url NVARCHAR(255) = NULL,
+    @main_image_url NVARCHAR(MAX) = NULL,
     @structural_features NVARCHAR(MAX) = NULL,
     @historical_significance NVARCHAR(MAX) = NULL,
     @current_status NVARCHAR(MAX) = NULL,
     @tags NVARCHAR(500) = NULL,
     @image_gallery NVARCHAR(MAX) = NULL,
-    @model_3d_url NVARCHAR(255) = NULL,
-    @vr_panorama_url NVARCHAR(255) = NULL,
+    @model_3d_url NVARCHAR(MAX) = NULL,
+    @vr_panorama_url NVARCHAR(MAX) = NULL,
     @construction_date NVARCHAR(50) = NULL,
     @architect NVARCHAR(100) = NULL,
     @is_featured BIT = 0
@@ -770,14 +788,14 @@ CREATE PROCEDURE dbo.sp_architecture_update
     @protection_level NVARCHAR(100) = NULL,
     @brief_description NVARCHAR(MAX) = NULL,
     @full_description NVARCHAR(MAX) = NULL,
-    @main_image_url NVARCHAR(255) = NULL,
+    @main_image_url NVARCHAR(MAX) = NULL,
     @structural_features NVARCHAR(MAX) = NULL,
     @historical_significance NVARCHAR(MAX) = NULL,
     @current_status NVARCHAR(MAX) = NULL,
     @tags NVARCHAR(500) = NULL,
     @image_gallery NVARCHAR(MAX) = NULL,
-    @model_3d_url NVARCHAR(255) = NULL,
-    @vr_panorama_url NVARCHAR(255) = NULL,
+    @model_3d_url NVARCHAR(MAX) = NULL,
+    @vr_panorama_url NVARCHAR(MAX) = NULL,
     @construction_date NVARCHAR(50) = NULL,
     @architect NVARCHAR(100) = NULL,
     @is_featured BIT = NULL
