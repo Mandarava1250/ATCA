@@ -102,11 +102,11 @@
             <button class="form-tab" :class="{ active: activeTab === 'basic' }" @click="activeTab = 'basic'">基本信息</button>
             <button class="form-tab" :class="{ active: activeTab === 'detail' }" @click="activeTab = 'detail'">详细介绍</button>
             <button class="form-tab" :class="{ active: activeTab === 'media' }" @click="activeTab = 'media'">图片与标签</button>
-            <button class="form-tab" :class="{ active: activeTab === 'history' }" @click="loadSubTableData('history')">历史发展</button>
-            <button class="form-tab" :class="{ active: activeTab === 'structure' }" @click="loadSubTableData('structure')">技术结构</button>
-            <button class="form-tab" :class="{ active: activeTab === 'features' }" @click="loadSubTableData('features')">建筑特色</button>
-            <button class="form-tab" :class="{ active: activeTab === 'culture' }" @click="loadSubTableData('culture')">文化意义</button>
-            <button class="form-tab" :class="{ active: activeTab === 'experts' }" @click="loadSubTableData('experts')">专家观点</button>
+            <button class="form-tab" :class="{ active: activeTab === 'history' }" @click="activeTab = 'history'; loadSubTableData('history')">历史发展</button>
+          <button class="form-tab" :class="{ active: activeTab === 'structure' }" @click="activeTab = 'structure'; loadSubTableData('structure')">技术结构</button>
+          <button class="form-tab" :class="{ active: activeTab === 'features' }" @click="activeTab = 'features'; loadSubTableData('features')">建筑特色</button>
+          <button class="form-tab" :class="{ active: activeTab === 'culture' }" @click="activeTab = 'culture'; loadSubTableData('culture')">文化意义</button>
+          <button class="form-tab" :class="{ active: activeTab === 'experts' }" @click="activeTab = 'experts'; loadSubTableData('experts')">专家观点</button>
           </div>
 
           <!-- 基本信息 -->
