@@ -230,6 +230,7 @@ const navItems = [
   { to: '/quiz', label: computed(() => t('nav.knowledgeQuiz')) },
   { to: '/workshop', label: computed(() => t('nav.workshop3D')) },
   { to: '/community', label: computed(() => t('nav.community')) },
+  { to: '/overview', label: computed(() => t('nav.overview')) },
 ];
 
 const mobileNavItems = computed<NavItem[]>(() => [
@@ -238,6 +239,7 @@ const mobileNavItems = computed<NavItem[]>(() => [
   { key: 'quiz', label: t('nav.knowledgeQuiz'), href: '/quiz', icon: 'M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z', active: route.path.startsWith('/quiz') },
   { key: 'workshop', label: t('nav.workshop3D'), href: '/workshop', icon: 'M4 2h16a2 2 0 012 2v16a2 2 0 01-2 2H4a2 2 0 01-2-2V4a2 2 0 012-2zm6 2l1.5 3L13 4h3l-2 3.5L17 10h-3l-1.5-3L11 10H8l2-3.5L6 4h3z', active: route.path.startsWith('/workshop') },
   { key: 'community', label: t('nav.community'), href: '/community', icon: 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z', active: route.path.startsWith('/community') },
+  { key: 'overview', label: t('nav.overview'), href: '/overview', icon: 'M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h8v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z', active: route.path.startsWith('/overview') },
 ]);
 
 // ================ 国际化文本 ================

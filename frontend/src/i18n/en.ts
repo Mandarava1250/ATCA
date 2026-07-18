@@ -7,6 +7,7 @@ export default {
   nav: {
     menu: 'Navigation',
     home: 'Home',
+    overview: 'Project Overview',
     architectureHall: 'Architecture Gallery',
     knowledgeQuiz: 'Knowledge Quiz',
     workshop3D: '3D Workshop',

@@ -18,19 +18,25 @@ const router = createRouter({
       path: '/home',
       name: 'Home',
       component: () => import('@/views/home/ViewHome.vue'),
-      meta: { title: 'home' },
+      meta: { title: '首页' },
+    },
+    {
+      path: '/overview',
+      name: 'Overview',
+      component: () => import('@/views/home/ViewOverview.vue'),
+      meta: { title: '项目总览' },
     },
     {
       path: '/architecture',
       name: 'ArchitectureList',
       component: () => import('@/views/architecture/ViewArchitectureList.vue'),
-      meta: { title: 'architecture' },
+      meta: { title: '古建筑馆' },
     },
     {
       path: '/architecture/:id',
       name: 'ArchitectureDetail',
       component: () => import('@/views/architecture/ViewArchitectureDetail.vue'),
-      meta: { title: 'architectureDetail' },
+      meta: { title: '古建筑详情' },
     },
     {
       path: '/architecture/map',
@@ -42,13 +48,13 @@ const router = createRouter({
       path: '/quiz',
       name: 'Quiz',
       component: () => import('@/views/quiz/ViewQuiz.vue'),
-      meta: { title: 'quiz' },
+      meta: { title: '知识竞赛' },
     },
     {
       path: '/quiz/play',
       name: 'QuizPlay',
       component: () => import('@/views/quiz/ViewQuizPlay.vue'),
-      meta: { title: 'quizPlay', requiresAuth: true },
+      meta: { title: '答题', requiresAuth: true },
     },
     {
       path: '/quiz/analytics',
@@ -60,19 +66,19 @@ const router = createRouter({
       path: '/workshop',
       name: 'WorkshopHome',
       component: () => import('@/views/workshop/ViewWorkshopHome.vue'),
-      meta: { title: 'workshop' },
+      meta: { title: '3D工坊' },
     },
     {
       path: '/workshop/editor',
       name: 'WorkshopEditor',
       component: () => import('@/views/workshop/ViewWorkshop.vue'),
-      meta: { title: 'workshopEditor' },
+      meta: { title: '3D工坊编辑器' },
     },
     {
       path: '/workshop/builder',
       name: 'ComponentBuilder',
       component: () => import('@/views/workshop/ComponentBuilder.vue'),
-      meta: { title: 'componentBuilder' },
+      meta: { title: '3D构件构建器' },
     },
     // 3D工坊访客重定向（仅访客使用，带redirect）
     {
@@ -86,6 +92,7 @@ const router = createRouter({
       path: '/community',
       name: 'Community',
       component: () => import('@/views/community/ViewCommunity.vue'),
+      meta: { title: '社区讨论' },
     },
     {
       path: '/community/board/:boardId',
@@ -109,25 +116,25 @@ const router = createRouter({
       path: '/profile',
       name: 'Profile',
       component: () => import('@/views/user/ViewProfile.vue'),
-      meta: { title: 'profile', requiresAuth: true },
+      meta: { title: '个人中心', requiresAuth: true },
     },
     {
       path: '/login',
       name: 'Login',
       component: () => import('@/views/user/ViewLogin.vue'),
-      meta: { title: 'login', guestOnly: true },
+      meta: { title: '登录', guestOnly: true },
     },
     {
       path: '/register',
       name: 'Register',
       component: () => import('@/views/user/ViewRegister.vue'),
-      meta: { title: 'register', guestOnly: true },
+      meta: { title: '注册', guestOnly: true },
     },
     // 管理员路由
     {
       path: '/admin',
       component: () => import('@/views/admin/AdminLayout.vue'),
-      meta: { requiresAuth: true, requiresAdmin: true },
+      meta: { title: '管理后台', requiresAuth: true, requiresAdmin: true },
       children: [
         { path: '', name: 'AdminDashboard', component: () => import('@/views/admin/AdminDashboard.vue') },
         { path: 'users', name: 'AdminUsers', component: () => import('@/views/admin/AdminUsers.vue') },

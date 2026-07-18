@@ -7,6 +7,7 @@ export default {
   nav: {
     menu: '导航菜单',
     home: '首页',
+    overview: '项目总览',
     architectureHall: '古建筑馆',
     knowledgeQuiz: '知识竞赛',
     workshop3D: '3D工坊',
