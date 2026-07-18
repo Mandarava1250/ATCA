@@ -1765,7 +1765,6 @@ async function ensureOperationLogTable() {
 // ============ 历史发展管理 (historical_development) ============
 
 const historicalDevelopmentSchema = z.object({
-  architecture_id: z.number().min(1),
   dynasty_period: z.string().min(1),
   start_year: z.number().nullable().optional(),
   end_year: z.number().nullable().optional(),
@@ -1777,6 +1776,10 @@ const historicalDevelopmentSchema = z.object({
 
 router.get('/architectures/:id/history', asyncHandler(async (req: any, res) => {
   const { id } = req.params;
+  if (isMockMode()) {
+    res.json({ success: true, data: [] });
+    return;
+  }
   try {
     const history = await query('architecture',
       'SELECT * FROM [historical_development] WHERE [architecture_id] = @id ORDER BY [start_year] ASC, [development_id] ASC',
@@ -1857,7 +1860,6 @@ router.delete('/architectures/:id/history/:historyId', asyncHandler(async (req: 
 // ============ 技术结构管理 (technical_structure) ============
 
 const technicalStructureSchema = z.object({
-  architecture_id: z.number().min(1),
   structure_name: z.string().min(1),
   technical_category: z.string().min(1),
   technical_description: z.string().min(1),
@@ -1868,6 +1870,10 @@ const technicalStructureSchema = z.object({
 
 router.get('/architectures/:id/structure', asyncHandler(async (req: any, res) => {
   const { id } = req.params;
+  if (isMockMode()) {
+    res.json({ success: true, data: [] });
+    return;
+  }
   try {
     const structures = await query('architecture',
       'SELECT * FROM [technical_structure] WHERE [architecture_id] = @id ORDER BY [structure_id] ASC',
@@ -1948,7 +1954,6 @@ router.delete('/architectures/:id/structure/:structureId', asyncHandler(async (r
 // ============ 建筑特色管理 (architectural_features) ============
 
 const architecturalFeaturesSchema = z.object({
-  architecture_id: z.number().min(1),
   feature_name: z.string().min(1),
   design_philosophy: z.string().nullable().optional(),
   spatial_organization: z.string().nullable().optional(),
@@ -1958,6 +1963,10 @@ const architecturalFeaturesSchema = z.object({
 
 router.get('/architectures/:id/features', asyncHandler(async (req: any, res) => {
   const { id } = req.params;
+  if (isMockMode()) {
+    res.json({ success: true, data: [] });
+    return;
+  }
   try {
     const features = await query('architecture',
       'SELECT * FROM [architectural_features] WHERE [architecture_id] = @id ORDER BY [feature_id] ASC',
@@ -2038,7 +2047,6 @@ router.delete('/architectures/:id/features/:featureId', asyncHandler(async (req:
 // ============ 文化意义管理 (cultural_significance) ============
 
 const culturalSignificanceSchema = z.object({
-  architecture_id: z.number().min(1),
   significance_aspect: z.string().min(1),
   philosophical_basis: z.string().nullable().optional(),
   cultural_interpretation: z.string().min(1),
@@ -2048,6 +2056,10 @@ const culturalSignificanceSchema = z.object({
 
 router.get('/architectures/:id/culture', asyncHandler(async (req: any, res) => {
   const { id } = req.params;
+  if (isMockMode()) {
+    res.json({ success: true, data: [] });
+    return;
+  }
   try {
     const cultures = await query('architecture',
       'SELECT * FROM [cultural_significance] WHERE [architecture_id] = @id ORDER BY [significance_id] ASC',
@@ -2128,7 +2140,6 @@ router.delete('/architectures/:id/culture/:cultureId', asyncHandler(async (req: 
 // ============ 专家观点管理 (expert_quotes) ============
 
 const expertQuotesSchema = z.object({
-  architecture_id: z.number().min(1),
   expert_name: z.string().min(1),
   expert_title: z.string().nullable().optional(),
   quote_content: z.string().min(1),
@@ -2137,6 +2148,10 @@ const expertQuotesSchema = z.object({
 
 router.get('/architectures/:id/experts', asyncHandler(async (req: any, res) => {
   const { id } = req.params;
+  if (isMockMode()) {
+    res.json({ success: true, data: [] });
+    return;
+  }
   try {
     const experts = await query('architecture',
       'SELECT * FROM [expert_quotes] WHERE [architecture_id] = @id ORDER BY [quote_id] ASC',

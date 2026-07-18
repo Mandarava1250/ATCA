@@ -186,7 +186,7 @@ router.get('/:id', optionalAuthMiddleware, asyncHandler(async (req, res) => {
     }
   };
   const historicalDevelopments = await safeQuery('historical_development', 'development_id');
-  const constructionTechniques  = await safeQuery('construction_techniques', 'technique_id');
+  const technicalStructuresRaw = await safeQuery('technical_structure', 'structure_id');
   const architecturalFeatures   = await safeQuery('architectural_features', 'feature_id');
   const culturalSignificance    = await safeQuery('cultural_significance', 'significance_id');
   const expertQuotes            = await safeQuery('expert_quotes', 'quote_id');
@@ -202,23 +202,24 @@ router.get('/:id', optionalAuthMiddleware, asyncHandler(async (req, res) => {
     }
   } catch { /* architecture_favorites表可能不存在，静默忽略 */ }
 
+  const technicalStructures = technicalStructuresRaw.map((item: any) => ({
+    technique_id: item.structure_id,
+    technique_name: item.structure_name,
+    category: item.technical_category,
+    description: item.technical_description,
+    technical_principles: item.technical_principles,
+    historical_value: item.historical_value,
+    heritage_status: item.heritage_status,
+  }));
+
   res.json({
     success: true,
     data: {
       ...arch,
       historicalDevelopments,
-      technicalStructures: constructionTechniques.length > 0 ? constructionTechniques : [
-        { technique_id: 1, technique_name: '抬梁式结构', description: '采用抬梁式（叠梁式）木构架，柱上承梁，逐层缩短，最上层立脊瓜柱承脊檩' },
-        { technique_id: 2, technique_name: '斗拱铺作', description: '七铺作双抄双下昂，出跳深远，承托檐部重量' },
-        { technique_id: 3, technique_name: '榫卯连接', description: '全榫卯结构，不用一钉一铆，体现以柔克刚的营造智慧' },
-      ],
-      architecturalFeatures: architecturalFeatures.length > 0 ? architecturalFeatures : [
-        { feature_id: 1, feature_name: '重檐庑殿顶', description: '中国古建筑最高等级屋顶，四面斜坡，正脊垂脊分明' },
-        { feature_id: 2, feature_name: '和玺彩画', description: '最高等级彩画，以龙凤为主要题材，金碧辉煌' },
-      ],
-      culturalSignificances: culturalSignificance.length > 0 ? culturalSignificance : [
-        { significance_id: 1, significance_name: '皇权象征', description: '作为紫禁城核心建筑，代表中国古代最高建筑成就' },
-      ],
+      technicalStructures,
+      architecturalFeatures,
+      culturalSignificances: culturalSignificance,
       expertQuotes,
       mediaFiles,
       isFavorited,

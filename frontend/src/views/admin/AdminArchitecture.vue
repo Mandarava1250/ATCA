@@ -1118,6 +1118,8 @@ async function saveSubTableItem() {
       showMessage(subTableEditingId.value ? '更新成功' : '添加成功');
       closeSubTableModal();
       await loadSubTableData(currentSubTable.value);
+      http.clearCache('/architecture');
+      http.clearCache('/admin/architectures');
     } else {
       showMessage('保存失败: ' + (res?.error?.message || '未知错误'), 'error');
     }
@@ -1156,6 +1158,8 @@ async function deleteSubTableItem(type: SubTableType, id: number) {
     if (res?.success) {
       showMessage('删除成功');
       await loadSubTableData(type);
+      http.clearCache('/architecture');
+      http.clearCache('/admin/architectures');
     } else {
       showMessage('删除失败: ' + (res?.error?.message || '未知错误'), 'error');
     }
@@ -1193,6 +1197,8 @@ async function batchDeleteSubTable(type: SubTableType) {
       showMessage('批量删除成功');
       subTableSelection.value[type] = [];
       await loadSubTableData(type);
+      http.clearCache('/architecture');
+      http.clearCache('/admin/architectures');
     } else {
       showMessage('批量删除失败: ' + (res?.error?.message || '未知错误'), 'error');
     }
