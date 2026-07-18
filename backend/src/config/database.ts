@@ -255,7 +255,11 @@ export async function query<T = any>(
       if (value === null || value === undefined) {
         request.input(key, sql.NVarChar(sql.MAX), null);
       } else if (typeof value === 'number') {
-        request.input(key, sql.Int, value);
+        if (isNaN(value) || !isFinite(value)) {
+          request.input(key, sql.NVarChar(sql.MAX), null);
+        } else {
+          request.input(key, sql.Int, value);
+        }
       } else if (typeof value === 'boolean') {
         request.input(key, sql.Bit, value ? 1 : 0);
       } else {
@@ -284,6 +288,13 @@ export async function execute(
     sqlString: string,
     params?: Record<string, any>
 ): Promise<sql.IResult<any>> {
+  const upperSql = sqlString.toUpperCase();
+  const isWriteOperation = upperSql.startsWith('INSERT') || upperSql.startsWith('UPDATE') || upperSql.startsWith('DELETE');
+
+  if (isWriteOperation) {
+    queryCache.clear(dbName);
+  }
+
   const pool = await getPool(dbName);
   const request = pool.request();
 
@@ -292,7 +303,11 @@ export async function execute(
       if (value === null || value === undefined) {
         request.input(key, sql.NVarChar(sql.MAX), null);
       } else if (typeof value === 'number') {
-        request.input(key, sql.Int, value);
+        if (isNaN(value) || !isFinite(value)) {
+          request.input(key, sql.NVarChar(sql.MAX), null);
+        } else {
+          request.input(key, sql.Int, value);
+        }
       } else if (typeof value === 'boolean') {
         request.input(key, sql.Bit, value ? 1 : 0);
       } else {
@@ -301,7 +316,9 @@ export async function execute(
     }
   }
 
-  return await request.query(sqlString);
+  const result = await request.query(sqlString);
+
+  return result;
 }
 
 export async function transaction<T>(

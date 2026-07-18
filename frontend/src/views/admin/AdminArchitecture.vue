@@ -1074,6 +1074,14 @@ async function saveSubTableItem() {
   subTableSaving.value = true;
   try {
     const payload = { ...subTableForm.value };
+    for (const key of Object.keys(payload)) {
+      const val = payload[key];
+      if (typeof val === 'number' && (isNaN(val) || !isFinite(val))) {
+        payload[key] = null;
+      } else if (val === '') {
+        payload[key] = null;
+      }
+    }
     let res;
 
     if (subTableEditingId.value) {

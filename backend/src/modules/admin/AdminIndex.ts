@@ -1766,8 +1766,8 @@ async function ensureOperationLogTable() {
 
 const historicalDevelopmentSchema = z.object({
   dynasty_period: z.string().min(1),
-  start_year: z.number().nullable().optional(),
-  end_year: z.number().nullable().optional(),
+  start_year: z.coerce.number().nullable().optional(),
+  end_year: z.coerce.number().nullable().optional(),
   development_title: z.string().min(1),
   development_content: z.string().min(1),
   architectural_changes: z.string().nullable().optional(),
