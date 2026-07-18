@@ -899,6 +899,7 @@ export default {
     reset: 'Reset',
     imageLoadFailed: 'Image failed to load',
     unknownError: 'Unknown error',
+    close: 'Close',
   },
   errors: {
     network: 'Network connection failed, please check your network settings',

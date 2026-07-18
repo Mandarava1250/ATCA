@@ -899,6 +899,7 @@ export default {
     reset: '重置',
     imageLoadFailed: '图片加载失败',
     unknownError: '未知错误',
+    close: '关闭',
   },
   errors: {
     network: '网络连接失败，请检查网络设置',
