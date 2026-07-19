@@ -299,15 +299,16 @@ async function runBatchImport() {
       }
       formData.append('import_type', importType.value);
       
-      const res = await adminApi.uploadModels(formData);
-      const data = res.data;
-      if (data.success) {
-        batchResult.value = { error: false, imported: data.data.imported, total: data.data.total };
+      const res = await adminApi.uploadModels(formData) as any;
+      if (res.success) {
+        batchResult.value = { error: false, imported: res.data.imported, total: res.data.total };
         loadData(); loadFeatured();
         setTimeout(() => { showBatchImport.value = false; batchJson.value = ''; batchResult.value = null; importFiles.value = []; }, 2000);
+      } else {
+        batchResult.value = { error: true, message: res.message || '导入失败' };
       }
     } catch (e: any) { 
-      batchResult.value = { error: true, message: e.response?.data?.message || e.message }; 
+      batchResult.value = { error: true, message: e.response?.data?.message || e.response?.data?.error?.message || e.message || '上传失败' }; 
     } finally { 
       batchImporting.value = false; 
     }

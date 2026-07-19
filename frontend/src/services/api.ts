@@ -470,7 +470,6 @@ export const adminApi = {
   batchImportModels: (models: any[]) => http.post('/models/batch-import', { models }),
   // 3D模型文件上传
   uploadModels: (formData: FormData) => apiClient.post('/models/upload', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
     timeout: 120000,
   }),
   // 知识图谱数据导入
