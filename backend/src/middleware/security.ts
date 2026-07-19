@@ -222,7 +222,7 @@ export function validatePassword(password: string): PasswordValidationResult {
 // ============================================
 
 export function validateRequestSize(req: Request, res: Response, next: NextFunction): void {
-  const maxBodySize = 10 * 1024 * 1024; // 10MB
+  const maxBodySize = 500 * 1024 * 1024;
   
   let contentLength = 0;
   if (req.headers['content-length']) {
