@@ -300,8 +300,9 @@ async function runBatchImport() {
       formData.append('import_type', importType.value);
       
       const res = await adminApi.uploadModels(formData);
-      if (res.success) {
-        batchResult.value = { error: false, imported: res.data.imported, total: res.data.total };
+      const data = res.data;
+      if (data.success) {
+        batchResult.value = { error: false, imported: data.data.imported, total: data.data.total };
         loadData(); loadFeatured();
         setTimeout(() => { showBatchImport.value = false; batchJson.value = ''; batchResult.value = null; importFiles.value = []; }, 2000);
       }
