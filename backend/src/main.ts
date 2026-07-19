@@ -156,7 +156,12 @@ app.use(morgan(morganFormat, {
 }));
 
 app.use(securityLogger);
-app.use(validateRequestSize);
+app.use((req, res, next) => {
+  if (req.path.startsWith('/api/v1/models/upload')) {
+    return next();
+  }
+  validateRequestSize(req, res, next);
+});
 app.use(sqlInjectionDetection);
 app.use(pathTraversalProtection);
 
