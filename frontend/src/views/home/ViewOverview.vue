@@ -238,7 +238,7 @@
               <ul>
                 <li>原生 WebGL 封装</li>
                 <li>无需额外运行时</li>
-                <li>OBJ格式支持完善</li>
+                <li>3D文件多格式支持完善</li>
               </ul>
             </div>
             <div class="reason-card">
