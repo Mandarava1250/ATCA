@@ -806,15 +806,15 @@ router.post('/ai-configs/test', validateBody(testAISchema), asyncHandler(async (
 /** 确保 user_models 表存在 is_featured 列（失败时静默处理） */
 async function ensureUserModelsFeaturedColumn() {
   try {
-    await execute('media3d', 'ALTER TABLE dbo.user_models ADD [is_featured] BIT NOT NULL DEFAULT 0');
-    console.log('[Admin 3D] 已自动为 user_models 表添加 is_featured 列');
+    await execute('media3d', `
+      IF NOT EXISTS (SELECT * FROM sys.columns WHERE name = 'is_featured' AND object_id = OBJECT_ID('dbo.user_models'))
+      BEGIN
+        ALTER TABLE dbo.user_models ADD [is_featured] BIT NOT NULL DEFAULT 0
+      END
+    `);
+    console.log('[Admin 3D] 已检查并确保 user_models 表存在 is_featured 列');
   } catch (e: any) {
-    const msg = e.message || '';
-    if (msg.includes('already exists') || msg.includes('重复') || msg.includes('COLUMN') || msg.includes('约束') || msg.includes('存在')) {
-      // 列已存在，忽略
-    } else {
-      console.warn('[Admin 3D] 添加 is_featured 列失败:', msg);
-    }
+    console.warn('[Admin 3D] 检查/添加 is_featured 列失败:', e.message);
   }
 }
 

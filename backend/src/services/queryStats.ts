@@ -57,6 +57,11 @@ class QueryStats {
     rowCount: number,
     error?: string
   ): void {
+    if (!sql) {
+      logger.warn('[QueryStats] SQL为空，跳过记录', { dbName, error });
+      return;
+    }
+
     const record: QueryRecord = {
       id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       dbName,
@@ -91,7 +96,7 @@ class QueryStats {
     if (duration > SLOW_QUERY_THRESHOLD && !cached) {
       logger.warn(`慢查询检测 [${dbName}]: ${duration}ms`, {
         sql: sql.substring(0, 100),
-        params: JSON.stringify(params).substring(0, 50),
+        params: params ? JSON.stringify(params).substring(0, 50) : '{}',
       });
     }
   }
