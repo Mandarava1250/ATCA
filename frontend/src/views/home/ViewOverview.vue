@@ -718,6 +718,8 @@ import MermaidChart from '@/components/common/MermaidChart.vue';
 import Navbar from '@/components/common/CommonNavbar.vue';
 
 const activeSection = ref('');
+let lastScrollPosition = 0;
+let lastActiveSection = '';
 
 const navItems = [
   { id: 'section-background', number: '01', label: '项目背景'},
@@ -735,28 +737,37 @@ const navItems = [
 function scrollToSection(id: string) {
   const element = document.getElementById(id);
   if (element) {
-    element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const navbarHeight = 68;
+    const offset = element.offsetTop - navbarHeight - 20;
+    window.scrollTo({ top: offset, behavior: 'smooth' });
   }
 }
 
 function updateActiveSection() {
-  const sections = navItems.map(item => document.getElementById(item.id)).filter(el => el);
-  const scrollPosition = window.scrollY + 150;
+  const navbarHeight = 68;
+  const viewportHeight = window.innerHeight;
+  const scrollPosition = window.scrollY + navbarHeight + viewportHeight * 0.35;
 
-  for (let i = sections.length - 1; i >= 0; i--) {
-    const section = sections[i];
+  for (let i = navItems.length - 1; i >= 0; i--) {
+    const section = document.getElementById(navItems[i].id);
     if (section && section.offsetTop <= scrollPosition) {
-      activeSection.value = navItems[i].id;
-      return;
+      const candidateSection = navItems[i].id;
+      const scrollDiff = Math.abs(window.scrollY - lastScrollPosition);
+      
+      if (scrollDiff > 50 || candidateSection === lastActiveSection) {
+        activeSection.value = candidateSection;
+        lastActiveSection = candidateSection;
+      }
+      break;
     }
   }
-  activeSection.value = '';
+  lastScrollPosition = window.scrollY;
 }
 
 let scrollTimeout: ReturnType<typeof setTimeout>;
 function debounceScroll() {
   clearTimeout(scrollTimeout);
-  scrollTimeout = setTimeout(updateActiveSection, 100);
+  scrollTimeout = setTimeout(updateActiveSection, 150);
 }
 
 onMounted(() => {
