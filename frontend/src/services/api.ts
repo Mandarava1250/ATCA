@@ -11,7 +11,9 @@ export const API_HOST = import.meta.env.VITE_API_HOST || '';
 
 const apiClient = axios.create({
   baseURL: API_BASE,
-  timeout: 45000,
+  timeout: 120000,
+  maxBodyLength: 500 * 1024 * 1024,
+  maxContentLength: 500 * 1024 * 1024,
   headers: {
     'Content-Type': 'application/json',
   },
