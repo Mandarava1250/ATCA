@@ -73,15 +73,61 @@ export function validateUsername(username: string): { valid: boolean; errorKey?:
 
 export function validatePassword(password: string): { valid: boolean; errorKey?: string } {
   if (!password || password.length < 8) {
-    return { valid: false, errorKey: 'errors.passwordTooShort' };
+    return { valid: false, errorKey: 'errors.passwordTooSimple' };
+  }
+  if (!/[A-Z]/.test(password) || !/[a-z]/.test(password)) {
+    return { valid: false, errorKey: 'errors.passwordTooSimple' };
+  }
+  if (!/\d/.test(password)) {
+    return { valid: false, errorKey: 'errors.passwordTooSimple' };
+  }
+  if (!/[^A-Za-z0-9]/.test(password)) {
+    return { valid: false, errorKey: 'errors.passwordTooSimple' };
   }
   return { valid: true };
 }
 
 export function validateEmail(email: string): { valid: boolean; errorKey?: string } {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const emailRegex = /^[a-zA-Z0-9](?:[a-zA-Z0-9._%+-]{0,61}[a-zA-Z0-9])?@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z]{2,})+$/;
   if (!email || !emailRegex.test(email)) {
     return { valid: false, errorKey: 'errors.invalidEmail' };
   }
+  
+  const domain = email.split('@')[1].toLowerCase();
+  const allowedDomains = [
+    'qq.com', 'vip.qq.com', 'foxmail.com',
+    'gmail.com', 'googlemail.com',
+    '163.com', 'vip.163.com', '126.com',
+    '139.com', 'yeah.net',
+    'sina.com', 'sina.cn',
+    'sohu.com', 'sohu.net',
+    'hotmail.com', 'outlook.com', 'live.com', 'msn.com',
+    'yahoo.com', 'yahoo.cn',
+    'aliyun.com', 'alibaba.com',
+    'baidu.com',
+    'jd.com',
+    'meituan.com',
+    'bytedance.com', 'douyin.com', 'tiktok.com',
+    'wechat.com', 'weixin.com',
+    'huawei.com', 'hwccna.net',
+    'microsoft.com',
+    'apple.com',
+    'facebook.com',
+    'twitter.com',
+    'linkedin.com',
+    'github.com',
+  ];
+  
+  const isValidDomain = allowedDomains.some(domainPattern => {
+    if (domainPattern.startsWith('*.')) {
+      return domain.endsWith(domainPattern.substring(2));
+    }
+    return domain === domainPattern || domain.endsWith('.' + domainPattern);
+  });
+  
+  if (!isValidDomain) {
+    return { valid: false, errorKey: 'errors.invalidEmailDomain' };
+  }
+  
   return { valid: true };
 }
