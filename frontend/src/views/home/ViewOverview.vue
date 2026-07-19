@@ -31,7 +31,7 @@
     <section id="section-background" class="section-content">
       <div class="section-card">
         <div class="section-header">
-          <span class="section-number">01</span>
+          <span class="section-number">一</span>
           <h2 class="section-title">项目背景与意义</h2>
         </div>
 
@@ -132,10 +132,117 @@
       </div>
     </section>
 
+    <section id="section-requirements" class="section-content">
+      <div class="section-card">
+        <div class="section-header">
+          <span class="section-number">二</span>
+          <h2 class="section-title">功能需求与非功能需求</h2>
+        </div>
+
+        <div class="two-column">
+          <div class="column">
+            <h3 class="subsection-title">功能需求</h3>
+            <table class="requirement-table">
+              <thead>
+                <tr>
+                  <th>模块</th>
+                  <th>功能描述</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>古建筑浏览</td>
+                  <td>按朝代、类型分类浏览，支持搜索筛选，详情页展示历史沿革</td>
+                </tr>
+                <tr>
+                  <td>用户系统</td>
+                  <td>注册/登录、个人信息管理、积分体系、等级成长</td>
+                </tr>
+                <tr>
+                  <td>收藏功能</td>
+                  <td>收藏感兴趣的古建筑，列表页实时显示收藏状态</td>
+                </tr>
+                <tr>
+                  <td>知识竞赛</td>
+                  <td>多种题型答题竞赛，支持排行榜、积分奖励</td>
+                </tr>
+                <tr>
+                  <td>3D建模工坊</td>
+                  <td>基于Three.js的3D编辑器，OBJ导入、场景编辑、环境控制</td>
+                </tr>
+                <tr>
+                  <td>AI智能问答</td>
+                  <td>集成讯飞星火、通义千问、DeepSeek多模型问答</td>
+                </tr>
+                <tr>
+                  <td>每日签到</td>
+                  <td>每日打卡题目，可选题库已有题目或新建</td>
+                </tr>
+                <tr>
+                  <td>活动管理</td>
+                  <td>线上/线下活动发布管理，支持积分奖励</td>
+                </tr>
+                <tr>
+                  <td>管理后台</td>
+                  <td>用户、建筑、题库、AI、模型、活动全生命周期管理</td>
+                </tr>
+                <tr>
+                  <td>精选模型</td>
+                  <td>管理员标记精选，首页展示推荐内容</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="column">
+            <h3 class="subsection-title">非功能需求</h3>
+            <div class="non-functional-grid">
+              <div class="non-functional-card">
+                <div class="non-functional-icon">
+                  <svg viewBox="0 0 24 24" width="24" height="24">
+                    <path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z" fill="currentColor"/>
+                  </svg>
+                </div>
+                <h4>性能</h4>
+                <p>首屏加载 &lt; 3秒，3D渲染 60fps</p>
+              </div>
+              <div class="non-functional-card">
+                <div class="non-functional-icon">
+                  <svg viewBox="0 0 24 24" width="24" height="24">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z" fill="currentColor"/>
+                  </svg>
+                </div>
+                <h4>兼容性</h4>
+                <p>支持 Chrome、Firefox、Edge、Safari</p>
+              </div>
+              <div class="non-functional-card">
+                <div class="non-functional-icon">
+                  <svg viewBox="0 0 24 24" width="24" height="24">
+                    <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 11c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z" fill="currentColor"/>
+                  </svg>
+                </div>
+                <h4>安全性</h4>
+                <p>JWT认证、SQL注入防护、XSS防护</p>
+              </div>
+              <div class="non-functional-card">
+                <div class="non-functional-icon">
+                  <svg viewBox="0 0 24 24" width="24" height="24">
+                    <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z" fill="currentColor"/>
+                  </svg>
+                </div>
+                <h4>可扩展性</h4>
+                <p>模块化架构，便于功能扩展维护</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <section id="section-tech" class="section-content">
       <div class="section-card">
         <div class="section-header">
-          <span class="section-number">02</span>
+          <span class="section-number">三</span>
           <h2 class="section-title">技术栈总览与选型理由</h2>
         </div>
 
@@ -263,7 +370,7 @@
     <section id="section-features" class="section-content">
       <div class="section-card">
         <div class="section-header">
-          <span class="section-number">03</span>
+          <span class="section-number">四</span>
           <h2 class="section-title">核心功能实现</h2>
         </div>
 
@@ -342,117 +449,10 @@
       </div>
     </section>
 
-    <section id="section-requirements" class="section-content">
-      <div class="section-card">
-        <div class="section-header">
-          <span class="section-number">04</span>
-          <h2 class="section-title">功能需求与非功能需求</h2>
-        </div>
-
-        <div class="two-column">
-          <div class="column">
-            <h3 class="subsection-title">功能需求</h3>
-            <table class="requirement-table">
-              <thead>
-                <tr>
-                  <th>模块</th>
-                  <th>功能描述</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>古建筑浏览</td>
-                  <td>按朝代、类型分类浏览，支持搜索筛选，详情页展示历史沿革</td>
-                </tr>
-                <tr>
-                  <td>用户系统</td>
-                  <td>注册/登录、个人信息管理、积分体系、等级成长</td>
-                </tr>
-                <tr>
-                  <td>收藏功能</td>
-                  <td>收藏感兴趣的古建筑，列表页实时显示收藏状态</td>
-                </tr>
-                <tr>
-                  <td>知识竞赛</td>
-                  <td>多种题型答题竞赛，支持排行榜、积分奖励</td>
-                </tr>
-                <tr>
-                  <td>3D建模工坊</td>
-                  <td>基于Three.js的3D编辑器，OBJ导入、场景编辑、环境控制</td>
-                </tr>
-                <tr>
-                  <td>AI智能问答</td>
-                  <td>集成讯飞星火、通义千问、DeepSeek多模型问答</td>
-                </tr>
-                <tr>
-                  <td>每日签到</td>
-                  <td>每日打卡题目，可选题库已有题目或新建</td>
-                </tr>
-                <tr>
-                  <td>活动管理</td>
-                  <td>线上/线下活动发布管理，支持积分奖励</td>
-                </tr>
-                <tr>
-                  <td>管理后台</td>
-                  <td>用户、建筑、题库、AI、模型、活动全生命周期管理</td>
-                </tr>
-                <tr>
-                  <td>精选模型</td>
-                  <td>管理员标记精选，首页展示推荐内容</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-          <div class="column">
-            <h3 class="subsection-title">非功能需求</h3>
-            <div class="non-functional-grid">
-              <div class="non-functional-card">
-                <div class="non-functional-icon">
-                  <svg viewBox="0 0 24 24" width="24" height="24">
-                    <path d="M12 2L4.5 20.29l.71.71L12 18l6.79 3 .71-.71z" fill="currentColor"/>
-                  </svg>
-                </div>
-                <h4>性能</h4>
-                <p>首屏加载 &lt; 3秒，3D渲染 60fps</p>
-              </div>
-              <div class="non-functional-card">
-                <div class="non-functional-icon">
-                  <svg viewBox="0 0 24 24" width="24" height="24">
-                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z" fill="currentColor"/>
-                  </svg>
-                </div>
-                <h4>兼容性</h4>
-                <p>支持 Chrome、Firefox、Edge、Safari</p>
-              </div>
-              <div class="non-functional-card">
-                <div class="non-functional-icon">
-                  <svg viewBox="0 0 24 24" width="24" height="24">
-                    <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 11c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z" fill="currentColor"/>
-                  </svg>
-                </div>
-                <h4>安全性</h4>
-                <p>JWT认证、SQL注入防护、XSS防护</p>
-              </div>
-              <div class="non-functional-card">
-                <div class="non-functional-icon">
-                  <svg viewBox="0 0 24 24" width="24" height="24">
-                    <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z" fill="currentColor"/>
-                  </svg>
-                </div>
-                <h4>可扩展性</h4>
-                <p>模块化架构，便于功能扩展维护</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
     <section id="section-workshop" class="section-content">
       <div class="section-card workshop-section">
         <div class="section-header workshop-header">
-          <span class="section-number">05</span>
+          <span class="section-number">五</span>
           <h2 class="section-title">3D建模工坊与知识竞赛</h2>
         </div>
         <div class="workshop-main">
@@ -625,7 +625,7 @@
     <section id="section-er" class="section-content">
       <div class="section-card">
         <div class="section-header">
-          <span class="section-number">06</span>
+          <span class="section-number">六</span>
           <h2 class="section-title">数据库E-R图</h2>
         </div>
         <div class="er-image-container">
@@ -637,7 +637,7 @@
     <section id="section-architecture-flow" class="section-content">
       <div class="section-card">
         <div class="section-header">
-          <span class="section-number">07</span>
+          <span class="section-number">七</span>
           <h2 class="section-title">系统架构流程图</h2>
         </div>
 
@@ -651,8 +651,13 @@
           <MermaidChart :code="mermaidCoreModule" />
         </div>
 
-        <div id="section-auth" class="section-header">
-          <span class="section-number">08</span>
+      </div>
+    </section>
+
+    <section id="section-auth" class="section-content">
+      <div class="section-card">
+        <div class="section-header">
+          <span class="section-number">八</span>
           <h2 class="section-title">用户认证流程图</h2>
         </div>
 
@@ -670,9 +675,13 @@
           <h3 class="subsection-title">2.3 会话管理与安全机制</h3>
           <MermaidChart :code="mermaidSessionSecurity" />
         </div>
+      </div>
+    </section>
 
-        <div id="section-db-pool" class="section-header">
-          <span class="section-number">09</span>
+    <section id="section-db-pool" class="section-content">
+      <div class="section-card">
+        <div class="section-header">
+          <span class="section-number">九</span>
           <h2 class="section-title">数据库连接池管理流程图</h2>
         </div>
 
@@ -685,9 +694,13 @@
           <h3 class="subsection-title">3.2 连接池分配与回收流程</h3>
           <MermaidChart :code="mermaidPoolRecycle" />
         </div>
+      </div>
+    </section>
 
-        <div id="section-ai-manager" class="section-header">
-          <span class="section-number">10</span>
+    <section id="section-ai-manager" class="section-content">
+      <div class="section-card">
+        <div class="section-header">
+          <span class="section-number">十</span>
           <h2 class="section-title">本地AI管理器工作流程图</h2>
         </div>
 
@@ -722,16 +735,16 @@ let lastScrollPosition = 0;
 let lastActiveSection = '';
 
 const navItems = [
-  { id: 'section-background', number: '01', label: '项目背景'},
-  { id: 'section-tech', number: '02', label: '技术栈' },
-  { id: 'section-features', number: '03', label: '核心功能'},
-  { id: 'section-requirements', number: '04', label: '需求分析'},
-  { id: 'section-workshop', number: '05', label: '3D工坊'},
-  { id: 'section-er', number: '06', label: '数据库E-R图' },
-  { id: 'section-architecture-flow', number: '07', label: '系统架构' },
-  { id: 'section-auth', number: '08', label: '用户认证'},
-  { id: 'section-db-pool', number: '09', label: '连接池' },
-  { id: 'section-ai-manager', number: '10', label: 'AI管理器'},
+  { id: 'section-background', number: '一', label: '项目背景'},
+  { id: 'section-requirements', number: '二', label: '需求分析'},
+  { id: 'section-tech', number: '三', label: '技术栈' },
+  { id: 'section-features', number: '四', label: '核心功能'},
+  { id: 'section-workshop', number: '五', label: '3D工坊'},
+  { id: 'section-er', number: '六', label: '数据库E-R图' },
+  { id: 'section-architecture-flow', number: '七', label: '系统架构' },
+  { id: 'section-auth', number: '八', label: '用户认证'},
+  { id: 'section-db-pool', number: '九', label: '连接池' },
+  { id: 'section-ai-manager', number: '十', label: 'AI管理器'},
 ];
 
 function scrollToSection(id: string) {
