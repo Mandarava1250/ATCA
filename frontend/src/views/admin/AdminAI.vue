@@ -90,10 +90,14 @@
               v-for="p in providers"
               :key="p.value"
               class="provider-card"
+              :data-provider="p.value"
               :class="{ active: form.provider === p.value }"
               @click="selectProvider(p.value)"
+              :title="p.label + ' - ' + p.desc"
             >
-              <span class="provider-icon">{{ p.icon }}</span>
+              <div class="provider-icon-wrapper">
+                <span class="provider-icon" v-html="p.icon"></span>
+              </div>
               <span class="provider-label">{{ p.label }}</span>
               <span class="provider-desc">{{ p.desc }}</span>
             </button>
@@ -295,14 +299,14 @@ const form = ref({
 });
 
 const providers = [
-  { value: 'openai', label: 'OpenAI', icon: 'O', desc: 'GPT系列', models: ['gpt-4o','gpt-4o-mini','gpt-3.5-turbo'], placeholder: { model: 'gpt-4o', endpoint: 'https://api.openai.com/v1/chat/completions' } },
-  { value: 'qwan', label: '通义千问', icon: '千', desc: '阿里云百炼', models: ['qwen-turbo','qwen-plus','qwen-max','qwen-coder-plus','qwen2.5-72b-instruct','qwen2.5-14b-instruct'], placeholder: { model: 'qwen-turbo', endpoint: 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions' } },
-  { value: 'deepseek', label: 'DeepSeek', icon: 'D', desc: '深度求索', models: ['deepseek-chat','deepseek-coder'], placeholder: { model: 'deepseek-chat', endpoint: 'https://api.deepseek.com/v1/chat/completions' } },
-  { value: 'kimi', label: 'Kimi', icon: '月', desc: '月之暗面', models: ['moonshot-v1-8k','moonshot-v1-32k','moonshot-v1-128k'], placeholder: { model: 'moonshot-v1-8k', endpoint: 'https://api.moonshot.cn/v1/chat/completions' } },
-  { value: 'spark', label: '讯飞星火', icon: '星', desc: '支持HTTP/WebSocket', models: ['lite','generalv3','pro-128k','generalv3.5','max-32k','4.0Ultra'], placeholder: { model: 'lite', endpoint: 'https://spark-api-open.xf-yun.com/v1/chat/completions' } },
-  { value: 'baidu', label: '百度千帆', icon: '百', desc: '文心大模型', models: ['ernie-4.0-turbo','ernie-3.5-128k'], placeholder: { model: 'ernie-4.0-turbo', endpoint: 'https://qianfan.baidubce.com/v2/chat/completions' } },
-  { value: 'aliyun', label: '阿里云', icon: '云', desc: '通义千问原生', models: ['qwen-turbo','qwen-plus','qwen-max'], placeholder: { model: 'qwen-turbo', endpoint: 'https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation' } },
-  { value: 'custom', label: '自定义', icon: '自', desc: '其他兼容OpenAI的API', models: [], placeholder: { model: 'custom-model', endpoint: 'https://api.example.com/v1/chat/completions' } },
+  { value: 'openai', label: 'OpenAI', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/><circle cx="12" cy="12" r="8"/></svg>', desc: 'GPT系列', models: ['gpt-4o','gpt-4o-mini','gpt-3.5-turbo'], placeholder: { model: 'gpt-4o', endpoint: 'https://api.openai.com/v1/chat/completions' } },
+  { value: 'qwan', label: '通义千问', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/><path d="M11 7h6M12 12h3"/></svg>', desc: '阿里云百炼', models: ['qwen-turbo','qwen-plus','qwen-max','qwen-coder-plus','qwen2.5-72b-instruct','qwen2.5-14b-instruct'], placeholder: { model: 'qwen-turbo', endpoint: 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions' } },
+  { value: 'deepseek', label: 'DeepSeek', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/><circle cx="11" cy="11" r="3"/></svg>', desc: '深度求索', models: ['deepseek-chat','deepseek-coder'], placeholder: { model: 'deepseek-chat', endpoint: 'https://api.deepseek.com/v1/chat/completions' } },
+  { value: 'kimi', label: 'Kimi', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/><path d="M13 10l-3 5h4l-3 5"/></svg>', desc: '月之暗面', models: ['moonshot-v1-8k','moonshot-v1-32k','moonshot-v1-128k'], placeholder: { model: 'moonshot-v1-8k', endpoint: 'https://api.moonshot.cn/v1/chat/completions' } },
+  { value: 'spark', label: '讯飞星火', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/><path d="M12 6v6"/></svg>', desc: '支持HTTP/WebSocket', models: ['lite','generalv3','pro-128k','generalv3.5','max-32k','4.0Ultra'], placeholder: { model: 'lite', endpoint: 'https://spark-api-open.xf-yun.com/v1/chat/completions' } },
+  { value: 'baidu', label: '百度千帆', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>', desc: '文心大模型', models: ['ernie-4.0-turbo','ernie-3.5-128k'], placeholder: { model: 'ernie-4.0-turbo', endpoint: 'https://qianfan.baidubce.com/v2/chat/completions' } },
+  { value: 'aliyun', label: '阿里云', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17.5 19H9a7 7 0 116.71-9h1.79a4.5 4.5 0 110 9z"/></svg>', desc: '通义千问原生', models: ['qwen-turbo','qwen-plus','qwen-max'], placeholder: { model: 'qwen-turbo', endpoint: 'https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation' } },
+  { value: 'custom', label: '自定义', icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>', desc: '其他兼容OpenAI的API', models: [], placeholder: { model: 'custom-model', endpoint: 'https://api.example.com/v1/chat/completions' } },
 ];
 
 const currentProvider = computed(() => providers.find(p => p.value === form.value.provider));
@@ -482,13 +486,15 @@ onMounted(() => { loadData(); });
 
 .ai-name { font-weight: 600; }
 .ai-desc { font-size: 0.6875rem; color: var(--color-text-muted); margin-top: 2px; }
-.provider-tag { font-size: 0.75rem; padding: 2px 8px; border-radius: var(--radius-sm); font-weight: 500; }
-.provider-tag.spark { background: rgba(234, 88, 12, 0.1); color: #c2410c; }
-.provider-tag.openai { background: rgba(16, 185, 129, 0.1); color: #059669; }
-.provider-tag.qwan { background: rgba(59, 130, 246, 0.1); color: #2563eb; }
-.provider-tag.deepseek { background: rgba(99, 102, 241, 0.1); color: #4f46e5; }
-.provider-tag.baidu { background: rgba(37, 99, 235, 0.1); color: #1d4ed8; }
-.provider-tag.custom { background: rgba(100, 116, 139, 0.1); color: #64748b; }
+.provider-tag { font-size: 0.75rem; padding: 3px 10px; border-radius: var(--r-sm); font-weight: 500; border: 1px solid transparent; transition: all var(--t-fast); }
+.provider-tag.spark { background: rgba(194, 123, 123, 0.1); color: var(--color-red); border-color: rgba(194, 123, 123, 0.2); }
+.provider-tag.openai { background: rgba(90, 123, 108, 0.1); color: var(--c-jade); border-color: rgba(90, 123, 108, 0.2); }
+.provider-tag.qwan { background: rgba(123, 158, 194, 0.1); color: var(--color-blue); border-color: rgba(123, 158, 194, 0.2); }
+.provider-tag.deepseek { background: rgba(201, 169, 110, 0.1); color: var(--gold); border-color: rgba(201, 169, 110, 0.2); }
+.provider-tag.kimi { background: rgba(201, 169, 110, 0.1); color: var(--gold); border-color: rgba(201, 169, 110, 0.2); }
+.provider-tag.baidu { background: rgba(123, 158, 194, 0.1); color: var(--color-blue); border-color: rgba(123, 158, 194, 0.2); }
+.provider-tag.aliyun { background: rgba(123, 194, 181, 0.1); color: var(--color-cyan); border-color: rgba(123, 194, 181, 0.2); }
+.provider-tag.custom { background: rgba(100, 116, 139, 0.1); color: var(--text-muted); border-color: rgba(100, 116, 139, 0.2); }
 
 .endpoint-text { font-size: 0.6875rem; color: var(--color-text-muted); max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
 
@@ -526,13 +532,48 @@ onMounted(() => { loadData(); });
 .form-actions { padding: 20px 24px; display: flex; gap: 12px; justify-content: flex-end; }
 
 /* 提供商选择 */
-.provider-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
-.provider-card { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 12px; border: 2px solid var(--color-border); border-radius: var(--radius-md); cursor: pointer; background: var(--color-surface); transition: all var(--transition-fast); }
-.provider-card:hover { border-color: var(--color-primary); background: var(--color-surface-warm); }
-.provider-card.active { border-color: var(--color-primary); background: rgba(var(--color-primary-rgb), 0.06); }
-.provider-icon { font-size: 1.25rem; }
-.provider-label { font-size: 0.75rem; font-weight: 600; }
-.provider-desc { font-size: 0.625rem; color: var(--color-text-muted); }
+.provider-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+.provider-card { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 20px 14px; border: 2px solid var(--border); border-radius: var(--r-lg); cursor: pointer; background: var(--bg-card); transition: all var(--t-fast); min-height: 120px; position: relative; overflow: hidden; }
+.provider-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: transparent; transition: background var(--t-fast); }
+.provider-card:hover { border-color: var(--gold-dim); background: var(--bg-hover); transform: translateY(-2px); }
+.provider-card:hover::before { background: var(--gold); }
+.provider-card.active { border-color: var(--gold); background: rgba(var(--gold-rgb), 0.06); box-shadow: 0 4px 20px rgba(var(--gold-rgb), 0.15); }
+.provider-card.active::before { background: var(--gold); }
+.provider-icon-wrapper { width: 52px; height: 52px; border-radius: var(--r-md); display: flex; align-items: center; justify-content: center; background: var(--bg); transition: all var(--t-fast); }
+.provider-card:hover .provider-icon-wrapper { transform: scale(1.1); }
+.provider-card.active .provider-icon-wrapper { background: rgba(var(--gold-rgb), 0.12); }
+.provider-icon { width: 28px; height: 28px; stroke-width: 1.5; }
+.provider-label { font-size: 0.8125rem; font-weight: 600; color: var(--text); font-family: var(--font-serif); }
+.provider-desc { font-size: 0.7rem; color: var(--text-muted); text-align: center; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* 各提供商颜色标识 */
+.provider-card[data-provider="openai"] .provider-icon { stroke: var(--c-jade); }
+.provider-card[data-provider="openai"] .provider-icon-wrapper { background: rgba(90, 123, 108, 0.1); }
+.provider-card[data-provider="qwan"] .provider-icon { stroke: var(--color-blue); }
+.provider-card[data-provider="qwan"] .provider-icon-wrapper { background: rgba(123, 158, 194, 0.1); }
+.provider-card[data-provider="deepseek"] .provider-icon { stroke: var(--gold); }
+.provider-card[data-provider="deepseek"] .provider-icon-wrapper { background: rgba(201, 169, 110, 0.1); }
+.provider-card[data-provider="kimi"] .provider-icon { stroke: var(--gold); }
+.provider-card[data-provider="kimi"] .provider-icon-wrapper { background: rgba(201, 169, 110, 0.1); }
+.provider-card[data-provider="spark"] .provider-icon { stroke: var(--color-red); }
+.provider-card[data-provider="spark"] .provider-icon-wrapper { background: rgba(194, 123, 123, 0.1); }
+.provider-card[data-provider="baidu"] .provider-icon { stroke: var(--color-blue); }
+.provider-card[data-provider="baidu"] .provider-icon-wrapper { background: rgba(123, 158, 194, 0.1); }
+.provider-card[data-provider="aliyun"] .provider-icon { stroke: var(--color-cyan); }
+.provider-card[data-provider="aliyun"] .provider-icon-wrapper { background: rgba(123, 194, 181, 0.1); }
+.provider-card[data-provider="custom"] .provider-icon { stroke: var(--text-muted); }
+.provider-card[data-provider="custom"] .provider-icon-wrapper { background: rgba(100, 116, 139, 0.1); }
+
+/* 响应式布局 */
+@media screen and (max-width: 768px) {
+  .provider-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .provider-card { padding: 16px 12px; min-height: 100px; }
+  .provider-icon-wrapper { width: 44px; height: 44px; }
+  .provider-icon { width: 24px; height: 24px; }
+}
+@media screen and (max-width: 480px) {
+  .provider-grid { grid-template-columns: 1fr; }
+}
 
 /* 模型选择 */
 .model-input-group { display: flex; gap: 8px; }

@@ -1,7 +1,26 @@
 <template>
   <div class="overview-page">
     <Navbar />
-    <section class="section-hero">
+    <div class="overview-container">
+      <aside class="sidebar-nav">
+        <nav class="sidebar-menu">
+          <ul class="menu-list">
+            <li v-for="item in navItems" :key="item.id">
+              <a 
+                :href="'#' + item.id" 
+                class="menu-item"
+                :class="{ active: activeSection === item.id }"
+                @click="scrollToSection(item.id)"
+              >
+                <span class="menu-number">{{ item.number }}</span>
+                <span class="menu-label">{{ item.label }}</span>
+              </a>
+            </li>
+          </ul>
+        </nav>
+      </aside>
+      <main class="overview-content">
+        <section class="section-hero">
       <div class="hero-content">
         <h1 class="hero-title">华夏营造</h1>
         <p class="hero-subtitle">中国古代建筑文化虚拟展览馆</p>
@@ -9,7 +28,7 @@
       </div>
     </section>
 
-    <section class="section-content">
+    <section id="section-background" class="section-content">
       <div class="section-card">
         <div class="section-header">
           <span class="section-number">01</span>
@@ -113,7 +132,7 @@
       </div>
     </section>
 
-    <section class="section-content">
+    <section id="section-tech" class="section-content">
       <div class="section-card">
         <div class="section-header">
           <span class="section-number">02</span>
@@ -241,7 +260,7 @@
       </div>
     </section>
 
-    <section class="section-content">
+    <section id="section-features" class="section-content">
       <div class="section-card">
         <div class="section-header">
           <span class="section-number">03</span>
@@ -323,9 +342,12 @@
       </div>
     </section>
 
-    <section class="section-content">
+    <section id="section-requirements" class="section-content">
       <div class="section-card">
-        <h2 class="section-title">功能需求与非功能需求</h2>
+        <div class="section-header">
+          <span class="section-number">04</span>
+          <h2 class="section-title">功能需求与非功能需求</h2>
+        </div>
 
         <div class="two-column">
           <div class="column">
@@ -427,8 +449,12 @@
       </div>
     </section>
 
-    <section class="section-content">
+    <section id="section-workshop" class="section-content">
       <div class="section-card workshop-section">
+        <div class="section-header workshop-header">
+          <span class="section-number">05</span>
+          <h2 class="section-title">3D建模工坊与知识竞赛</h2>
+        </div>
         <div class="workshop-main">
           <div class="workshop-image-container">
             <img src="https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=ancient%20Chinese%20traditional%20architecture%20pagoda%20temple%20with%20intricate%20wooden%20details%20and%20beautiful%20landscape&image_size=landscape_16_9" alt="古建筑" class="workshop-image" />
@@ -596,7 +622,7 @@
       </div>
     </section>
     
-    <section class="section-content">
+    <section id="section-er" class="section-content">
       <div class="section-card">
         <div class="section-header">
           <span class="section-number">06</span>
@@ -608,7 +634,7 @@
       </div>
     </section>
 
-    <section class="section-content">
+    <section id="section-architecture-flow" class="section-content">
       <div class="section-card">
         <div class="section-header">
           <span class="section-number">07</span>
@@ -625,8 +651,8 @@
           <MermaidChart :code="mermaidCoreModule" />
         </div>
 
-        <div class="section-header">
-          <span class="section-number">07</span>
+        <div id="section-auth" class="section-header">
+          <span class="section-number">08</span>
           <h2 class="section-title">用户认证流程图</h2>
         </div>
 
@@ -645,8 +671,8 @@
           <MermaidChart :code="mermaidSessionSecurity" />
         </div>
 
-        <div class="section-header">
-          <span class="section-number">08</span>
+        <div id="section-db-pool" class="section-header">
+          <span class="section-number">09</span>
           <h2 class="section-title">数据库连接池管理流程图</h2>
         </div>
 
@@ -660,8 +686,8 @@
           <MermaidChart :code="mermaidPoolRecycle" />
         </div>
 
-        <div class="section-header">
-          <span class="section-number">09</span>
+        <div id="section-ai-manager" class="section-header">
+          <span class="section-number">10</span>
           <h2 class="section-title">本地AI管理器工作流程图</h2>
         </div>
 
@@ -681,13 +707,67 @@
         </div>
       </div>
     </section>
+      </main>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, onMounted, onUnmounted } from 'vue';
 import MermaidChart from '@/components/common/MermaidChart.vue';
 import Navbar from '@/components/common/CommonNavbar.vue';
+
+const activeSection = ref('');
+
+const navItems = [
+  { id: 'section-background', number: '01', label: '项目背景'},
+  { id: 'section-tech', number: '02', label: '技术栈' },
+  { id: 'section-features', number: '03', label: '核心功能'},
+  { id: 'section-requirements', number: '04', label: '需求分析'},
+  { id: 'section-workshop', number: '05', label: '3D工坊'},
+  { id: 'section-er', number: '06', label: '数据库E-R图' },
+  { id: 'section-architecture-flow', number: '07', label: '系统架构' },
+  { id: 'section-auth', number: '08', label: '用户认证'},
+  { id: 'section-db-pool', number: '09', label: '连接池' },
+  { id: 'section-ai-manager', number: '10', label: 'AI管理器'},
+];
+
+function scrollToSection(id: string) {
+  const element = document.getElementById(id);
+  if (element) {
+    element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+}
+
+function updateActiveSection() {
+  const sections = navItems.map(item => document.getElementById(item.id)).filter(el => el);
+  const scrollPosition = window.scrollY + 150;
+
+  for (let i = sections.length - 1; i >= 0; i--) {
+    const section = sections[i];
+    if (section && section.offsetTop <= scrollPosition) {
+      activeSection.value = navItems[i].id;
+      return;
+    }
+  }
+  activeSection.value = '';
+}
+
+let scrollTimeout: ReturnType<typeof setTimeout>;
+function debounceScroll() {
+  clearTimeout(scrollTimeout);
+  scrollTimeout = setTimeout(updateActiveSection, 100);
+}
+
+onMounted(() => {
+  window.addEventListener('scroll', debounceScroll);
+  updateActiveSection();
+});
+
+onUnmounted(() => {
+  window.removeEventListener('scroll', debounceScroll);
+  clearTimeout(scrollTimeout);
+});
 
 const mermaidArchitecture = ref(`
 graph TB
@@ -2210,6 +2290,134 @@ graph TB
   max-width: 100%;
   height: auto;
   border-radius: var(--r-sm);
+}
+
+.overview-container {
+  display: flex;
+  gap: 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+.sidebar-nav {
+  position: sticky;
+  top: 92px;
+  flex-shrink: 0;
+  width: 200px;
+  height: calc(100vh - 92px);
+  overflow-y: auto;
+}
+
+.sidebar-menu {
+  background: rgba(36, 32, 28, 0.8);
+  border: 1px solid rgba(201, 169, 110, 0.1);
+  border-radius: var(--r-lg);
+  padding: 16px 0;
+}
+
+.menu-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  color: var(--text-muted);
+  text-decoration: none;
+  font-size: 0.8125rem;
+  transition: all 0.2s ease;
+  border-left: 3px solid transparent;
+}
+
+.menu-item:hover {
+  background: rgba(201, 169, 110, 0.08);
+  color: var(--text);
+}
+
+.menu-item.active {
+  background: rgba(201, 169, 110, 0.12);
+  color: var(--gold);
+  border-left-color: var(--gold);
+}
+
+.menu-icon {
+  font-size: 1rem;
+}
+
+.menu-number {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: rgba(201, 169, 110, 0.6);
+  min-width: 24px;
+}
+
+.menu-item.active .menu-number {
+  color: var(--gold);
+}
+
+.menu-label {
+  flex: 1;
+}
+
+.overview-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.section-icon {
+  font-size: 1.25rem;
+  margin-right: 12px;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 2px solid rgba(201, 169, 110, 0.15);
+}
+
+.section-number {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--gold);
+  font-family: 'Noto Serif SC','STSong',serif;
+  min-width: 40px;
+}
+
+.section-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0;
+  font-family: 'Noto Serif SC','STSong',serif;
+}
+
+.section-content {
+  margin-bottom: 32px;
+}
+
+.workshop-header {
+  background: transparent;
+  border: none;
+  padding-bottom: 0;
+  margin-bottom: 20px;
+}
+
+@media screen and (max-width: 1024px) {
+  .sidebar-nav {
+    display: none;
+  }
+  
+  .overview-container {
+    padding: 0 16px;
+  }
 }
 
 @media screen and (max-width: 768px) {
