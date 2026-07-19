@@ -299,7 +299,7 @@ async function runBatchImport() {
       }
       formData.append('import_type', importType.value);
       
-      const res = await adminApi.uploadModels(formData) as any;
+      const res = await adminApi.uploadModels(formData);
       if (res.success) {
         batchResult.value = { error: false, imported: res.data.imported, total: res.data.total };
         loadData(); loadFeatured();
@@ -308,6 +308,7 @@ async function runBatchImport() {
         batchResult.value = { error: true, message: res.message || '导入失败' };
       }
     } catch (e: any) { 
+      console.error('[Upload] 上传失败:', e);
       batchResult.value = { error: true, message: e.response?.data?.message || e.response?.data?.error?.message || e.message || '上传失败' }; 
     } finally { 
       batchImporting.value = false; 
