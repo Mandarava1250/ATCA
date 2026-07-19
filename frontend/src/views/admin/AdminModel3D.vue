@@ -285,8 +285,34 @@ async function deleteModel(id: number) {
 }
 
 async function runBatchImport() {
-  if (!batchJson.value.trim()) { batchResult.value = { error: true, message: '请输入JSON数据' }; return; }
+  if (!batchJson.value.trim() && importFiles.value.length === 0) { 
+    batchResult.value = { error: true, message: '请选择文件或输入JSON数据' }; 
+    return; 
+  }
   batchImporting.value = true; batchResult.value = null;
+  
+  if (importFiles.value.length > 0) {
+    try {
+      const formData = new FormData();
+      for (const file of importFiles.value) {
+        formData.append('files', file);
+      }
+      formData.append('import_type', importType.value);
+      
+      const res = await adminApi.uploadModels(formData);
+      if (res.success) {
+        batchResult.value = { error: false, imported: res.data.imported, total: res.data.total };
+        loadData(); loadFeatured();
+        setTimeout(() => { showBatchImport.value = false; batchJson.value = ''; batchResult.value = null; importFiles.value = []; }, 2000);
+      }
+    } catch (e: any) { 
+      batchResult.value = { error: true, message: e.response?.data?.message || e.message }; 
+    } finally { 
+      batchImporting.value = false; 
+    }
+    return;
+  }
+  
   try {
     let models: any[] = [];
     const text = batchJson.value.trim();

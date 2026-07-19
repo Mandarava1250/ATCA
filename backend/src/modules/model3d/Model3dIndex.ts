@@ -5,15 +5,50 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import sql from 'mssql';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
 import { query, execute, isMockMode, transaction } from '../../config/database';
 import { authMiddleware, AuthRequest } from '../../middleware/auth';
 import { validateBody, validateParams } from '../../middleware/validation';
 import { asyncHandler } from '../../middleware/errorHandler';
 import { mockComponentDefs, mockTemplates } from '../../utils/mockData';
 import { createLogger } from '../../utils/logger';
+import { config } from '../../config/app';
 
 const router = Router();
 const logger = createLogger('Model3D');
+
+const uploadDir = path.resolve(config.upload.dir, 'models');
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+const modelUpload = multer({
+  storage: multer.diskStorage({
+    destination: (_req, _file, cb) => {
+      cb(null, uploadDir);
+    },
+    filename: (_req, file, cb) => {
+      const ext = path.extname(file.originalname).toLowerCase();
+      const unique = Date.now() + '-' + Math.round(Math.random() * 1e9);
+      cb(null, `model-${unique}${ext}`);
+    },
+  }),
+  limits: {
+    fileSize: 200 * 1024 * 1024,
+    files: 20,
+  },
+  fileFilter: (_req, file, cb) => {
+    const allowedExts = ['.obj', '.mtl', '.glb', '.gltf', '.json'];
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (allowedExts.includes(ext)) {
+      cb(null, true);
+    } else {
+      cb(new Error('不允许的文件类型'));
+    }
+  },
+});
 
 const idParamSchema = z.object({ id: z.string().regex(/^\d+$/) });
 const saveModelSchema = z.object({
@@ -463,6 +498,106 @@ router.post('/batch-import', authMiddleware, validateBody(batchImportSchema), as
     data: { imported, total: models.length, errors: errors.length > 0 ? errors : undefined },
     message: `成功导入 ${imported}/${models.length} 个模型${errors.length > 0 ? `，${errors.length} 个失败` : ''}`
   });
+}));
+
+router.post('/upload', authMiddleware, modelUpload.array('files', 20), asyncHandler(async (req: AuthRequest, res) => {
+  const userId = req.user!.userId;
+  const importType = (req.body as any).import_type || 'model';
+  const files = req.files as Express.Multer.File[];
+  let imported = 0;
+  const errors: string[] = [];
+
+  if (!files || files.length === 0) {
+    return res.status(400).json({ success: false, message: '请选择要上传的文件' });
+  }
+
+  const objFiles = files.filter(f => f.originalname.toLowerCase().endsWith('.obj'));
+  const mtlMap = new Map<string, string>();
+  for (const file of files) {
+    if (file.originalname.toLowerCase().endsWith('.mtl')) {
+      const base = file.originalname.replace(/\.mtl$/i, '').toLowerCase();
+      mtlMap.set(base, fs.readFileSync(file.path, 'utf-8'));
+      fs.unlinkSync(file.path);
+    }
+  }
+
+  try {
+    await transaction('media3d', async (tx) => {
+      for (const objFile of objFiles) {
+        const modelName = objFile.originalname.replace(/\.obj$/i, '');
+        let modelData = fs.readFileSync(objFile.path, 'utf-8');
+        fs.unlinkSync(objFile.path);
+
+        const baseName = modelName.toLowerCase();
+        if (mtlMap.has(baseName)) {
+          modelData = '# MTL_INLINE_START\n' + mtlMap.get(baseName)! + '\n# MTL_INLINE_END\n' + modelData;
+        }
+
+        if (importType === 'building') {
+          const request = tx.request();
+          request
+            .input('userId', sql.Int, userId)
+            .input('modelName', sql.NVarChar(sql.MAX), modelName)
+            .input('modelData', sql.NVarChar(sql.MAX), modelData)
+            .input('thumbnailUrl', sql.NVarChar(sql.MAX), null);
+          await request.query(
+            'INSERT INTO dbo.user_models ([user_id],[model_name],[model_data],[thumbnail_url],[is_public]) VALUES (@userId,@modelName,@modelData,@thumbnailUrl,1)'
+          );
+        } else {
+          try {
+            const templateRequest = tx.request();
+            templateRequest
+              .input('name', sql.NVarChar(255), modelName)
+              .input('desc', sql.NVarChar(sql.MAX), '管理员导入的精选模型')
+              .input('cat', sql.NVarChar(50), '古建筑')
+              .input('btype', sql.NVarChar(50), '传统建筑')
+              .input('era', sql.NVarChar(50), '传统')
+              .input('complexity', sql.Int, 2)
+              .input('thumb', sql.NVarChar(sql.MAX), null)
+              .input('struct', sql.NVarChar(sql.MAX), modelData);
+            await templateRequest.query(
+              'INSERT INTO dbo.building_templates ([template_name],[description],[category],[building_type],[era],[complexity_level],[thumbnail_url],[is_featured],[is_active],[template_structure]) VALUES (@name,@desc,@cat,@btype,@era,@complexity,@thumb,1,1,@struct)'
+            );
+
+            const userModelRequest = tx.request();
+            userModelRequest
+              .input('userId', sql.Int, userId)
+              .input('modelName', sql.NVarChar(sql.MAX), '[精选] ' + modelName)
+              .input('modelData', sql.NVarChar(sql.MAX), modelData)
+              .input('thumbnailUrl', sql.NVarChar(sql.MAX), null);
+            await userModelRequest.query(
+              'INSERT INTO dbo.user_models ([user_id],[model_name],[model_data],[thumbnail_url],[is_public]) VALUES (@userId,@modelName,@modelData,@thumbnailUrl,1)'
+            );
+          } catch (e: any) {
+            logger.warn('[Upload] building_templates插入失败，回退到user_models:', e.message);
+            const fallbackRequest = tx.request();
+            fallbackRequest
+              .input('userId', sql.Int, userId)
+              .input('modelName', sql.NVarChar(sql.MAX), modelName)
+              .input('modelData', sql.NVarChar(sql.MAX), modelData)
+              .input('thumbnailUrl', sql.NVarChar(sql.MAX), null);
+            await fallbackRequest.query(
+              'INSERT INTO dbo.user_models ([user_id],[model_name],[model_data],[thumbnail_url],[is_public]) VALUES (@userId,@modelName,@modelData,@thumbnailUrl,1)'
+            );
+          }
+        }
+        imported++;
+      }
+    });
+  } catch (txError: any) {
+    logger.error('[Upload] 文件上传导入事务失败:', txError.message);
+    errors.push(txError.message);
+    for (const objFile of objFiles) {
+      try { fs.unlinkSync(objFile.path); } catch { }
+    }
+  }
+
+  res.json({
+    success: imported > 0,
+    data: { imported, total: objFiles.length, errors: errors.length > 0 ? errors : undefined },
+    message: `成功导入 ${imported}/${objFiles.length} 个模型${errors.length > 0 ? `，${errors.length} 个失败` : ''}`
+  });
+  return;
 }));
 
 export default router;

@@ -468,6 +468,8 @@ export const adminApi = {
   deleteReplyAdmin: (id: number) => http.delete(`/social/admin/forum/replies/${id}`),
   // 3D模型批量导入
   batchImportModels: (models: any[]) => http.post('/models/batch-import', { models }),
+  // 3D模型文件上传
+  uploadModels: (formData: FormData) => http.post('/models/upload', formData),
   // 知识图谱数据导入
   importKnowledgeGraph: (data: { format: string; data: string; conflictStrategy: string; validateOnly: boolean; batchSize: number }) =>
       http.post<{ success: boolean; data?: any; error?: { message: string } }>('/admin/knowledge-graph/import', data),
