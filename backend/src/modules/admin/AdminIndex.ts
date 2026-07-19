@@ -1006,23 +1006,30 @@ router.delete('/models/:id', asyncHandler(async (req: any, res) => {
   const modelId = parseInt(id);
 
   try {
+    let deletedCount = 0;
     if (source === 'admin') {
-      await execute('media3d', 'DELETE FROM dbo.building_templates WHERE [template_id] = @id', { id: modelId });
+      const result = await execute('media3d', 'DELETE FROM dbo.building_templates WHERE [template_id] = @id', { id: modelId });
+      if (result && (result.rowsAffected as any[])?.[0] > 0) deletedCount += (result.rowsAffected as any[])[0];
     } else if (source === 'user') {
-      await execute('media3d', 'DELETE FROM dbo.user_models WHERE [model_id] = @id', { id: modelId });
+      const result = await execute('media3d', 'DELETE FROM dbo.user_models WHERE [model_id] = @id', { id: modelId });
+      if (result && (result.rowsAffected as any[])?.[0] > 0) deletedCount += (result.rowsAffected as any[])[0];
     } else {
-      // 未指定 source：先尝试 building_templates，再尝试 user_models
-      let deleted = false;
       try {
-        const result = await execute('media3d', 'DELETE FROM dbo.building_templates WHERE [template_id] = @id', { id: modelId });
-        if (result && (result.rowsAffected as any[])?.[0] > 0) deleted = true;
+        const result1 = await execute('media3d', 'DELETE FROM dbo.building_templates WHERE [template_id] = @id', { id: modelId });
+        if (result1 && (result1.rowsAffected as any[])?.[0] > 0) deletedCount += (result1.rowsAffected as any[])[0];
       } catch (e) { /* ignore */ }
 
-      if (!deleted) {
-        await execute('media3d', 'DELETE FROM dbo.user_models WHERE [model_id] = @id', { id: modelId });
-      }
+      try {
+        const result2 = await execute('media3d', 'DELETE FROM dbo.user_models WHERE [model_id] = @id', { id: modelId });
+        if (result2 && (result2.rowsAffected as any[])?.[0] > 0) deletedCount += (result2.rowsAffected as any[])[0];
+      } catch (e) { /* ignore */ }
     }
-    res.json({ success: true, message: '模型删除成功' });
+
+    if (deletedCount === 0) {
+      res.status(404).json({ success: false, message: '未找到要删除的模型' });
+    } else {
+      res.json({ success: true, message: '模型删除成功' });
+    }
   } catch (err: any) {
     console.error('[Admin DeleteModel] 删除失败:', err.message);
     res.status(500).json({ success: false, error: { message: err.message || '删除失败' } });

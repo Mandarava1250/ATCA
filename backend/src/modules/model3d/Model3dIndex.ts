@@ -30,7 +30,8 @@ const modelUpload = multer({
       cb(null, uploadDir);
     },
     filename: (_req, file, cb) => {
-      const ext = path.extname(file.originalname).toLowerCase();
+      const decodedName = Buffer.from(file.originalname, 'latin1').toString('utf8');
+      const ext = path.extname(decodedName).toLowerCase();
       const unique = Date.now() + '-' + Math.round(Math.random() * 1e9);
       cb(null, `model-${unique}${ext}`);
     },
@@ -40,8 +41,9 @@ const modelUpload = multer({
     files: 20,
   },
   fileFilter: (_req, file, cb) => {
+    const decodedName = Buffer.from(file.originalname, 'latin1').toString('utf8');
     const allowedExts = ['.obj', '.mtl', '.glb', '.gltf', '.json'];
-    const ext = path.extname(file.originalname).toLowerCase();
+    const ext = path.extname(decodedName).toLowerCase();
     if (allowedExts.includes(ext)) {
       cb(null, true);
     } else {
@@ -511,11 +513,16 @@ router.post('/upload', authMiddleware, modelUpload.array('files', 20), asyncHand
     return res.status(400).json({ success: false, message: '请选择要上传的文件' });
   }
 
-  const objFiles = files.filter(f => f.originalname.toLowerCase().endsWith('.obj'));
+  const decodeFilename = (filename: string): string => {
+    return Buffer.from(filename, 'latin1').toString('utf8');
+  };
+
+  const objFiles = files.filter(f => decodeFilename(f.originalname).toLowerCase().endsWith('.obj'));
   const mtlMap = new Map<string, string>();
   for (const file of files) {
-    if (file.originalname.toLowerCase().endsWith('.mtl')) {
-      const base = file.originalname.replace(/\.mtl$/i, '').toLowerCase();
+    const decodedName = decodeFilename(file.originalname);
+    if (decodedName.toLowerCase().endsWith('.mtl')) {
+      const base = decodedName.replace(/\.mtl$/i, '').toLowerCase();
       mtlMap.set(base, fs.readFileSync(file.path, 'utf-8'));
       fs.unlinkSync(file.path);
     }
@@ -524,7 +531,8 @@ router.post('/upload', authMiddleware, modelUpload.array('files', 20), asyncHand
   try {
     await transaction('media3d', async (tx) => {
       for (const objFile of objFiles) {
-        const modelName = objFile.originalname.replace(/\.obj$/i, '');
+        const decodedName = decodeFilename(objFile.originalname);
+        const modelName = decodedName.replace(/\.obj$/i, '');
         let modelData = fs.readFileSync(objFile.path, 'utf-8');
         fs.unlinkSync(objFile.path);
 
