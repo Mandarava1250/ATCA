@@ -228,34 +228,32 @@ const logger = {
   error: (msg: string, data?: any) => console.error(`[Checkin] ${msg}`, data || ''),
 };
 
-async function syncCheckinToSyncDb(
-  userId: number,
-  checkinId: number,
-  checkinDate: string,
-  checkinTime: Date,
-  streakCount: number,
-  pointsEarned: number,
-  deviceType?: string,
-  deviceInfo?: string
-): Promise<void> {
+async function calculateStreakAndPoints(userId: number, targetDateStr: string): Promise<{ streak: number; points: number }> {
   try {
-    await execute(
+    const yesterday = new Date(targetDateStr);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toISOString().split('T')[0];
+
+    const result = await query(
       'sync',
-      'EXEC sp_sync_record_checkin @user_id = @uid, @checkin_id = @cid, @checkin_date = @cd, @checkin_time = @ct, @streak_count = @sc, @points_earned = @pe, @device_type = @dt, @device_info = @di',
-      {
-        uid: userId,
-        cid: checkinId,
-        cd: checkinDate,
-        ct: checkinTime.toISOString(),
-        sc: streakCount,
-        pe: pointsEarned,
-        dt: deviceType || null,
-        di: deviceInfo || null,
-      }
+      'SELECT TOP 1 [streak_count] FROM dbo.user_checkin_sync WHERE [user_id] = @uid AND [checkin_date] = @cd',
+      { uid: userId, cd: yesterdayStr }
     );
-    logger.info(`打卡数据已同步到Sync数据库 - 用户: ${userId}, 日期: ${checkinDate}`);
-  } catch (syncErr: any) {
-    logger.error(`打卡数据同步到Sync数据库失败 - 用户: ${userId}, 日期: ${checkinDate}, 错误: ${syncErr.message}`);
+
+    let streak = 1;
+    if (Array.isArray(result) && result.length > 0) {
+      streak = result[0].streak_count + 1;
+    }
+
+    let points = 10;
+    if (streak >= 7) points = 50;
+    else if (streak >= 5) points = 30;
+    else if (streak >= 3) points = 20;
+
+    return { streak, points };
+  } catch (err: any) {
+    logger.warn(`计算连续打卡失败，使用默认值 - 用户: ${userId}, 错误: ${err.message}`);
+    return { streak: 1, points: 10 };
   }
 }
 
@@ -273,9 +271,6 @@ router.post('/checkin', authMiddleware, asyncHandler(async (req: AuthRequest, re
 
   const targetDate = checkin_date ? new Date(checkin_date) : new Date();
   const targetDateStr = targetDate.toISOString().split('T')[0];
-  const yesterday = new Date(targetDate);
-  yesterday.setDate(yesterday.getDate() - 1);
-  const yesterdayStr = yesterday.toISOString().split('T')[0];
 
   if (isMockMode()) {
     const mockCheckins = JSON.parse(mockStorage.get('mock_checkins') || '[]');
@@ -286,6 +281,9 @@ router.post('/checkin', authMiddleware, asyncHandler(async (req: AuthRequest, re
       return;
     }
 
+    const yesterday = new Date(targetDate);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toISOString().split('T')[0];
     const yesterdayCheckin = mockCheckins.find((c: any) => c.checkin_date === yesterdayStr);
     const streak = yesterdayCheckin ? yesterdayCheckin.streak_count + 1 : 1;
     let points = 10;
@@ -314,62 +312,59 @@ router.post('/checkin', authMiddleware, asyncHandler(async (req: AuthRequest, re
   }
 
   try {
-    const result = await execute(
-      'activity',
-      'EXEC sp_user_checkin @user_id = @uid, @device_type = @dt, @device_info = @di, @checkin_date = @cd',
-      { uid: req.user!.userId, dt: device_type || null, di: device_info || null, cd: checkin_date || null }
+    const checkResult = await query(
+      'sync',
+      'SELECT 1 FROM dbo.user_checkin_sync WHERE [user_id] = @uid AND [checkin_date] = @cd',
+      { uid: req.user!.userId, cd: targetDateStr }
     );
 
-    if (Array.isArray(result) && result.length > 0) {
-      const row = result[0];
-      if (row.success) {
-        logger.info(`打卡成功 - 用户: ${req.user!.userId}, 日期: ${targetDateStr}, 连续: ${row.streak_count}, 积分: ${row.points_earned}`);
-
-        syncCheckinToSyncDb(
-          req.user!.userId,
-          row.checkin_id,
-          targetDateStr,
-          new Date(),
-          row.streak_count,
-          row.points_earned,
-          device_type,
-          device_info
-        ).catch(syncErr => {
-          logger.error(`异步同步打卡数据失败: ${syncErr.message}`);
-        });
-
-        try {
-          pushToUser(req.user!.userId, 'sync:checkin_update', {
-            checkin_date: targetDateStr,
-            streak_count: row.streak_count,
-            points_earned: row.points_earned,
-            device_type,
-            timestamp: Date.now(),
-          });
-        } catch (syncErr: any) {
-          logger.warn('WebSocket同步推送失败（用户可能未连接）:', syncErr.message);
-        }
-
-        res.json({
-          success: true,
-          message: row.message,
-          checkin_id: row.checkin_id,
-          streak_count: row.streak_count,
-          points_earned: row.points_earned,
-          already_checked: false,
-        });
-      } else {
-        logger.info(`打卡失败（已打卡） - 用户: ${req.user!.userId}, 日期: ${targetDateStr}`);
-        res.json({
-          success: false,
-          message: row.message,
-          already_checked: true,
-        });
-      }
-    } else {
-      logger.error(`打卡返回数据异常 - 用户: ${req.user!.userId}, 日期: ${targetDateStr}`);
-      res.json({ success: false, message: '打卡失败', already_checked: false });
+    if (Array.isArray(checkResult) && checkResult.length > 0) {
+      logger.info(`打卡失败（已打卡） - 用户: ${req.user!.userId}, 日期: ${targetDateStr}`);
+      res.json({ success: false, message: '该日期已打卡', already_checked: true });
+      return;
     }
+
+    const { streak, points } = await calculateStreakAndPoints(req.user!.userId, targetDateStr);
+    const checkinId = Date.now();
+    const checkinTime = new Date();
+
+    const result = await execute(
+      'sync',
+      'EXEC sp_sync_record_checkin @user_id = @uid, @checkin_id = @cid, @checkin_date = @cd, @checkin_time = @ct, @streak_count = @sc, @points_earned = @pe, @device_type = @dt, @device_info = @di',
+      {
+        uid: req.user!.userId,
+        cid: checkinId,
+        cd: targetDateStr,
+        ct: checkinTime.toISOString(),
+        sc: streak,
+        pe: points,
+        dt: device_type || null,
+        di: device_info || null,
+      }
+    );
+
+    logger.info(`打卡成功 - 用户: ${req.user!.userId}, 日期: ${targetDateStr}, 连续: ${streak}, 积分: ${points}`);
+
+    try {
+      pushToUser(req.user!.userId, 'sync:checkin_update', {
+        checkin_date: targetDateStr,
+        streak_count: streak,
+        points_earned: points,
+        device_type,
+        timestamp: Date.now(),
+      });
+    } catch (syncErr: any) {
+      logger.warn('WebSocket同步推送失败（用户可能未连接）:', syncErr.message);
+    }
+
+    res.json({
+      success: true,
+      message: '打卡成功',
+      checkin_id: checkinId,
+      streak_count: streak,
+      points_earned: points,
+      already_checked: false,
+    });
   } catch (err: any) {
     logger.error(`打卡数据库操作失败 - 用户: ${req.user!.userId}, 日期: ${targetDateStr}, 错误: ${err.message}`);
     
@@ -379,6 +374,9 @@ router.post('/checkin', authMiddleware, asyncHandler(async (req: AuthRequest, re
     if (hasCheckedToday) {
       res.json({ success: false, message: '该日期已打卡', already_checked: true });
     } else {
+      const yesterday = new Date(targetDate);
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yesterdayStr = yesterday.toISOString().split('T')[0];
       const yesterdayCheckin = mockCheckins.find((c: any) => c.checkin_date === yesterdayStr);
       const streak = yesterdayCheckin ? yesterdayCheckin.streak_count + 1 : 1;
       let points = 10;
@@ -428,15 +426,15 @@ router.get('/checkin', authMiddleware, asyncHandler(async (req: AuthRequest, res
 
   try {
     const countResult = await query(
-      'activity',
-      'SELECT COUNT(*) AS total FROM [daily_checkin] WHERE [user_id] = @uid',
+      'sync',
+      'SELECT COUNT(*) AS total FROM dbo.user_checkin_sync WHERE [user_id] = @uid',
       { uid: req.user!.userId }
     );
     const total = countResult.length > 0 ? (countResult[0] as any).total : 0;
 
     const result = await query(
-      'activity',
-      'EXEC sp_get_user_checkins @user_id = @uid, @page = @p, @limit = @l',
+      'sync',
+      'EXEC sp_sync_get_user_checkins @user_id = @uid, @page = @p, @limit = @l',
       { uid: req.user!.userId, p: parseInt(page), l: parseInt(limit) }
     );
 
@@ -471,8 +469,19 @@ router.get('/checkin/stats', authMiddleware, asyncHandler(async (req: AuthReques
   }
 
   try {
-    const result = await query('activity', 'EXEC sp_get_user_checkin_stats @user_id = @uid', { uid: req.user!.userId });
-    const stats = Array.isArray(result) && result.length > 0 ? result[0] : {};
+    const result = await query(
+      'sync',
+      'SELECT COUNT(*) AS total_checkins, MAX([streak_count]) AS max_streak, SUM([points_earned]) AS total_points, MAX([checkin_date]) AS last_checkin_date, SUM(CASE WHEN [checkin_date] >= DATEADD(DAY, -7, GETDATE()) THEN 1 ELSE 0 END) AS weekly_checkins, SUM(CASE WHEN [checkin_date] >= DATEADD(DAY, -30, GETDATE()) THEN 1 ELSE 0 END) AS monthly_checkins FROM dbo.user_checkin_sync WHERE [user_id] = @uid',
+      { uid: req.user!.userId }
+    );
+    const stats = Array.isArray(result) && result.length > 0 ? result[0] : {
+      total_checkins: 0,
+      max_streak: 0,
+      total_points: 0,
+      last_checkin_date: null,
+      weekly_checkins: 0,
+      monthly_checkins: 0,
+    };
     res.json({ success: true, data: stats });
   } catch (err: any) {
     console.error('[Checkin] 获取统计失败:', err.message);
@@ -491,8 +500,13 @@ router.get('/checkin/today', authMiddleware, asyncHandler(async (req: AuthReques
   }
 
   try {
-    const result = await query('activity', 'EXEC sp_check_today_checkin @user_id = @uid', { uid: req.user!.userId });
-    const checked = Array.isArray(result) && result.length > 0 && result[0].checked_today === true;
+    const today = new Date().toISOString().split('T')[0];
+    const result = await query(
+      'sync',
+      'SELECT 1 FROM dbo.user_checkin_sync WHERE [user_id] = @uid AND [checkin_date] = @cd',
+      { uid: req.user!.userId, cd: today }
+    );
+    const checked = Array.isArray(result) && result.length > 0;
     res.json({ success: true, data: { checked_today: checked } });
   } catch (err: any) {
     console.error('[Checkin] 检查今日打卡失败:', err.message);
@@ -500,7 +514,6 @@ router.get('/checkin/today', authMiddleware, asyncHandler(async (req: AuthReques
   }
 }));
 
-// 获取打卡日历数据
 router.get('/checkin/calendar', authMiddleware, asyncHandler(async (req: AuthRequest, res) => {
   const { year = new Date().getFullYear().toString(), month = (new Date().getMonth() + 1).toString() } = req.query as Record<string, string>;
 
@@ -515,10 +528,11 @@ router.get('/checkin/calendar', authMiddleware, asyncHandler(async (req: AuthReq
   }
 
   try {
+    const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
     const result = await query(
-      'activity',
-      'EXEC sp_get_checkin_calendar @user_id = @uid, @year = @y, @month = @m',
-      { uid: req.user!.userId, y: parseInt(year), m: parseInt(month) }
+      'sync',
+      'SELECT [checkin_date], [streak_count], [points_earned] FROM dbo.user_checkin_sync WHERE [user_id] = @uid AND [checkin_date] >= @startDate AND [checkin_date] < DATEADD(MONTH, 1, @startDate) ORDER BY [checkin_date]',
+      { uid: req.user!.userId, startDate }
     );
     res.json({ success: true, data: Array.isArray(result) ? result : [] });
   } catch (err: any) {
