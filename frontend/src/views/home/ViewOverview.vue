@@ -23,7 +23,7 @@
         <section class="section-hero">
       <div class="hero-content">
         <h1 class="hero-title">华夏营造</h1>
-        <p class="hero-subtitle">中国古代建筑文化虚拟展览馆</p>
+        <p class="hero-subtitle">中国古建筑文化传播平台</p>
         <div class="hero-badge">项目总览</div>
       </div>
     </section>
@@ -32,7 +32,7 @@
       <div class="section-card">
         <div class="section-header">
           <span class="section-number">一</span>
-          <h2 class="section-title">项目背景与意义</h2>
+          <h2 class="section-title">项目背景</h2>
         </div>
 
         <div class="two-column">
@@ -136,7 +136,7 @@
       <div class="section-card">
         <div class="section-header">
           <span class="section-number">二</span>
-          <h2 class="section-title">功能需求与非功能需求</h2>
+          <h2 class="section-title">功能需求</h2>
         </div>
 
         <div class="two-column">
@@ -445,135 +445,130 @@
               </div>
             </div>
           </div>
+
+          <div class="feature-section">
+            <h3 class="subsection-title">3D建模工坊</h3>
+            <div class="feature-card-grid">
+              <div class="feature-item-card">
+                <div class="feature-item-icon">
+                  <svg viewBox="0 0 24 24" width="24" height="24">
+                    <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z" fill="currentColor"/>
+                  </svg>
+                </div>
+                <h4>Three.js 渲染管线</h4>
+                <p>WebGLRenderer + PerspectiveCamera + Scene + OrbitControls轨道控制</p>
+              </div>
+              <div class="feature-item-card">
+                <div class="feature-item-icon">
+                  <svg viewBox="0 0 24 24" width="24" height="24">
+                    <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z" fill="currentColor"/>
+                  </svg>
+                </div>
+                <h4>模型分块异步解析</h4>
+                <p>6阶段进度条：解析顶点 → 计算包围盒 → 解析面数据 → 三角化 → 批量合并 → 导入编辑器</p>
+              </div>
+              <div class="feature-item-card">
+                <div class="feature-item-icon">
+                  <svg viewBox="0 0 24 24" width="24" height="24">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z" fill="currentColor"/>
+                  </svg>
+                </div>
+                <h4>坐标系转换处理</h4>
+                <p>Z-up/Y-up坐标转换 x'=x, y'=z, z'=-y，确保模型正确站立</p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </section>
 
     <section id="section-workshop" class="section-content">
-      <div class="section-card workshop-section">
-        <div class="section-header workshop-header">
-          <span class="section-number">五</span>
-          <h2 class="section-title">3D建模工坊与知识竞赛</h2>
-        </div>
-        <div class="workshop-main">
-          <div class="workshop-image-container">
-            <img src="https://trae-api-cn.mchost.guru/api/ide/v1/text_to_image?prompt=ancient%20Chinese%20traditional%20architecture%20pagoda%20temple%20with%20intricate%20wooden%20details%20and%20beautiful%20landscape&image_size=landscape_16_9" alt="古建筑" class="workshop-image" />
-            <div class="workshop-3d-card">
-              <h3 class="workshop-3d-title">3D建模工坊</h3>
-              <div class="workshop-feature-list">
-                <div class="workshop-feature-item">
-                  <div class="workshop-feature-icon">
-                    <svg viewBox="0 0 24 24" width="20" height="20">
-                      <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z" fill="currentColor"/>
-                    </svg>
-                  </div>
-                  <div class="workshop-feature-content">
-                    <h4>Three.js 渲染管线</h4>
-                    <p>WebGLRenderer + PerspectiveCamera + Scene + OrbitControls轨道控制</p>
-                  </div>
-                </div>
-                <div class="workshop-feature-item">
-                  <div class="workshop-feature-icon">
-                    <svg viewBox="0 0 24 24" width="20" height="20">
-                      <path d="M18 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 4h5v8l-2.5-1.5L6 12V4z" fill="currentColor"/>
-                    </svg>
-                  </div>
-                  <div class="workshop-feature-content">
-                    <h4>OBJ模型分块异步解析</h4>
-                    <p>6阶段进度条：解析顶点 → 计算包围盒 → 解析面数据 → 三角化 → 批量合并 → 导入编辑器</p>
-                  </div>
-                </div>
-                <div class="workshop-feature-item">
-                  <div class="workshop-feature-icon">
-                    <svg viewBox="0 0 24 24" width="20" height="20">
-                      <path d="M12 2L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z" fill="currentColor"/>
-                    </svg>
-                  </div>
-                  <div class="workshop-feature-content">
-                    <h4>坐标系转换处理</h4>
-                    <p>Z-up/Y-up坐标转换 x'=x, y'=z, z'=-y，确保模型正确站立</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="knowledge-competition">
-          <h3 class="competition-title">知识竞赛与排行榜</h3>
-          <div class="competition-grid">
-            <div class="competition-card">
-              <div class="competition-icon">
-                <svg viewBox="0 0 24 24" width="24" height="24">
-                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" fill="currentColor"/>
-                </svg>
-              </div>
-              <h4>积分排行榜</h4>
-              <p>基于 SQL Server RANK()窗口函数实现高效排名，基于SQL Server排除管理员账户</p>
-            </div>
-            <div class="competition-card">
-              <div class="competition-icon">
-                <svg viewBox="0 0 24 24" width="24" height="24">
-                  <path d="M12 2L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z" fill="currentColor"/>
-                </svg>
-              </div>
-              <h4>奖牌视觉设计</h4>
-              <p>金 #f5c842→#e6a817 / 银 #c0c0c0→#a0a0a0 / 铜 #cd7f32→#b87333 渐变色图标</p>
-            </div>
-            <div class="competition-card">
-              <div class="competition-icon">
-                <svg viewBox="0 0 24 24" width="24" height="24">
-                  <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z" fill="currentColor"/>
-                </svg>
-              </div>
-              <h4>每日签到系统</h4>
-              <p>每日签到选择"从题库选择"和"新建题目"两种模式，新建题目可配置是否同步到公共题库</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section class="section-content">
       <div class="section-card tech-challenge-section">
-        <div class="tech-challenge-header">
-          <h2 class="section-title">关键技术难点与解决方案</h2>
+        <div class="section-header">
+          <span class="section-number">五</span>
+          <h2 class="section-title">技术难点</h2>
+        </div>
+        <div class="feature-section">
+          <h3 class="subsection-title">关键技术难点与解决方案</h3>
         </div>
         <div class="tech-challenge-grid">
           <div class="tech-challenge-card">
-            <div class="tech-challenge-number">01</div>
-            <h3 class="tech-challenge-title">大型OBJ文件解析性能</h3>
+            <div class="tech-challenge-number">5.1</div>
+            <h3 class="tech-challenge-title">大型OBJ文件解析性能问题</h3>
             <div class="tech-challenge-content">
               <div class="tech-challenge-item">
                 <span class="tech-label">问题:</span>
-                <span class="tech-value">文件过大导致浏览器卡死</span>
+                <span class="tech-value">在打开、编辑或导入过大的3D模型文件时，会导致浏览器卡死</span>
               </div>
               <div class="tech-challenge-item">
                 <span class="tech-label">方案:</span>
               </div>
               <ul class="tech-solution-list">
-                <li>分块异步解析：每16384行yield一次，不阻塞UI</li>
-                <li>分块异步解析：每16384行yield一次，不阻塞UI</li>
-                <li>批量合并：8000三角/组件，从10万降到约26个</li>
-                <li>TypedArray优化：Float32Array存储，减少GC</li>
+                <li>异步解析方案：计算每个构件的顶点，将其拆分成多个三角形</li>
+                <li>通过合并这些三角形进行显示，减少渲染压力</li>
+                <li>转换坐标系确保模型正确站立（Z-up/Y-up坐标转换）</li>
+                <li>分块解析不阻塞UI，提升用户体验</li>
               </ul>
             </div>
           </div>
           <div class="tech-challenge-card">
-            <div class="tech-challenge-number">02</div>
-            <h3 class="tech-challenge-title">跨源资源共享 (CORS)</h3>
+            <div class="tech-challenge-number">5.2</div>
+            <h3 class="tech-challenge-title">智能榫卯吸附引擎</h3>
             <div class="tech-challenge-content">
               <div class="tech-challenge-item">
                 <span class="tech-label">问题:</span>
-                <span class="tech-value">开发环境vite代理在生产环境不可用</span>
+                <span class="tech-value">古建筑构件有严格的方位约束，N×M的吸附点检测成本较高</span>
               </div>
               <div class="tech-challenge-item">
                 <span class="tech-label">方案:</span>
               </div>
               <ul class="tech-solution-list">
-                <li>开发环境：Vite server.server.proxy配置代理</li>
-                <li>生产环境：Nginx统一代理，同域名部署</li>
-                <li>生产环境：Nginx统一代理，同域名部署</li>
-                <li>后端cors中间件配置允许的源</li>
+                <li>空间索引：快速定位候选吸附点</li>
+                <li>类别兼容：过滤不匹配的构件类型</li>
+                <li>距离检测：筛选近距离匹配点</li>
+                <li>方向检测：验证方位约束条件</li>
+                <li>旋转约束：确保正确角度对齐</li>
+                <li>复杂度从O(N×M)降低到O(log N)</li>
+              </ul>
+            </div>
+          </div>
+          <div class="tech-challenge-card">
+            <div class="tech-challenge-number">5.3</div>
+            <h3 class="tech-challenge-title">多端同步一致性</h3>
+            <div class="tech-challenge-content">
+              <div class="tech-challenge-item">
+                <span class="tech-label">问题:</span>
+                <span class="tech-value">用户在手机、平板、PC等多端登录时，打卡和收藏状态可能不一致，网络不稳定还容易导致状态丢失</span>
+              </div>
+              <div class="tech-challenge-item">
+                <span class="tech-label">方案:</span>
+              </div>
+              <ul class="tech-solution-list">
+                <li>网络恢复后自动重试：确保离线操作最终同步</li>
+                <li>操作成功后广播 sync:* 消息：实时同步各端状态</li>
+                <li>Sync数据库作为单一权威数据源</li>
+                <li>delta-sync增量同步机制减少数据传输量</li>
+              </ul>
+            </div>
+          </div>
+          <div class="tech-challenge-card">
+            <div class="tech-challenge-number">5.4</div>
+            <h3 class="tech-challenge-title">RAG知识检索与冲突检测</h3>
+            <div class="tech-challenge-content">
+              <div class="tech-challenge-item">
+                <span class="tech-label">问题:</span>
+                <span class="tech-value">AI回答可能存在事实性错误，需确保回答的准确性</span>
+              </div>
+              <div class="tech-challenge-item">
+                <span class="tech-label">方案:</span>
+              </div>
+              <ul class="tech-solution-list">
+                <li>混合检索：BM25文本检索 + 向量相似度检索</li>
+                <li>知识图谱增强：实体关系查询与上下文知识链扩展</li>
+                <li>多路召回：综合多种检索结果</li>
+                <li>提示词构建：系统角色设定 + 知识库上下文注入</li>
+                <li>冲突检测机制：事实性检查 + 逻辑矛盾检查</li>
+                <li>保障AI生成结果的精准性与可靠性</li>
               </ul>
             </div>
           </div>
@@ -582,14 +577,16 @@
     </section>
 
     <section class="section-content">
+      
+    </section>
+
+    <section id="section-technology" class="section-content">
       <div class="section-card innovation-section">
-        <div class="innovation-header">
-          <div class="innovation-number">05</div>
-          <div class="innovation-title-container">
-            <span class="innovation-tag">技术创新</span>
-            <h2 class="section-title">项目特色、创新与总结</h2>
-          </div>
+        <div class="section-header">
+          <span class="section-number">六</span>
+          <h2 class="section-title">技术创新</h2>
         </div>
+      </div>
         <div class="innovation-grid">
           <div class="innovation-card">
             <div class="innovation-icon">
@@ -618,81 +615,18 @@
             <h3>可选认证架构</h3>
             <p>optionalAuthMiddleware设计实现"浏览公开、操作需登录"的无感知用户体验，降低用户使用门槛</p>
           </div>
-        </div>
       </div>
     </section>
     
     <section id="section-er" class="section-content">
       <div class="section-card">
         <div class="section-header">
-          <span class="section-number">六</span>
+          <span class="section-number">七</span>
           <h2 class="section-title">数据库E-R图</h2>
         </div>
+        <p class="intro-text">共创建立10个数据库，68个表</p>
         <div class="er-image-container">
           <img src="/images/er.png" alt="数据库E-R图" class="er-image">
-        </div>
-      </div>
-    </section>
-
-    <section id="section-architecture-flow" class="section-content">
-      <div class="section-card">
-        <div class="section-header">
-          <span class="section-number">七</span>
-          <h2 class="section-title">系统架构流程图</h2>
-        </div>
-
-        <div class="mermaid-section">
-          <h3 class="subsection-title">1.1 整体架构层次图</h3>
-          <MermaidChart :code="mermaidArchitecture" />
-        </div>
-
-        <div class="mermaid-section">
-          <h3 class="subsection-title">1.2 核心模块交互流程图</h3>
-          <MermaidChart :code="mermaidCoreModule" />
-        </div>
-
-      </div>
-    </section>
-
-    <section id="section-auth" class="section-content">
-      <div class="section-card">
-        <div class="section-header">
-          <span class="section-number">八</span>
-          <h2 class="section-title">用户认证流程图</h2>
-        </div>
-
-        <div class="mermaid-section">
-          <h3 class="subsection-title">2.1 登录认证完整流程</h3>
-          <MermaidChart :code="mermaidLoginFlow" />
-        </div>
-
-        <div class="mermaid-section">
-          <h3 class="subsection-title">2.2 Token验证与刷新流程</h3>
-          <MermaidChart :code="mermaidTokenRefresh" />
-        </div>
-
-        <div class="mermaid-section">
-          <h3 class="subsection-title">2.3 会话管理与安全机制</h3>
-          <MermaidChart :code="mermaidSessionSecurity" />
-        </div>
-      </div>
-    </section>
-
-    <section id="section-db-pool" class="section-content">
-      <div class="section-card">
-        <div class="section-header">
-          <span class="section-number">九</span>
-          <h2 class="section-title">数据库连接池管理流程图</h2>
-        </div>
-
-        <div class="mermaid-section">
-          <h3 class="subsection-title">3.1 连接池初始化流程</h3>
-          <MermaidChart :code="mermaidPoolInit" />
-        </div>
-
-        <div class="mermaid-section">
-          <h3 class="subsection-title">3.2 连接池分配与回收流程</h3>
-          <MermaidChart :code="mermaidPoolRecycle" />
         </div>
       </div>
     </section>
@@ -700,22 +634,22 @@
     <section id="section-ai-manager" class="section-content">
       <div class="section-card">
         <div class="section-header">
-          <span class="section-number">十</span>
+          <span class="section-number">八</span>
           <h2 class="section-title">本地AI管理器工作流程图</h2>
         </div>
 
         <div class="mermaid-section">
-          <h3 class="subsection-title">4.1 AI初始化流程</h3>
+          <h3 class="subsection-title">8.1 AI初始化流程</h3>
           <MermaidChart :code="mermaidAIInit" />
         </div>
 
         <div class="mermaid-section">
-          <h3 class="subsection-title">4.2 RAG查询处理流程</h3>
+          <h3 class="subsection-title">8.2 RAG查询处理流程</h3>
           <MermaidChart :code="mermaidRAGQuery" />
         </div>
 
         <div class="mermaid-section">
-          <h3 class="subsection-title">4.3 冲突检测与偏离分析流程</h3>
+          <h3 class="subsection-title">8.3 冲突检测与偏离分析流程</h3>
           <MermaidChart :code="mermaidConflictDetection" />
         </div>
       </div>
@@ -736,15 +670,13 @@ let lastActiveSection = '';
 
 const navItems = [
   { id: 'section-background', number: '一', label: '项目背景'},
-  { id: 'section-requirements', number: '二', label: '需求分析'},
+  { id: 'section-requirements', number: '二', label: '功能需求'},
   { id: 'section-tech', number: '三', label: '技术栈' },
-  { id: 'section-features', number: '四', label: '核心功能'},
-  { id: 'section-workshop', number: '五', label: '3D工坊'},
-  { id: 'section-er', number: '六', label: '数据库E-R图' },
-  { id: 'section-architecture-flow', number: '七', label: '系统架构' },
-  { id: 'section-auth', number: '八', label: '用户认证'},
-  { id: 'section-db-pool', number: '九', label: '连接池' },
-  { id: 'section-ai-manager', number: '十', label: 'AI管理器'},
+  { id: 'section-features', number: '四', label: '技术创新'},
+  { id: 'section-workshop', number: '五', label: '技术难点'},
+  { id: 'section-technology', number: '六', label: '技术创新' },
+  { id: 'section-er', number: '七', label: '数据库E-R图' },
+  { id: 'section-ai-manager', number: '八', label: 'AI管理器'},
 ];
 
 function scrollToSection(id: string) {
