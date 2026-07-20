@@ -111,6 +111,72 @@ export interface Neighbor {
   relation_description: string | null;
 }
 
+export interface Entity {
+  entity_id: number;
+  entity_key: string;
+  entity_name: string;
+  category: string;
+  content_zh: string;
+  content_en: string | null;
+  source: string;
+  confidence: number;
+  verified: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface KnowledgeRelation {
+  relation_id: number;
+  from_topic_id: number;
+  to_topic_id: number;
+  relation_type: string;
+  description: string | null;
+}
+
+export interface Keyword {
+  keyword_id: number;
+  topic_id: number;
+  keyword: string;
+  weight: number;
+  language: string;
+}
+
+export interface EntityLink {
+  source_entity_id: number;
+  source_entity_name: string;
+  relation_type: string;
+  target_entity_id: number;
+  target_entity_name: string;
+}
+
+export interface SemanticQueryResult {
+  topics: Topic[];
+  relations: KnowledgeRelation[];
+  total_hits: number;
+  execution_time: number;
+}
+
+export interface KnowledgeGraphNode {
+  id: number;
+  name: string;
+  category: string;
+  type: 'topic';
+}
+
+export interface KnowledgeGraphEdge {
+  source: number;
+  target: number;
+  relation_type: string;
+  description: string | null;
+}
+
+export interface KnowledgeGraphData {
+  nodes: KnowledgeGraphNode[];
+  edges: KnowledgeGraphEdge[];
+  total_nodes: number;
+  total_edges: number;
+}
+
 // ============ 服务类 ============
 
 class KnowledgeGraphService implements IService {
@@ -1303,6 +1369,741 @@ class KnowledgeGraphService implements IService {
     );
 
     return result as Array<{ name: string; count: number }>;
+  }
+
+  /**
+   * 添加知识主题（事务性操作）
+   */
+  async addTopic(data: Omit<Topic, 'topic_id' | 'created_at' | 'updated_at'>): Promise<number> {
+    if (isMockMode()) {
+      return Math.floor(Math.random() * 1000) + 100;
+    }
+
+    try {
+      const result = await execute('knowledge',
+        `INSERT INTO dbo.kg_topics 
+         ([topic_key], [topic_name], [category], [content_zh], [content_en], [source], [confidence], [verified])
+         OUTPUT INSERTED.[topic_id]
+         VALUES (@topic_key, @topic_name, @category, @content_zh, @content_en, @source, @confidence, @verified)`,
+        {
+          topic_key: data.topic_key,
+          topic_name: data.topic_name,
+          category: data.category,
+          content_zh: data.content_zh,
+          content_en: data.content_en || null,
+          source: data.source || '用户添加',
+          confidence: data.confidence,
+          verified: data.verified ? 1 : 0,
+        }
+      );
+
+      const recordsets = (result.recordsets as sql.IRecordSet<any>[]);
+      const topicId = recordsets[0]?.[0]?.topic_id || 0;
+      
+      await this.logAudit(
+        'ADD_TOPIC',
+        'system',
+        0,
+        'Topic',
+        topicId.toString(),
+        `添加知识主题: ${data.topic_name}`
+      );
+
+      return topicId;
+    } catch (error: any) {
+      logger.error('添加知识主题失败', { 
+        errorType: ErrorType.DATABASE_ERROR,
+        message: error.message,
+        data: data.topic_key
+      });
+      throw new Error(`添加知识主题失败: ${error.message}`);
+    }
+  }
+
+  /**
+   * 更新知识主题
+   */
+  async updateTopic(topicId: number, data: Partial<Omit<Topic, 'topic_id' | 'created_at' | 'updated_at'>>): Promise<boolean> {
+    if (isMockMode()) {
+      return true;
+    }
+
+    const fields: string[] = [];
+    const params: any = { topicId };
+
+    if (data.topic_name !== undefined) {
+      fields.push('[topic_name] = @topic_name');
+      params.topic_name = data.topic_name;
+    }
+    if (data.category !== undefined) {
+      fields.push('[category] = @category');
+      params.category = data.category;
+    }
+    if (data.content_zh !== undefined) {
+      fields.push('[content_zh] = @content_zh');
+      params.content_zh = data.content_zh;
+    }
+    if (data.content_en !== undefined) {
+      fields.push('[content_en] = @content_en');
+      params.content_en = data.content_en;
+    }
+    if (data.source !== undefined) {
+      fields.push('[source] = @source');
+      params.source = data.source;
+    }
+    if (data.confidence !== undefined) {
+      fields.push('[confidence] = @confidence');
+      params.confidence = data.confidence;
+    }
+    if (data.verified !== undefined) {
+      fields.push('[verified] = @verified');
+      params.verified = data.verified ? 1 : 0;
+    }
+
+    if (fields.length === 0) return false;
+
+    try {
+      const result = await execute('knowledge',
+        `UPDATE dbo.kg_topics SET ${fields.join(', ')} WHERE [topic_id] = @topicId`,
+        params
+      );
+
+      const success = (result as any)?.rowsAffected > 0;
+      
+      if (success) {
+        await this.logAudit(
+          'UPDATE_TOPIC',
+          'system',
+          0,
+          'Topic',
+          topicId.toString(),
+          `更新知识主题: ${data.topic_name || 'ID-' + topicId}`
+        );
+      }
+
+      return success;
+    } catch (error: any) {
+      logger.error('更新知识主题失败', { 
+        errorType: ErrorType.DATABASE_ERROR,
+        message: error.message,
+        topicId
+      });
+      throw new Error(`更新知识主题失败: ${error.message}`);
+    }
+  }
+
+  /**
+   * 删除知识主题（级联删除关联数据）
+   */
+  async deleteTopic(topicId: number): Promise<boolean> {
+    if (isMockMode()) {
+      return true;
+    }
+
+    try {
+      const result = await execute('knowledge',
+        'DELETE FROM dbo.kg_topics WHERE [topic_id] = @topicId',
+        { topicId }
+      );
+
+      const success = (result as any)?.rowsAffected > 0;
+      
+      if (success) {
+        await this.logAudit(
+          'DELETE_TOPIC',
+          'system',
+          0,
+          'Topic',
+          topicId.toString(),
+          `删除知识主题: ID-${topicId}`
+        );
+      }
+
+      return success;
+    } catch (error: any) {
+      logger.error('删除知识主题失败', { 
+        errorType: ErrorType.DATABASE_ERROR,
+        message: error.message,
+        topicId
+      });
+      throw new Error(`删除知识主题失败: ${error.message}`);
+    }
+  }
+
+  /**
+   * 批量删除知识主题（事务性）
+   */
+  async batchDeleteTopics(topicIds: number[]): Promise<number> {
+    if (isMockMode()) {
+      return topicIds.length;
+    }
+
+    try {
+      const pool = await sql.connect(process.env.KNOWLEDGE_DB_CONFIG || '');
+      const transaction = new sql.Transaction(pool);
+      
+      await transaction.begin();
+
+      try {
+        const request = new sql.Request(transaction);
+        request.input('topicIds', sql.Int, topicIds);
+        
+        const result = await request.query(`
+          DELETE FROM dbo.kg_topics 
+          WHERE [topic_id] IN (${topicIds.map((_, i) => `@topicIds${i}`).join(', ')})
+        `);
+        
+        for (let i = 0; i < topicIds.length; i++) {
+          request.input(`topicIds${i}`, sql.Int, topicIds[i]);
+        }
+        
+        const deleteResult = await request.query(`
+          DELETE FROM dbo.kg_topics 
+          WHERE [topic_id] IN (${topicIds.map((_, i) => `@topicIds${i}`).join(', ')})
+        `);
+
+        const deletedCount = (deleteResult as any)?.rowsAffected[0] || 0;
+        
+        await transaction.commit();
+
+        await this.logAudit(
+          'BATCH_DELETE_TOPICS',
+          'system',
+          0,
+          'Topic',
+          topicIds.join(','),
+          `批量删除知识主题: ${deletedCount}条`
+        );
+
+        return deletedCount;
+      } catch (error: any) {
+        await transaction.rollback();
+        throw error;
+      }
+    } catch (error: any) {
+      logger.error('批量删除知识主题失败', { 
+        errorType: ErrorType.DATABASE_ERROR,
+        message: error.message,
+        topicIds
+      });
+      throw new Error(`批量删除知识主题失败: ${error.message}`);
+    }
+  }
+
+  /**
+   * 添加关键词
+   */
+  async addKeyword(topicId: number, keyword: string, weight: number = 1.0, language: string = 'zh'): Promise<number> {
+    if (isMockMode()) {
+      return Math.floor(Math.random() * 1000);
+    }
+
+    try {
+      const result = await execute('knowledge',
+        `INSERT INTO dbo.kg_keywords 
+         ([topic_id], [keyword], [weight], [language])
+         OUTPUT INSERTED.[keyword_id]
+         VALUES (@topic_id, @keyword, @weight, @language)`,
+        { topic_id: topicId, keyword, weight, language }
+      );
+
+      const recordsets = (result.recordsets as sql.IRecordSet<any>[]);
+      const keywordId = recordsets[0]?.[0]?.keyword_id || 0;
+      
+      await this.logAudit(
+        'ADD_KEYWORD',
+        'system',
+        0,
+        'Keyword',
+        keywordId.toString(),
+        `为主题ID-${topicId}添加关键词: ${keyword}`
+      );
+
+      return keywordId;
+    } catch (error: any) {
+      logger.error('添加关键词失败', { 
+        errorType: ErrorType.DATABASE_ERROR,
+        message: error.message,
+        topicId,
+        keyword
+      });
+      throw new Error(`添加关键词失败: ${error.message}`);
+    }
+  }
+
+  /**
+   * 获取主题的所有关键词
+   */
+  async getKeywords(topicId: number): Promise<Keyword[]> {
+    if (isMockMode()) {
+      return [
+        { keyword_id: 1, topic_id: topicId, keyword: '抬梁', weight: 1.5, language: 'zh' },
+        { keyword_id: 2, topic_id: topicId, keyword: '梁柱', weight: 1.0, language: 'zh' },
+      ];
+    }
+
+    const result = await query('knowledge',
+      'SELECT [keyword_id], [topic_id], [keyword], [weight], [language] FROM dbo.kg_keywords WHERE [topic_id] = @topicId ORDER BY [weight] DESC',
+      { topicId }
+    );
+
+    return result as Keyword[];
+  }
+
+  /**
+   * 添加关系
+   */
+  async addRelation(fromTopicId: number, toTopicId: number, relationType: string, description?: string): Promise<number> {
+    if (isMockMode()) {
+      return Math.floor(Math.random() * 1000);
+    }
+
+    try {
+      const result = await execute('knowledge',
+        `INSERT INTO dbo.kg_relations 
+         ([from_topic_id], [to_topic_id], [relation_type], [description])
+         OUTPUT INSERTED.[relation_id]
+         VALUES (@from_topic_id, @to_topic_id, @relation_type, @description)`,
+        { from_topic_id: fromTopicId, to_topic_id: toTopicId, relation_type: relationType, description: description || null }
+      );
+
+      const recordsets = (result.recordsets as sql.IRecordSet<any>[]);
+      const relationId = recordsets[0]?.[0]?.relation_id || 0;
+      
+      await this.logAudit(
+        'ADD_RELATION',
+        'system',
+        0,
+        'Relation',
+        relationId.toString(),
+        `添加关系: ${fromTopicId} -> ${toTopicId} (${relationType})`
+      );
+
+      return relationId;
+    } catch (error: any) {
+      logger.error('添加关系失败', { 
+        errorType: ErrorType.DATABASE_ERROR,
+        message: error.message,
+        fromTopicId,
+        toTopicId,
+        relationType
+      });
+      throw new Error(`添加关系失败: ${error.message}`);
+    }
+  }
+
+  /**
+   * 删除关系
+   */
+  async deleteRelation(relationId: number): Promise<boolean> {
+    if (isMockMode()) {
+      return true;
+    }
+
+    try {
+      const result = await execute('knowledge',
+        'DELETE FROM dbo.kg_relations WHERE [relation_id] = @relationId',
+        { relationId }
+      );
+
+      const success = (result as any)?.rowsAffected > 0;
+      
+      if (success) {
+        await this.logAudit(
+          'DELETE_RELATION',
+          'system',
+          0,
+          'Relation',
+          relationId.toString(),
+          `删除关系: ID-${relationId}`
+        );
+      }
+
+      return success;
+    } catch (error: any) {
+      logger.error('删除关系失败', { 
+        errorType: ErrorType.DATABASE_ERROR,
+        message: error.message,
+        relationId
+      });
+      throw new Error(`删除关系失败: ${error.message}`);
+    }
+  }
+
+  /**
+   * 获取所有关系
+   */
+  async getAllRelations(): Promise<KnowledgeRelation[]> {
+    if (isMockMode()) {
+      return [
+        { relation_id: 1, from_topic_id: 8, to_topic_id: 7, relation_type: 'belongs_to', description: '佛光寺东大殿是唐代建筑的典型代表' },
+        { relation_id: 2, from_topic_id: 1, to_topic_id: 5, relation_type: 'related_to', description: '抬梁式结构使用斗拱' },
+      ];
+    }
+
+    const result = await query('knowledge',
+      'SELECT [relation_id], [from_topic_id], [to_topic_id], [relation_type], [description] FROM dbo.kg_relations ORDER BY [relation_id]'
+    );
+
+    return result as KnowledgeRelation[];
+  }
+
+  /**
+   * 获取主题的所有出边关系
+   */
+  async getOutgoingRelations(topicId: number): Promise<KnowledgeRelation[]> {
+    if (isMockMode()) {
+      return [
+        { relation_id: 1, from_topic_id: topicId, to_topic_id: 5, relation_type: 'related_to', description: '使用斗拱' },
+      ];
+    }
+
+    const result = await query('knowledge',
+      'SELECT [relation_id], [from_topic_id], [to_topic_id], [relation_type], [description] FROM dbo.kg_relations WHERE [from_topic_id] = @topicId',
+      { topicId }
+    );
+
+    return result as KnowledgeRelation[];
+  }
+
+  /**
+   * 获取主题的所有入边关系
+   */
+  async getIncomingRelations(topicId: number): Promise<KnowledgeRelation[]> {
+    if (isMockMode()) {
+      return [
+        { relation_id: 1, from_topic_id: 1, to_topic_id: topicId, relation_type: 'related_to', description: '抬梁式结构使用' },
+      ];
+    }
+
+    const result = await query('knowledge',
+      'SELECT [relation_id], [from_topic_id], [to_topic_id], [relation_type], [description] FROM dbo.kg_relations WHERE [to_topic_id] = @topicId',
+      { topicId }
+    );
+
+    return result as KnowledgeRelation[];
+  }
+
+  /**
+   * 语义查询：根据关键词查询相关知识
+   */
+  async semanticQuery(keywords: string[], language: string = 'zh', maxResults: number = 10): Promise<SemanticQueryResult> {
+    const startTime = Date.now();
+
+    if (isMockMode()) {
+      const mockTopics: Topic[] = [
+        { topic_id: 1, topic_key: 'tailiang', topic_name: '抬梁式结构', category: 'structure', content_zh: '抬梁式结构...', content_en: null, source: '华夏营造知识库', confidence: 0.98, verified: true, created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-01T00:00:00Z' },
+        { topic_id: 5, topic_key: 'dougong', topic_name: '斗拱', category: 'component', content_zh: '斗拱...', content_en: null, source: '华夏营造知识库', confidence: 0.99, verified: true, created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-01T00:00:00Z' },
+      ];
+      return {
+        topics: mockTopics,
+        relations: [],
+        total_hits: mockTopics.length,
+        execution_time: Date.now() - startTime,
+      };
+    }
+
+    try {
+      const keywordList = keywords.join(',');
+      const result = await query('knowledge',
+        `EXEC dbo.sp_kg_query @keywords = @keywordList, @language = @language, @max_results = @maxResults`,
+        { keywordList, language, maxResults }
+      );
+
+      const topics = (result as any[]).map((row: any) => ({
+        topic_id: row.topic_id,
+        topic_key: row.topic_key,
+        topic_name: row.topic_name,
+        category: row.category,
+        content_zh: row.content || row.content_zh,
+        content_en: row.content_en,
+        source: row.source,
+        confidence: row.confidence,
+        verified: !!row.verified,
+        created_at: row.created_at,
+        updated_at: row.updated_at,
+      }));
+
+      const topicIds = topics.map(t => t.topic_id);
+      let relations: KnowledgeRelation[] = [];
+      
+      if (topicIds.length > 0) {
+        const placeholders = topicIds.map((_, idx) => `@id${idx}`).join(', ');
+        const params: Record<string, number> = {};
+        topicIds.forEach((id, idx) => { params[`id${idx}`] = id; });
+        
+        const relResult = await query('knowledge',
+          `SELECT [relation_id], [from_topic_id], [to_topic_id], [relation_type], [description] 
+           FROM dbo.kg_relations 
+           WHERE [from_topic_id] IN (${placeholders}) OR [to_topic_id] IN (${placeholders})`,
+          params
+        );
+        relations = relResult as KnowledgeRelation[];
+      }
+
+      return {
+        topics,
+        relations,
+        total_hits: topics.length,
+        execution_time: Date.now() - startTime,
+      };
+    } catch (error: any) {
+      logger.error('语义查询失败', { 
+        errorType: ErrorType.DATABASE_ERROR,
+        message: error.message,
+        keywords
+      });
+      throw new Error(`语义查询失败: ${error.message}`);
+    }
+  }
+
+  /**
+   * 获取完整知识图谱数据（用于可视化）
+   */
+  async getGraphData(maxNodes: number = 100): Promise<KnowledgeGraphData> {
+    if (isMockMode()) {
+      return {
+        nodes: [
+          { id: 1, name: '抬梁式结构', category: 'structure', type: 'topic' },
+          { id: 5, name: '斗拱', category: 'component', type: 'topic' },
+          { id: 9, name: '榫卯', category: 'component', type: 'topic' },
+          { id: 8, name: '佛光寺东大殿', category: 'famous', type: 'topic' },
+        ],
+        edges: [
+          { source: 1, target: 5, relation_type: 'related_to', description: '使用斗拱' },
+          { source: 1, target: 9, relation_type: 'related_to', description: '使用榫卯' },
+          { source: 8, target: 1, relation_type: 'belongs_to', description: '采用抬梁式' },
+        ],
+        total_nodes: 4,
+        total_edges: 3,
+      };
+    }
+
+    try {
+      const [nodesResult, edgesResult] = await Promise.all([
+        query('knowledge',
+          `SELECT [topic_id] as id, [topic_name] as name, [category] 
+           FROM dbo.kg_topics 
+           ORDER BY [created_at] DESC
+           OFFSET 0 ROWS FETCH NEXT @maxNodes ROWS ONLY`,
+          { maxNodes }
+        ),
+        query('knowledge',
+          `SELECT r.[from_topic_id] as source, r.[to_topic_id] as target, r.[relation_type], r.[description]
+           FROM dbo.kg_relations r
+           INNER JOIN dbo.kg_topics t1 ON r.[from_topic_id] = t1.[topic_id]
+           INNER JOIN dbo.kg_topics t2 ON r.[to_topic_id] = t2.[topic_id]
+           ORDER BY r.[relation_id]`
+        ),
+      ]);
+
+      const nodes = (nodesResult as any[]).map((row: any) => ({
+        id: row.id,
+        name: row.name,
+        category: row.category,
+        type: 'topic' as const,
+      }));
+
+      const edges = (edgesResult as any[]).map((row: any) => ({
+        source: row.source,
+        target: row.target,
+        relation_type: row.relation_type,
+        description: row.description,
+      }));
+
+      return {
+        nodes,
+        edges,
+        total_nodes: nodes.length,
+        total_edges: edges.length,
+      };
+    } catch (error: any) {
+      logger.error('获取知识图谱数据失败', { 
+        errorType: ErrorType.DATABASE_ERROR,
+        message: error.message
+      });
+      throw new Error(`获取知识图谱数据失败: ${error.message}`);
+    }
+  }
+
+  /**
+   * 实体链接：根据文本查找相关实体
+   */
+  async entityLinking(text: string, maxEntities: number = 5): Promise<EntityLink[]> {
+    if (isMockMode()) {
+      return [
+        { source_entity_id: 0, source_entity_name: 'query', relation_type: 'mentions', target_entity_id: 5, target_entity_name: '斗拱' },
+        { source_entity_id: 0, source_entity_name: 'query', relation_type: 'mentions', target_entity_id: 1, target_entity_name: '抬梁式结构' },
+      ];
+    }
+
+    try {
+      const keywords = text
+        .replace(/[，。！？、；：""''（）《》【】]/g, ' ')
+        .toLowerCase()
+        .split(/\s+/)
+        .filter(w => w.length > 1);
+
+      if (keywords.length === 0) return [];
+
+      const keywordPlaceholders = keywords.map((_, idx) => `@kw${idx}`).join(', ');
+      const params: Record<string, string> = {};
+      keywords.forEach((kw, idx) => { params[`kw${idx}`] = kw; });
+
+      const result = await query('knowledge',
+        `SELECT DISTINCT TOP ${maxEntities} 
+           t.[topic_id] as target_entity_id,
+           t.[topic_name] as target_entity_name,
+           'mentions' as relation_type
+         FROM dbo.kg_topics t
+         INNER JOIN dbo.kg_keywords kw ON t.[topic_id] = kw.[topic_id]
+         WHERE kw.[keyword] LIKE '%' + @kw0 + '%'
+           OR t.[topic_name] LIKE '%' + @kw0 + '%'
+           OR t.[content_zh] LIKE '%' + @kw0 + '%'
+         ORDER BY t.[confidence] DESC`,
+        params
+      );
+
+      return (result as any[]).map((row: any) => ({
+        source_entity_id: 0,
+        source_entity_name: 'query',
+        relation_type: row.relation_type,
+        target_entity_id: row.target_entity_id,
+        target_entity_name: row.target_entity_name,
+      }));
+    } catch (error: any) {
+      logger.error('实体链接失败', { 
+        errorType: ErrorType.DATABASE_ERROR,
+        message: error.message,
+        text
+      });
+      throw new Error(`实体链接失败: ${error.message}`);
+    }
+  }
+
+  /**
+   * 批量获取知识条目（用于本地模型集成）
+   */
+  async retrieveKnowledgeForModel(queryText: string, maxResults: number = 5): Promise<Array<{
+    id: number;
+    topic: string;
+    content: string;
+    keywords: string[];
+    source: string;
+    confidence: number;
+  }>> {
+    if (isMockMode()) {
+      return [
+        { id: 1, topic: '抬梁式结构', content: '抬梁式结构...', keywords: ['抬梁', '梁柱'], source: '华夏营造知识库', confidence: 0.98 },
+        { id: 5, topic: '斗拱', content: '斗拱...', keywords: ['斗拱', '铺作'], source: '华夏营造知识库', confidence: 0.99 },
+      ];
+    }
+
+    try {
+      const queryKeywords = queryText
+        .replace(/[，。！？、；：""''（）《》【】]/g, ',')
+        .toLowerCase();
+
+      const result = await query('knowledge',
+        `EXEC dbo.sp_kg_query @keywords = @keywords, @language = 'zh', @max_results = @maxResults`,
+        { keywords: queryKeywords, maxResults }
+      );
+
+      const topics: Array<{
+        id: number;
+        topic: string;
+        content: string;
+        keywords: string[];
+        source: string;
+        confidence: number;
+      }> = (result as any[]).map((row: any) => ({
+        id: row.topic_id,
+        topic: row.topic_name,
+        content: row.content || row.content_zh,
+        keywords: [],
+        source: row.source,
+        confidence: row.confidence,
+      }));
+
+      for (const topic of topics) {
+        const kwResult = await this.getKeywords(topic.id);
+        topic.keywords = kwResult.map(k => k.keyword);
+      }
+
+      return topics;
+    } catch (error: any) {
+      logger.error('检索知识供模型使用失败', { 
+        errorType: ErrorType.DATABASE_ERROR,
+        message: error.message,
+        query
+      });
+      throw new Error(`检索知识供模型使用失败: ${error.message}`);
+    }
+  }
+
+  /**
+   * 验证AI回答与知识库的一致性
+   */
+  async verifyAnswer(question: string, aiAnswer: string, aiProvider: string): Promise<{
+    verification_id: number;
+    matched_topic_id: number | null;
+    match_score: number;
+    is_accurate: boolean | null;
+  }> {
+    if (isMockMode()) {
+      return {
+        verification_id: Math.floor(Math.random() * 1000),
+        matched_topic_id: 1,
+        match_score: 0.85,
+        is_accurate: null,
+      };
+    }
+
+    try {
+      const keywords = question
+        .replace(/[，。！？、；：""''（）《》【】]/g, ',')
+        .toLowerCase();
+
+      const queryResult = await query('knowledge',
+        `EXEC dbo.sp_kg_query @keywords = @keywords, @language = 'zh', @max_results = 1`,
+        { keywords }
+      );
+
+      let matchedTopicId: number | null = null;
+      let matchScore = 0;
+
+      if ((queryResult as any[]).length > 0) {
+        matchedTopicId = (queryResult as any[])[0].topic_id;
+        matchScore = (queryResult as any[])[0].total_weight || 0.5;
+      }
+
+      const result = await execute('knowledge',
+        `EXEC dbo.sp_kg_log_verification 
+           @question = @question, 
+           @ai_answer = @aiAnswer, 
+           @ai_provider = @aiProvider, 
+           @matched_topic_id = @matched_topic_id, 
+           @match_score = @match_score`,
+        { question, aiAnswer, aiProvider, matched_topic_id: matchedTopicId, match_score: matchScore }
+      );
+
+      const recordsets = (result.recordsets as sql.IRecordSet<any>[]);
+      const verificationId = recordsets[0]?.[0]?.verification_id || 0;
+
+      return {
+        verification_id: verificationId,
+        matched_topic_id: matchedTopicId,
+        match_score: matchScore,
+        is_accurate: null,
+      };
+    } catch (error: any) {
+      logger.error('验证AI回答失败', { 
+        errorType: ErrorType.DATABASE_ERROR,
+        message: error.message,
+        question
+      });
+      throw new Error(`验证AI回答失败: ${error.message}`);
+    }
   }
 }
 

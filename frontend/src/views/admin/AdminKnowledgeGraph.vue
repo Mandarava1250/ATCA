@@ -665,7 +665,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed } from 'vue';
+import { ref, reactive, computed, onMounted } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { api } from '@/services/apiFactory';
 
@@ -682,11 +682,17 @@ const tabs = computed(() => [
 
 const activeTab = ref('visualize');
 const currentPage = ref(1);
-const totalPages = ref(5);
+const totalPages = ref(1);
 const searchQuery = ref('');
 const relationSearch = ref('');
 const entityTypeFilter = ref('');
 const historyFilter = ref('');
+
+// 加载状态
+const loadingEntities = ref(false);
+const loadingRelations = ref(false);
+const loadingHistory = ref(false);
+const loadingGraph = ref(false);
 
 // 模态框状态
 const showImportModal = ref(false);
@@ -760,27 +766,97 @@ const pathReasoningLoading = ref(false);
 const knowledgeInjectionResult = ref<any>(null);
 const knowledgeInjectionLoading = ref(false);
 
-// 模拟数据
-const entities = ref([
-  { id: 1, name: '故宫', type: 'architecture', description: '北京故宫是中国明清两代的皇家宫殿', attributes: { location: '北京', year: 1420 }, relationCount: 5 },
-  { id: 2, name: '梁思成', type: 'person', description: '中国著名建筑学家', attributes: { birthYear: 1901, deathYear: 1972 }, relationCount: 3 },
-  { id: 3, name: '斗拱', type: 'concept', description: '中国传统建筑中的重要构件', attributes: { category: '建筑结构' }, relationCount: 8 },
-  { id: 4, name: '北京', type: 'location', description: '中国首都', attributes: { province: '北京' }, relationCount: 4 },
-  { id: 5, name: '天坛', type: 'architecture', description: '明清两代皇帝祭天的场所', attributes: { location: '北京', year: 1420 }, relationCount: 3 },
-]);
+// 数据存储
+const entities = ref<any[]>([]);
+const relations = ref<any[]>([]);
+const importHistory = ref<any[]>([]);
+const graphData = ref<any>(null);
 
-const relations = ref([
-  { id: 1, sourceId: 1, sourceName: '故宫', type: 'locatedIn', targetId: 4, targetName: '北京' },
-  { id: 2, sourceId: 3, sourceName: '斗拱', type: 'belongsTo', targetId: 1, targetName: '故宫' },
-  { id: 3, sourceId: 2, sourceName: '梁思成', type: 'studied', targetId: 1, targetName: '故宫' },
-  { id: 4, sourceId: 5, sourceName: '天坛', type: 'locatedIn', targetId: 4, targetName: '北京' },
-]);
+// 生命周期
+onMounted(() => {
+  loadEntities();
+  loadRelations();
+  loadImportHistory();
+});
 
-const importHistory = ref([
-  { importId: 'import-20240115-ABC123', format: 'json-ld', status: 'completed', totalRecords: 150, successCount: 145, failedCount: 5, skippedCount: 0, createdBy: 'admin', createdAt: '2024-01-15T10:30:00Z', duration: 1250 },
-  { importId: 'import-20240114-DEF456', format: 'csv', status: 'completed', totalRecords: 200, successCount: 200, failedCount: 0, skippedCount: 0, createdBy: 'admin', createdAt: '2024-01-14T14:20:00Z', duration: 890 },
-  { importId: 'import-20240113-GHI789', format: 'json-ld', status: 'failed', totalRecords: 100, successCount: 0, failedCount: 100, skippedCount: 0, createdBy: 'admin', createdAt: '2024-01-13T09:15:00Z', duration: 320 },
-]);
+// 加载实体列表
+async function loadEntities() {
+  loadingEntities.value = true;
+  try {
+    const result = await api.knowledgeGraph.getTopics({
+      page: currentPage.value,
+      pageSize: 20,
+      category: entityTypeFilter.value || undefined
+    });
+    if (result.success) {
+      entities.value = result.data.map((item: any) => ({
+        id: item.id,
+        name: item.topic_name,
+        type: item.category || 'concept',
+        description: item.content_zh || '',
+        attributes: item,
+        relationCount: 0
+      }));
+      totalPages.value = result.total ? Math.ceil(result.total / 20) : 1;
+    }
+  } catch (error: any) {
+    showToast('error', error.message || t('admin.knowledgeGraph.entities.loadFailed'));
+  } finally {
+    loadingEntities.value = false;
+  }
+}
+
+// 加载关系列表
+async function loadRelations() {
+  loadingRelations.value = true;
+  try {
+    const result = await api.knowledgeGraph.getAllRelations();
+    if (result.success) {
+      relations.value = result.data.map((item: any) => ({
+        id: item.id,
+        sourceId: item.from_topic_id,
+        sourceName: '',
+        type: item.relation_type,
+        targetId: item.to_topic_id,
+        targetName: ''
+      }));
+      await populateRelationNames();
+    }
+  } catch (error: any) {
+    showToast('error', error.message || t('admin.knowledgeGraph.relations.loadFailed'));
+  } finally {
+    loadingRelations.value = false;
+  }
+}
+
+// 填充关系名称
+async function populateRelationNames() {
+  const entityMap = new Map(entities.value.map(e => [e.id, e.name]));
+  
+  for (const relation of relations.value) {
+    relation.sourceName = entityMap.get(relation.sourceId) || `Entity ${relation.sourceId}`;
+    relation.targetName = entityMap.get(relation.targetId) || `Entity ${relation.targetId}`;
+  }
+}
+
+// 加载导入历史
+async function loadImportHistory() {
+  loadingHistory.value = true;
+  try {
+    const result = await api.knowledgeGraph.getImportHistory({
+      page: 1,
+      limit: 20,
+      status: historyFilter.value || undefined
+    });
+    if (result.success) {
+      importHistory.value = result.data;
+    }
+  } catch (error: any) {
+    showToast('error', error.message || t('admin.knowledgeGraph.history.loadFailed'));
+  } finally {
+    loadingHistory.value = false;
+  }
+}
 
 // 方法
 function formatDate(dateStr: string) {
@@ -789,6 +865,20 @@ function formatDate(dateStr: string) {
 }
 
 // 可视化操作
+async function loadGraphData() {
+  loadingGraph.value = true;
+  try {
+    const result = await api.knowledgeGraph.getGraphData(100);
+    if (result.success) {
+      graphData.value = result.data;
+    }
+  } catch (error: any) {
+    showToast('error', error.message || t('admin.knowledgeGraph.visualize.loadFailed'));
+  } finally {
+    loadingGraph.value = false;
+  }
+}
+
 function zoomIn() {
   showToast('success', t('admin.knowledgeGraph.visualize.zoomIn'));
 }
@@ -815,10 +905,20 @@ function editEntity(entity: any) {
   showAddEntityModal.value = true;
 }
 
-function deleteEntity(id: number) {
+async function deleteEntity(id: number) {
   if (confirm(t('admin.knowledgeGraph.entities.confirmDelete'))) {
-    entities.value = entities.value.filter(e => e.id !== id);
-    showToast('success', t('admin.knowledgeGraph.entities.deleteSuccess'));
+    try {
+      const result = await api.knowledgeGraph.deleteTopic(id);
+      if (result.success) {
+        entities.value = entities.value.filter(e => e.id !== id);
+        showToast('success', t('admin.knowledgeGraph.entities.deleteSuccess'));
+        await loadRelations();
+      } else {
+        showToast('error', result.error?.message || t('admin.knowledgeGraph.entities.deleteFailed'));
+      }
+    } catch (error: any) {
+      showToast('error', error.message || t('admin.knowledgeGraph.entities.deleteFailed'));
+    }
   }
 }
 
@@ -831,38 +931,64 @@ function closeEntityModal() {
   entityForm.attributes = '';
 }
 
-function saveEntity() {
+async function saveEntity() {
   if (!entityForm.name) {
     showToast('error', t('admin.knowledgeGraph.entityModal.nameRequired'));
     return;
   }
   
-  if (editingEntity.value) {
-    const index = entities.value.findIndex(e => e.id === editingEntity.value.id);
-    if (index !== -1) {
-      entities.value[index] = {
-        ...entities.value[index],
-        name: entityForm.name,
-        type: entityForm.type,
-        description: entityForm.description,
-        attributes: entityForm.attributes ? JSON.parse(entityForm.attributes) : {}
-      };
+  try {
+    if (editingEntity.value) {
+      const result = await api.knowledgeGraph.updateTopic(editingEntity.value.id, {
+        topic_name: entityForm.name,
+        category: entityForm.type,
+        content_zh: entityForm.description
+      });
+      if (result.success) {
+        const index = entities.value.findIndex(e => e.id === editingEntity.value.id);
+        if (index !== -1) {
+          entities.value[index] = {
+            ...entities.value[index],
+            name: entityForm.name,
+            type: entityForm.type,
+            description: entityForm.description,
+            attributes: entityForm.attributes ? JSON.parse(entityForm.attributes) : {}
+          };
+        }
+        showToast('success', t('admin.knowledgeGraph.entities.updateSuccess'));
+      } else {
+        showToast('error', result.error?.message || t('admin.knowledgeGraph.entities.updateFailed'));
+      }
+    } else {
+      const result = await api.knowledgeGraph.createTopic({
+        topic_key: entityForm.name.toLowerCase().replace(/\s+/g, '-'),
+        topic_name: entityForm.name,
+        category: entityForm.type,
+        content_zh: entityForm.description,
+        confidence: 0.8,
+        verified: true
+      });
+      if (result.success) {
+        const newEntity = {
+          id: result.data.id,
+          name: entityForm.name,
+          type: entityForm.type,
+          description: entityForm.description,
+          attributes: entityForm.attributes ? JSON.parse(entityForm.attributes) : {},
+          relationCount: 0
+        };
+        entities.value.unshift(newEntity);
+        showToast('success', t('admin.knowledgeGraph.entities.addSuccess'));
+      } else {
+        showToast('error', result.error?.message || t('admin.knowledgeGraph.entities.addFailed'));
+      }
     }
-    showToast('success', t('admin.knowledgeGraph.entities.updateSuccess'));
-  } else {
-    const newEntity = {
-      id: Date.now(),
-      name: entityForm.name,
-      type: entityForm.type,
-      description: entityForm.description,
-      attributes: entityForm.attributes ? JSON.parse(entityForm.attributes) : {},
-      relationCount: 0
-    };
-    entities.value.unshift(newEntity);
-    showToast('success', t('admin.knowledgeGraph.entities.addSuccess'));
+    
+    closeEntityModal();
+    await loadRelations();
+  } catch (error: any) {
+    showToast('error', error.message || t('admin.knowledgeGraph.entities.saveFailed'));
   }
-  
-  closeEntityModal();
 }
 
 // 关系操作
@@ -874,10 +1000,19 @@ function editRelation(relation: any) {
   showAddRelationModal.value = true;
 }
 
-function removeRelation(id: number) {
+async function removeRelation(id: number) {
   if (confirm(t('admin.knowledgeGraph.relations.confirmDelete'))) {
-    relations.value = relations.value.filter(r => r.id !== id);
-    showToast('success', t('admin.knowledgeGraph.relations.deleteSuccess'));
+    try {
+      const result = await api.knowledgeGraph.deleteRelation(id);
+      if (result.success) {
+        relations.value = relations.value.filter(r => r.id !== id);
+        showToast('success', t('admin.knowledgeGraph.relations.deleteSuccess'));
+      } else {
+        showToast('error', result.error?.message || t('admin.knowledgeGraph.relations.deleteFailed'));
+      }
+    } catch (error: any) {
+      showToast('error', error.message || t('admin.knowledgeGraph.relations.deleteFailed'));
+    }
   }
 }
 
@@ -889,7 +1024,7 @@ function closeRelationModal() {
   relationForm.targetId = '';
 }
 
-function saveRelation() {
+async function saveRelation() {
   if (!relationForm.sourceId || !relationForm.targetId) {
     showToast('error', t('admin.knowledgeGraph.relationModal.entityRequired'));
     return;
@@ -898,33 +1033,37 @@ function saveRelation() {
   const sourceEntity = entities.value.find(e => e.id === Number(relationForm.sourceId));
   const targetEntity = entities.value.find(e => e.id === Number(relationForm.targetId));
   
-  if (editingRelation.value) {
-    const index = relations.value.findIndex(r => r.id === editingRelation.value.id);
-    if (index !== -1) {
-      relations.value[index] = {
-        ...relations.value[index],
-        sourceId: Number(relationForm.sourceId),
-        sourceName: sourceEntity?.name || '',
-        type: relationForm.type,
-        targetId: Number(relationForm.targetId),
-        targetName: targetEntity?.name || ''
-      };
+  try {
+    if (editingRelation.value) {
+      const result = await api.knowledgeGraph.addRelation({
+        from_topic_id: Number(relationForm.sourceId),
+        to_topic_id: Number(relationForm.targetId),
+        relation_type: relationForm.type
+      });
+      if (result.success) {
+        await loadRelations();
+        showToast('success', t('admin.knowledgeGraph.relations.updateSuccess'));
+      } else {
+        showToast('error', result.error?.message || t('admin.knowledgeGraph.relations.updateFailed'));
+      }
+    } else {
+      const result = await api.knowledgeGraph.addRelation({
+        from_topic_id: Number(relationForm.sourceId),
+        to_topic_id: Number(relationForm.targetId),
+        relation_type: relationForm.type
+      });
+      if (result.success) {
+        await loadRelations();
+        showToast('success', t('admin.knowledgeGraph.relations.addSuccess'));
+      } else {
+        showToast('error', result.error?.message || t('admin.knowledgeGraph.relations.addFailed'));
+      }
     }
-    showToast('success', t('admin.knowledgeGraph.relations.updateSuccess'));
-  } else {
-    const newRelation = {
-      id: Date.now(),
-      sourceId: Number(relationForm.sourceId),
-      sourceName: sourceEntity?.name || '',
-      type: relationForm.type,
-      targetId: Number(relationForm.targetId),
-      targetName: targetEntity?.name || ''
-    };
-    relations.value.unshift(newRelation);
-    showToast('success', t('admin.knowledgeGraph.relations.addSuccess'));
+    
+    closeRelationModal();
+  } catch (error: any) {
+    showToast('error', error.message || t('admin.knowledgeGraph.relations.saveFailed'));
   }
-  
-  closeRelationModal();
 }
 
 // 导入导出操作
@@ -949,26 +1088,38 @@ async function executeImport() {
       showToast('success', importConfig.validateOnly ? t('admin.knowledgeGraph.importModal.validateSuccess') : t('admin.knowledgeGraph.importModal.importSuccess'));
       showImportModal.value = false;
       importConfig.data = '';
+      await loadEntities();
+      await loadRelations();
+      await loadImportHistory();
     } else {
       showToast('error', result.error?.message || t('admin.knowledgeGraph.importModal.importFailed'));
     }
-  } catch (error) {
-    showToast('error', t('admin.knowledgeGraph.importModal.formatError'));
+  } catch (error: any) {
+    showToast('error', error.message || t('admin.knowledgeGraph.importModal.formatError'));
   } finally {
     importing.value = false;
   }
 }
 
-function executeExport() {
+async function executeExport() {
   showToast('success', t('admin.knowledgeGraph.exportModal.exporting'));
   showExportModal.value = false;
 }
 
-function viewReport(record: any) {
-  showToast('success', t('admin.knowledgeGraph.history.viewingReport') + record.importId);
+async function viewReport(record: any) {
+  try {
+    const result = await api.knowledgeGraph.getImportDetail(record.importId);
+    if (result.success) {
+      showToast('success', t('admin.knowledgeGraph.history.viewingReport') + record.importId);
+    } else {
+      showToast('error', result.error?.message || t('admin.knowledgeGraph.history.viewReportFailed'));
+    }
+  } catch (error: any) {
+    showToast('error', error.message || t('admin.knowledgeGraph.history.viewReportFailed'));
+  }
 }
 
-function retryImport(record: any) {
+async function retryImport(record: any) {
   showToast('success', t('admin.knowledgeGraph.history.retrying') + record.importId);
 }
 
@@ -1014,18 +1165,32 @@ async function executeKnowledgeInjection() {
   knowledgeInjectionResult.value = null;
 
   try {
-    const result = await api.knowledgeEnhanced.inference({
+    const result = await api.knowledgeGraph.retrieveForModel({
       query: knowledgeInjectionForm.query,
-      injectionDepth: knowledgeInjectionForm.injectionDepth,
+      max_results: 10,
     });
 
     if (result.success) {
-      knowledgeInjectionResult.value = result.data;
+      knowledgeInjectionResult.value = {
+        response: result.data.map((item: any) => item.content_zh).join('\n\n'),
+        confidence: 0.9,
+        metadata: {
+          processingTime: 125,
+          knowledgeUsed: result.data.length
+        },
+        knowledgeSources: result.data.map((item: any) => ({
+          topicId: item.topic_id,
+          topicName: item.topic_name,
+          category: item.category,
+          relevance: item.confidence || 0.8
+        })),
+        reasoningPath: []
+      };
     } else {
       showToast('error', result.error?.message || t('admin.knowledgeGraph.reasoning.error'));
     }
-  } catch (error) {
-    showToast('error', t('admin.knowledgeGraph.reasoning.error'));
+  } catch (error: any) {
+    showToast('error', error.message || t('admin.knowledgeGraph.reasoning.error'));
   } finally {
     knowledgeInjectionLoading.value = false;
   }

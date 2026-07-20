@@ -28,6 +28,7 @@ import {
 } from './middleware/security';
 import { authRateLimiter, generalRateLimiter } from './middleware/rateLimiter';
 import { sessionTimeoutCheck, apiKeyValidation } from './middleware/accessControl';
+import { authMiddleware, adminMiddleware } from './middleware/auth';
 import { 
   browseStateDetection, 
   getClientStateStats, 
@@ -63,6 +64,7 @@ import socialRouter from './modules/social/SocialIndex';
 import knowledgeRouter from './modules/knowledgebase/KnowledgeBaseIndex';
 import knowledgeGraphRouter from './modules/knowledge-graph/KnowledgeGraphIndex';
 import userKnowledgeGraphRouter from './modules/knowledge-graph/UserKnowledgeGraphIndex';
+import knowledgeGraphPublicRouter from './modules/knowledge-graph/KnowledgeGraphPublicIndex';
 import knowledgeEnhancedTrainingRouter from './modules/knowledge-graph/KnowledgeEnhancedTrainingIndex';
 import performanceRouter from './modules/admin/performance/PerformanceIndex';
 import syncRouter from './modules/sync/SyncIndex';
@@ -337,7 +339,7 @@ app.use(`${apiPrefix}/profile`, profileRouter);
 app.use(`${apiPrefix}/index`, indexRouter);
 app.use(`${apiPrefix}/activities`, activityRouter);
 app.use(`${apiPrefix}/admin`, adminRouter);
-app.use(`${apiPrefix}/admin/knowledge-graph`, knowledgeGraphRouter);
+app.use(`${apiPrefix}/admin/knowledge-graph`, authMiddleware, adminMiddleware, knowledgeGraphRouter);
 app.use(`${apiPrefix}/admin/performance`, performanceRouter);
 app.use(`${apiPrefix}/i18n`, i18nRouter);
 app.use(`${apiPrefix}/social`, socialRouter);
@@ -347,6 +349,7 @@ app.use(`${apiPrefix}/knowledge`, conditionalOutput, knowledgeRouter);
 
 // 知识图谱用户检索API - 启用条件性输出（浏览状态检测）
 app.use(`${apiPrefix}/knowledge-graph`, conditionalOutput, userKnowledgeGraphRouter);
+app.use(`${apiPrefix}/knowledge-graph`, conditionalOutput, knowledgeGraphPublicRouter);
 
 // 知识增强训练API
 app.use(`${apiPrefix}/knowledge-enhanced`, knowledgeEnhancedTrainingRouter);

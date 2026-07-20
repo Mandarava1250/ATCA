@@ -118,6 +118,16 @@ export const dbConfigs: Record<string, DbConfig> = {
       'SOCIAL_DB_USER', 'SOCIAL_DB_PASSWORD',
       'SOCIAL_DB_ENCRYPT', 'SOCIAL_DB_TRUST_SERVER_CERTIFICATE'
   ),
+  knowledge: buildConfig(
+      'KNOWLEDGE_DB_HOST', 'KNOWLEDGE_DB_PORT', 'KNOWLEDGE_DB_NAME',
+      'KNOWLEDGE_DB_USER', 'KNOWLEDGE_DB_PASSWORD',
+      'KNOWLEDGE_DB_ENCRYPT', 'KNOWLEDGE_DB_TRUST_SERVER_CERTIFICATE'
+  ),
+  sync: buildConfig(
+      'SYNC_DB_HOST', 'SYNC_DB_PORT', 'SYNC_DB_NAME',
+      'SYNC_DB_USER', 'SYNC_DB_PASSWORD',
+      'SYNC_DB_ENCRYPT', 'SYNC_DB_TRUST_SERVER_CERTIFICATE'
+  ),
 };
 
 function getBaseConfig(): DbConfig {
@@ -433,6 +443,8 @@ const sqlScripts: Record<string, string[]> = {
   activity: ['Activity.sql'],
   media3d: ['Media_3D.sql'],
   social: ['Community.sql'],
+  knowledge: ['Knowledge.sql'],
+  sync: ['Sync.sql'],
 };
 
 export async function initDatabase(dbName: keyof typeof dbConfigs): Promise<void> {

@@ -171,11 +171,11 @@ export const http = {
   },
   delete: <T = ApiResponse>(
     url: string,
-    options?: Omit<RequestOptions, 'cache'>
+    options?: Omit<RequestOptions, 'cache'> & { data?: any }
   ) => {
-    const { retry: shouldRetry = false, maxRetries = 3 } = options || {}; // 非幂等操作默认不重试
+    const { retry: shouldRetry = false, maxRetries = 3, data } = options || {};
 
-    const request = () => apiClient.delete<T>(url) as Promise<T>;
+    const request = () => apiClient.delete<T>(url, data ? { data } : undefined) as Promise<T>;
     const promise = shouldRetry ? retry(request, maxRetries) : request();
     // 数据变更后清除匹配前缀的缓存，确保后续GET获取最新数据
     return promise.then(response => {
@@ -581,7 +581,7 @@ export const knowledgeApi = {
 
 export const knowledgeGraphApi = {
   getTopics: (params?: { page?: number; pageSize?: number; category?: string }) =>
-      http.get<{ success: boolean; data: any[]; meta?: { total: number; page: number; pageSize: number } }>('/knowledge-graph/topics', params),
+      http.get<{ success: boolean; data: any[]; total?: number }>('/knowledge-graph/topics', params),
   getTopicById: (id: number) =>
       http.get<{ success: boolean; data: any }>(`/knowledge-graph/topics/${id}`),
   searchTopics: (query: string) =>
@@ -594,6 +594,56 @@ export const knowledgeGraphApi = {
       http.get<{ success: boolean; data: any[]; error?: { message: string } }>('/knowledge-graph/paths', { from, to, maxHops }),
   getStats: () =>
       http.get<{ success: boolean; data: any }>('/knowledge-graph/stats'),
+  createTopic: (data: { topic_key: string; topic_name: string; category: string; content_zh: string; content_en?: string; source?: string; confidence?: number; verified?: boolean }) =>
+      http.post<{ success: boolean; data: any; error?: { message: string } }>('/knowledge-graph/topics', data),
+  updateTopic: (id: number, data: { topic_name?: string; category?: string; content_zh?: string; content_en?: string; source?: string; confidence?: number; verified?: boolean }) =>
+      http.put<{ success: boolean; data: any; error?: { message: string } }>(`/knowledge-graph/topics/${id}`, data),
+  deleteTopic: (id: number) =>
+      http.delete<{ success: boolean; message: string; error?: { message: string } }>(`/knowledge-graph/topics/${id}`),
+  getKeywords: (topicId: number) =>
+      http.get<{ success: boolean; data: any[] }>(`/knowledge-graph/topics/${topicId}/keywords`),
+  addKeyword: (topicId: number, data: { keyword: string; weight?: number; language?: string }) =>
+      http.post<{ success: boolean; data: any }>(`/knowledge-graph/topics/${topicId}/keywords`, data),
+  getAllRelations: () =>
+      http.get<{ success: boolean; data: any[] }>('/knowledge-graph/relations'),
+  getOutgoingRelations: (topicId: number) =>
+      http.get<{ success: boolean; data: any[] }>(`/knowledge-graph/topics/${topicId}/relations/outgoing`),
+  getIncomingRelations: (topicId: number) =>
+      http.get<{ success: boolean; data: any[] }>(`/knowledge-graph/topics/${topicId}/relations/incoming`),
+  addRelation: (data: { from_topic_id: number; to_topic_id: number; relation_type: string; description?: string }) =>
+      http.post<{ success: boolean; data: any; error?: { message: string } }>('/knowledge-graph/relations', data),
+  deleteRelation: (id: number) =>
+      http.delete<{ success: boolean; message: string; error?: { message: string } }>(`/knowledge-graph/relations/${id}`),
+  semanticQuery: (data: { keywords: string[]; language?: string; max_results?: number }) =>
+      http.post<{ success: boolean; data: any }>('/knowledge-graph/semantic-query', data),
+  entityLinking: (data: { text: string; max_entities?: number }) =>
+      http.post<{ success: boolean; data: any[] }>('/knowledge-graph/entity-linking', data),
+  getGraphData: (maxNodes?: number) =>
+      http.get<{ success: boolean; data: any }>('/knowledge-graph/graph', { maxNodes }),
+  retrieveForModel: (data: { query: string; max_results?: number }) =>
+      http.post<{ success: boolean; data: any[]; error?: { message: string } }>('/knowledge-graph/retrieve-for-model', data),
+  verifyAnswer: (data: { question: string; ai_answer: string; ai_provider: string }) =>
+      http.post<{ success: boolean; data: any }>('/knowledge-graph/verify-answer', data),
+  getRelationTypes: () =>
+      http.get<{ success: boolean; data: any[] }>('/admin/knowledge-graph/relations'),
+  addRelationType: (data: { name: string; nameEn: string; description?: string; domain?: string; range?: string }) =>
+      http.post<{ success: boolean; data: any }>('/admin/knowledge-graph/relations', data),
+  updateRelationType: (id: number, data: { name?: string; nameEn?: string; description?: string; domain?: string; range?: string }) =>
+      http.put<{ success: boolean; data: any }>(`/admin/knowledge-graph/relations/${id}`, data),
+  deleteRelationType: (id: number) =>
+      http.delete<{ success: boolean; message: string }>(`/admin/knowledge-graph/relations/${id}`),
+  getImportHistory: (params?: { page?: number; limit?: number; status?: string; search?: string }) =>
+      http.get<{ success: boolean; data: any[]; meta?: { total: number; page: number; limit: number } }>('/admin/knowledge-graph/import-history', params),
+  getImportDetail: (id: string) =>
+      http.get<{ success: boolean; data: any; error?: { message: string } }>(`/admin/knowledge-graph/import-history/${id}`),
+  deleteImportRecord: (id: string) =>
+      http.delete<{ success: boolean; message: string }>(`/admin/knowledge-graph/import-history/${id}`),
+  getAuditLogs: (params?: { page?: number; limit?: number; action?: string; user?: string }) =>
+      http.get<{ success: boolean; data: any[]; meta?: { total: number; page: number; limit: number } }>('/admin/knowledge-graph/audit-logs', params),
+  validateData: (data: { format: string; data: string }) =>
+      http.post<{ success: boolean; data: any }>('/admin/knowledge-graph/validate', data),
+  batchDeleteTopics: (ids: number[]) =>
+      http.delete<{ success: boolean; data: { deletedCount: number } }>('/knowledge-graph/topics/batch', { data: { ids } }),
 };
 
 export const knowledgeEnhancedApi = {

@@ -404,4 +404,240 @@ BEGIN
 END
 GO
 
+-- ============================================
+-- 8. 用户打卡同步记录表 (user_checkin_sync)
+-- ============================================
+IF OBJECT_ID('dbo.user_checkin_sync', 'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.user_checkin_sync (
+        [sync_record_id] BIGINT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        [user_id] INT NOT NULL,
+        [checkin_id] BIGINT NOT NULL,
+        [checkin_date] DATE NOT NULL,
+        [checkin_time] DATETIME NOT NULL,
+        [streak_count] INT DEFAULT 1,
+        [points_earned] INT DEFAULT 0,
+        [device_type] VARCHAR(20) NULL,
+        [device_info] NVARCHAR(255) NULL,
+        [sync_status] NVARCHAR(20) DEFAULT 'pending',
+        [synced_devices] NVARCHAR(MAX) NULL,
+        [created_at] DATETIME DEFAULT GETDATE(),
+        [updated_at] DATETIME DEFAULT GETDATE(),
+        CONSTRAINT UK_user_checkin_date_sync UNIQUE ([user_id], [checkin_date]),
+        CONSTRAINT FK_user_checkin_sync_user FOREIGN KEY ([user_id]) REFERENCES [ATCA_User].[dbo].[users]([user_id])
+    );
+END
+GO
+
+-- ============================================
+-- 9. 创建打卡同步索引
+-- ============================================
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'idx_user_checkin_sync_user' AND object_id = OBJECT_ID('dbo.user_checkin_sync'))
+    CREATE NONCLUSTERED INDEX [idx_user_checkin_sync_user] ON dbo.user_checkin_sync([user_id]);
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'idx_user_checkin_sync_date' AND object_id = OBJECT_ID('dbo.user_checkin_sync'))
+    CREATE NONCLUSTERED INDEX [idx_user_checkin_sync_date] ON dbo.user_checkin_sync([checkin_date]);
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'idx_user_checkin_sync_status' AND object_id = OBJECT_ID('dbo.user_checkin_sync'))
+    CREATE NONCLUSTERED INDEX [idx_user_checkin_sync_status] ON dbo.user_checkin_sync([sync_status]);
+GO
+
+-- ============================================
+-- 10. 打卡同步存储过程
+-- ============================================
+
+-- 记录打卡同步数据
+IF OBJECT_ID('dbo.sp_sync_record_checkin', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_sync_record_checkin;
+GO
+CREATE PROCEDURE dbo.sp_sync_record_checkin
+    @user_id INT,
+    @checkin_id BIGINT,
+    @checkin_date DATE,
+    @checkin_time DATETIME,
+    @streak_count INT,
+    @points_earned INT,
+    @device_type VARCHAR(20) = NULL,
+    @device_info NVARCHAR(255) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @existing_id BIGINT;
+
+    SELECT @existing_id = [sync_record_id]
+    FROM dbo.user_checkin_sync
+    WHERE [user_id] = @user_id AND [checkin_date] = @checkin_date;
+
+    IF @existing_id IS NOT NULL
+    BEGIN
+        UPDATE dbo.user_checkin_sync
+        SET [checkin_id] = @checkin_id,
+            [checkin_time] = @checkin_time,
+            [streak_count] = @streak_count,
+            [points_earned] = @points_earned,
+            [device_type] = COALESCE(@device_type, [device_type]),
+            [device_info] = COALESCE(@device_info, [device_info]),
+            [sync_status] = 'pending',
+            [updated_at] = GETDATE()
+        WHERE [sync_record_id] = @existing_id;
+
+        SELECT @existing_id AS [sync_record_id], CAST(1 AS BIT) AS [success], N'更新成功' AS [message];
+    END
+    ELSE
+    BEGIN
+        INSERT INTO dbo.user_checkin_sync (
+            [user_id], [checkin_id], [checkin_date], [checkin_time],
+            [streak_count], [points_earned], [device_type], [device_info]
+        ) VALUES (
+            @user_id, @checkin_id, @checkin_date, @checkin_time,
+            @streak_count, @points_earned, @device_type, @device_info
+        );
+
+        SELECT SCOPE_IDENTITY() AS [sync_record_id], CAST(1 AS BIT) AS [success], N'记录成功' AS [message];
+    END
+END
+GO
+
+-- 获取用户打卡同步记录
+IF OBJECT_ID('dbo.sp_sync_get_user_checkins', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_sync_get_user_checkins;
+GO
+CREATE PROCEDURE dbo.sp_sync_get_user_checkins
+    @user_id INT,
+    @page INT = 1,
+    @limit INT = 30,
+    @sync_status NVARCHAR(20) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DECLARE @offset INT = (@page - 1) * @limit;
+
+    SELECT
+        [sync_record_id],
+        [checkin_id],
+        [checkin_date],
+        [checkin_time],
+        [streak_count],
+        [points_earned],
+        [device_type],
+        [device_info],
+        [sync_status],
+        [synced_devices],
+        [created_at],
+        [updated_at]
+    FROM dbo.user_checkin_sync
+    WHERE [user_id] = @user_id
+        AND (@sync_status IS NULL OR [sync_status] = @sync_status)
+    ORDER BY [checkin_date] DESC
+    OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY;
+END
+GO
+
+-- 获取用户待同步打卡记录
+IF OBJECT_ID('dbo.sp_sync_get_pending_checkins', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_sync_get_pending_checkins;
+GO
+CREATE PROCEDURE dbo.sp_sync_get_pending_checkins
+    @user_id INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT
+        [sync_record_id],
+        [checkin_id],
+        [checkin_date],
+        [checkin_time],
+        [streak_count],
+        [points_earned],
+        [device_type],
+        [device_info]
+    FROM dbo.user_checkin_sync
+    WHERE [user_id] = @user_id AND [sync_status] = 'pending'
+    ORDER BY [checkin_date] DESC;
+END
+GO
+
+-- 标记打卡已同步到设备
+IF OBJECT_ID('dbo.sp_sync_mark_checkin_synced', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_sync_mark_checkin_synced;
+GO
+CREATE PROCEDURE dbo.sp_sync_mark_checkin_synced
+    @user_id INT,
+    @checkin_date DATE,
+    @device_id NVARCHAR(64)
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    UPDATE dbo.user_checkin_sync
+    SET [synced_devices] = CASE 
+            WHEN [synced_devices] IS NULL THEN @device_id
+            WHEN [synced_devices] LIKE '%' + @device_id + '%' THEN [synced_devices]
+            ELSE [synced_devices] + ',' + @device_id
+        END,
+        [updated_at] = GETDATE()
+    WHERE [user_id] = @user_id AND [checkin_date] = @checkin_date;
+END
+GO
+
+-- 批量标记打卡已同步
+IF OBJECT_ID('dbo.sp_sync_mark_checkins_synced', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_sync_mark_checkins_synced;
+GO
+CREATE PROCEDURE dbo.sp_sync_mark_checkins_synced
+    @user_id INT,
+    @device_id NVARCHAR(64)
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    UPDATE dbo.user_checkin_sync
+    SET [synced_devices] = CASE 
+            WHEN [synced_devices] IS NULL THEN @device_id
+            WHEN [synced_devices] LIKE '%' + @device_id + '%' THEN [synced_devices]
+            ELSE [synced_devices] + ',' + @device_id
+        END,
+        [sync_status] = 'synced',
+        [updated_at] = GETDATE()
+    WHERE [user_id] = @user_id AND [sync_status] = 'pending';
+
+    SELECT @@ROWCOUNT AS [updated_count];
+END
+GO
+
+-- 获取用户打卡同步统计
+IF OBJECT_ID('dbo.sp_sync_get_checkin_stats', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_sync_get_checkin_stats;
+GO
+CREATE PROCEDURE dbo.sp_sync_get_checkin_stats
+    @user_id INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT
+        COUNT(*) AS [total_records],
+        SUM(CASE WHEN [sync_status] = 'pending' THEN 1 ELSE 0 END) AS [pending_count],
+        SUM(CASE WHEN [sync_status] = 'synced' THEN 1 ELSE 0 END) AS [synced_count],
+        MAX([checkin_date]) AS [last_checkin_date],
+        MAX([updated_at]) AS [last_sync_time]
+    FROM dbo.user_checkin_sync
+    WHERE [user_id] = @user_id;
+END
+GO
+
+-- ============================================
+-- 11. 更新时间触发器
+-- ============================================
+IF OBJECT_ID('tr_user_checkin_sync_updated_at', 'TR') IS NOT NULL
+    DROP TRIGGER tr_user_checkin_sync_updated_at;
+GO
+
+CREATE TRIGGER tr_user_checkin_sync_updated_at
+ON dbo.user_checkin_sync
+AFTER UPDATE
+AS
+BEGIN
+    SET NOCOUNT ON;
+    UPDATE dbo.user_checkin_sync
+    SET [updated_at] = GETDATE()
+    FROM dbo.user_checkin_sync s
+    INNER JOIN inserted i ON s.[sync_record_id] = i.[sync_record_id];
+END
+GO
+
 PRINT 'Sync 数据库初始化完成';

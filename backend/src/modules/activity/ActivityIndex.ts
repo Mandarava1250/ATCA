@@ -216,9 +216,60 @@ router.post('/:id/join', authMiddleware, validateParams(idParamSchema), asyncHan
 // 每日打卡 API
 // ========================
 
+const checkinSchema = z.object({
+  device_type: z.enum(['mobile', 'web', 'desktop']).optional(),
+  device_info: z.string().max(255).optional(),
+  checkin_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+});
+
+const logger = {
+  info: (msg: string, data?: any) => console.log(`[Checkin] ${msg}`, data || ''),
+  warn: (msg: string, data?: any) => console.warn(`[Checkin] ${msg}`, data || ''),
+  error: (msg: string, data?: any) => console.error(`[Checkin] ${msg}`, data || ''),
+};
+
+async function syncCheckinToSyncDb(
+  userId: number,
+  checkinId: number,
+  checkinDate: string,
+  checkinTime: Date,
+  streakCount: number,
+  pointsEarned: number,
+  deviceType?: string,
+  deviceInfo?: string
+): Promise<void> {
+  try {
+    await execute(
+      'sync',
+      'EXEC sp_sync_record_checkin @user_id = @uid, @checkin_id = @cid, @checkin_date = @cd, @checkin_time = @ct, @streak_count = @sc, @points_earned = @pe, @device_type = @dt, @device_info = @di',
+      {
+        uid: userId,
+        cid: checkinId,
+        cd: checkinDate,
+        ct: checkinTime.toISOString(),
+        sc: streakCount,
+        pe: pointsEarned,
+        dt: deviceType || null,
+        di: deviceInfo || null,
+      }
+    );
+    logger.info(`打卡数据已同步到Sync数据库 - 用户: ${userId}, 日期: ${checkinDate}`);
+  } catch (syncErr: any) {
+    logger.error(`打卡数据同步到Sync数据库失败 - 用户: ${userId}, 日期: ${checkinDate}, 错误: ${syncErr.message}`);
+  }
+}
+
 // 用户打卡
 router.post('/checkin', authMiddleware, asyncHandler(async (req: AuthRequest, res) => {
   const { device_type, device_info, checkin_date } = req.body;
+
+  const validationResult = checkinSchema.safeParse({ device_type, device_info, checkin_date });
+  if (!validationResult.success) {
+    const errorMessages = validationResult.error.errors.map(e => `${e.path.join('.')}: ${e.message}`);
+    logger.warn(`打卡请求参数验证失败 - 用户: ${req.user!.userId}, 错误: ${errorMessages.join(', ')}`);
+    res.status(400).json({ success: false, message: '参数验证失败', errors: errorMessages });
+    return;
+  }
 
   const targetDate = checkin_date ? new Date(checkin_date) : new Date();
   const targetDateStr = targetDate.toISOString().split('T')[0];
@@ -256,6 +307,8 @@ router.post('/checkin', authMiddleware, asyncHandler(async (req: AuthRequest, re
     mockCheckins.unshift(newCheckin);
     mockStorage.set('mock_checkins', JSON.stringify(mockCheckins));
 
+    logger.info(`Mock模式打卡成功 - 用户: ${req.user!.userId}, 日期: ${targetDateStr}, 连续: ${streak}, 积分: ${points}`);
+
     res.json({ success: true, message: '打卡成功', checkin_id: newCheckin.checkin_id, streak_count: streak, points_earned: points, already_checked: false });
     return;
   }
@@ -270,16 +323,31 @@ router.post('/checkin', authMiddleware, asyncHandler(async (req: AuthRequest, re
     if (Array.isArray(result) && result.length > 0) {
       const row = result[0];
       if (row.success) {
+        logger.info(`打卡成功 - 用户: ${req.user!.userId}, 日期: ${targetDateStr}, 连续: ${row.streak_count}, 积分: ${row.points_earned}`);
+
+        syncCheckinToSyncDb(
+          req.user!.userId,
+          row.checkin_id,
+          targetDateStr,
+          new Date(),
+          row.streak_count,
+          row.points_earned,
+          device_type,
+          device_info
+        ).catch(syncErr => {
+          logger.error(`异步同步打卡数据失败: ${syncErr.message}`);
+        });
+
         try {
           pushToUser(req.user!.userId, 'sync:checkin_update', {
-            checkin_date: new Date().toISOString().split('T')[0],
+            checkin_date: targetDateStr,
             streak_count: row.streak_count,
             points_earned: row.points_earned,
             device_type,
             timestamp: Date.now(),
           });
         } catch (syncErr: any) {
-          console.warn('[Checkin] 同步推送失败（用户可能未连接WebSocket）:', syncErr.message);
+          logger.warn('WebSocket同步推送失败（用户可能未连接）:', syncErr.message);
         }
 
         res.json({
@@ -291,6 +359,7 @@ router.post('/checkin', authMiddleware, asyncHandler(async (req: AuthRequest, re
           already_checked: false,
         });
       } else {
+        logger.info(`打卡失败（已打卡） - 用户: ${req.user!.userId}, 日期: ${targetDateStr}`);
         res.json({
           success: false,
           message: row.message,
@@ -298,12 +367,12 @@ router.post('/checkin', authMiddleware, asyncHandler(async (req: AuthRequest, re
         });
       }
     } else {
+      logger.error(`打卡返回数据异常 - 用户: ${req.user!.userId}, 日期: ${targetDateStr}`);
       res.json({ success: false, message: '打卡失败', already_checked: false });
     }
   } catch (err: any) {
-    console.error('[Checkin] 打卡失败:', err.message);
+    logger.error(`打卡数据库操作失败 - 用户: ${req.user!.userId}, 日期: ${targetDateStr}, 错误: ${err.message}`);
     
-    // 数据库失败时降级到 Mock 模式处理
     const mockCheckins = JSON.parse(mockStorage.get('mock_checkins') || '[]');
     const hasCheckedToday = mockCheckins.some((c: any) => c.checkin_date === targetDateStr);
     
@@ -330,6 +399,8 @@ router.post('/checkin', authMiddleware, asyncHandler(async (req: AuthRequest, re
 
       mockCheckins.unshift(newCheckin);
       mockStorage.set('mock_checkins', JSON.stringify(mockCheckins));
+
+      logger.info(`降级模式打卡成功 - 用户: ${req.user!.userId}, 日期: ${targetDateStr}, 连续: ${streak}, 积分: ${points}`);
 
       res.json({
         success: true,

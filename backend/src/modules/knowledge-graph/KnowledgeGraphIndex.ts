@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 华夏营造 - 知识图谱数据导入管理模块
  * 提供管理员安全高效地添加本地模型知识图谱数据的功能
  */
@@ -12,7 +12,7 @@ import { knowledgeGraphService } from '../../services/KnowledgeGraphService';
 import { isMockMode } from '../../config/database';
 
 const router = Router();
-router.use(authMiddleware as any, adminMiddleware as any);
+// 注意：管理员中间件在 main.ts 中根据路径分别应用
 
 // ============ 数据导入接口 ============
 
@@ -532,5 +532,4 @@ router.get('/stats', asyncHandler(async (_req, res) => {
     });
   }
 }));
-
 export default router;
