@@ -793,14 +793,29 @@ graph TB
     C5 --> E2
     C5 --> E3
     
-    style A1 fill:#42b983
-    style A7 fill:#000000
-    style C1 fill:#339933
-    style D1 fill:#cc2927
-    style D2 fill:#d82c20
-    style E1 fill:#ff6600
-    style E2 fill:#4285f4
-    style E3 fill:#00bfff
+    style A1 fill:#2D2722
+    style A2 fill:#2D2722
+    style A3 fill:#2D2722
+    style A4 fill:#2D2722
+    style A5 fill:#2D2722
+    style A6 fill:#2D2722
+    style A7 fill:#2D2722
+    style B1 fill:#2D2722
+    style B2 fill:#2D2722
+    style B3 fill:#2D2722
+    style B4 fill:#2D2722
+    style C1 fill:#2D2722
+    style C2 fill:#2D2722
+    style C3 fill:#2D2722
+    style C4 fill:#2D2722
+    style C5 fill:#2D2722
+    style C6 fill:#2D2722
+    style D1 fill:#2D2722
+    style D2 fill:#2D2722
+    style D3 fill:#2D2722
+    style E1 fill:#2D2722
+    style E2 fill:#2D2722
+    style E3 fill:#2D2722
 `);
 
 const mermaidCoreModule = ref(`
@@ -847,13 +862,32 @@ graph LR
         KnowledgeBase --> KnowledgeData[knowledgeData.json]
     end
     
-    style Start fill:#f9f
-    style Authorized fill:#9f9
-    style Workshop fill:#ff9
-    style Quiz fill:#9ff
-    style Assistant fill:#f9f
-    style SQLServer fill:#cc2927
-    style DBCache fill:#d82c20
+    style Start fill:#2D2722
+    style Route fill:#2D2722
+    style Public fill:#2D2722
+    style AuthCheck fill:#2D2722
+    style Login fill:#2D2722
+    style Authorized fill:#2D2722
+    style AuthSuccess fill:#2D2722
+    style TokenStore fill:#2D2722
+    style Error fill:#2D2722
+    style ModuleChoice fill:#2D2722
+    style Workshop fill:#2D2722
+    style Quiz fill:#2D2722
+    style Assistant fill:#2D2722
+    style Community fill:#2D2722
+    style Admin fill:#2D2722
+    style WorkshopDB fill:#2D2722
+    style QuizDB fill:#2D2722
+    style AIModel fill:#2D2722
+    style KnowledgeDB fill:#2D2722
+    style SocialDB fill:#2D2722
+    style AllDB fill:#2D2722
+    style DBCache fill:#2D2722
+    style ConnectionPool fill:#2D2722
+    style SQLServer fill:#2D2722
+    style KnowledgeBase fill:#2D2722
+    style KnowledgeData fill:#2D2722
 `);
 
 const mermaidLoginFlow = ref(`
@@ -895,13 +929,30 @@ graph TB
     WebSocketConnect --> LoadUserData[加载用户数据]
     LoadUserData --> Redirect[重定向到目标页面]
     
-    style Start fill:#f9f
-    style ValidationError fill:#f66
-    style Lockout fill:#f66
-    style LoginFailed fill:#f66
-    style AccountLock fill:#f66
-    style GenerateTokens fill:#9f9
-    style Redirect fill:#9f9
+    style Start fill:#2D2722
+    style InputValidation fill:#2D2722
+    style RateLimitCheck fill:#2D2722
+    style SendRequest fill:#2D2722
+    style BackendReceive fill:#2D2722
+    style QueryUser fill:#2D2722
+    style UserExists fill:#2D2722
+    style PasswordVerify fill:#2D2722
+    style IncrementAttempts fill:#2D2722
+    style AttemptsCheck fill:#2D2722
+    style ValidationError fill:#2D2722
+    style Lockout fill:#2D2722
+    style LoginFailed fill:#2D2722
+    style AccountLock fill:#2D2722
+    style GenerateTokens fill:#2D2722
+    style AccessToken fill:#2D2722
+    style RefreshToken fill:#2D2722
+    style StoreTokens fill:#2D2722
+    style LocalStorage fill:#2D2722
+    style PiniaStore fill:#2D2722
+    style UpdateUserState fill:#2D2722
+    style WebSocketConnect fill:#2D2722
+    style LoadUserData fill:#2D2722
+    style Redirect fill:#2D2722
 `);
 
 const mermaidTokenRefresh = ref(`
@@ -947,11 +998,31 @@ graph TB
     NewTokens --> UpdateTokens[更新客户端Tokens]
     UpdateTokens --> RetryRequest[重试原请求]
     
-    style Request fill:#f9f
-    style Unauthorized fill:#f66
-    style TokenInvalid fill:#f66
-    style ProceedRequest fill:#9f9
-    style NewTokens fill:#9f9
+    style Request fill:#2D2722
+    style TokenExtract fill:#2D2722
+    style TokenExists fill:#2D2722
+    style BlacklistCheck fill:#2D2722
+    style RedisQuery fill:#2D2722
+    style MemoryQuery fill:#2D2722
+    style IsBlacklisted fill:#2D2722
+    style JWTVerify fill:#2D2722
+    style ExtractUserInfo fill:#2D2722
+    style AttachToRequest fill:#2D2722
+    style PermissionCheck fill:#2D2722
+    style RoleCheck fill:#2D2722
+    style AdminAccess fill:#2D2722
+    style UserAccess fill:#2D2722
+    style GuestAccess fill:#2D2722
+    style Unauthorized fill:#2D2722
+    style TokenInvalid fill:#2D2722
+    style ProceedRequest fill:#2D2722
+    style RefreshAttempt fill:#2D2722
+    style RefreshAPI fill:#2D2722
+    style RefreshVerify fill:#2D2722
+    style NewTokens fill:#2D2722
+    style UpdateTokens fill:#2D2722
+    style RetryRequest fill:#2D2722
+    style RedirectToLogin fill:#2D2722
 `);
 
 const mermaidSessionSecurity = ref(`
@@ -1009,11 +1080,44 @@ graph TB
         HeaderCheck -->|不匹配| DenyRequest[拒绝请求]
     end
     
-    style SessionStart fill:#f9f
-    style SessionTimeout fill:#f66
-    style BruteForce fill:#f66
-    style SQLInjection fill:#f66
-    style CSRFProtection fill:#f66
+    style SessionStart fill:#2D2722
+    style SessionInit fill:#2D2722
+    style ActivityTimer fill:#2D2722
+    style UserActivity fill:#2D2722
+    style ResetTimer fill:#2D2722
+    style SessionTimeout fill:#2D2722
+    style LogoutProcess fill:#2D2722
+    style BlacklistAdd fill:#2D2722
+    style RedisStore fill:#2D2722
+    style MemoryStore fill:#2D2722
+    style ClearClient fill:#2D2722
+    style RedirectToLogin fill:#2D2722
+    style ContinueSession fill:#2D2722
+    style MultiLogin fill:#2D2722
+    style DeviceCheck fill:#2D2722
+    style AllowMulti fill:#2D2722
+    style ForceLogout fill:#2D2722
+    style NotifyUser fill:#2D2722
+    style UpdateDeviceList fill:#2D2722
+    style AllowNewDevice fill:#2D2722
+    style TrackDevice fill:#2D2722
+    style SessionMap fill:#2D2722
+    style BruteForce fill:#2D2722
+    style LoginLimiter fill:#2D2722
+    style AttemptCount fill:#2D2722
+    style Threshold fill:#2D2722
+    style AccountLockout fill:#2D2722
+    style AllowRetry fill:#2D2722
+    style SQLInjection fill:#2D2722
+    style QueryAnalysis fill:#2D2722
+    style PatternMatch fill:#2D2722
+    style BlockRequest fill:#2D2722
+    style AllowQuery fill:#2D2722
+    style CSRFProtection fill:#2D2722
+    style TokenValidation fill:#2D2722
+    style HeaderCheck fill:#2D2722
+    style AllowRequest fill:#2D2722
+    style DenyRequest fill:#2D2722
 `);
 
 const mermaidPoolInit = ref(`
@@ -1072,10 +1176,39 @@ graph TB
     HybridMode --> AppReady
     MockMode --> AppReady
     
-    style AppStart fill:#f9f
-    style ConfigError fill:#f66
-    style ReadyMode fill:#9f9
-    style MockMode fill:#ff9
+    style AppStart fill:#2D2722
+    style LoadConfig fill:#2D2722
+    style ParseEnv fill:#2D2722
+    style BuildConfigs fill:#2D2722
+    style ConfigValidation fill:#2D2722
+    style ConfigError fill:#2D2722
+    style PreconnectAll fill:#2D2722
+    style ConnectLoop fill:#2D2722
+    style DB1 fill:#2D2722
+    style DB2 fill:#2D2722
+    style DB3 fill:#2D2722
+    style DB4 fill:#2D2722
+    style DB5 fill:#2D2722
+    style DB6 fill:#2D2722
+    style RetryLogic fill:#2D2722
+    style Attempt1 fill:#2D2722
+    style ConnectSuccess1 fill:#2D2722
+    style PoolCache1 fill:#2D2722
+    style Delay1 fill:#2D2722
+    style Attempt2 fill:#2D2722
+    style ConnectSuccess2 fill:#2D2722
+    style PoolCache2 fill:#2D2722
+    style Delay2 fill:#2D2722
+    style Attempt3 fill:#2D2722
+    style ConnectSuccess3 fill:#2D2722
+    style PoolCache3 fill:#2D2722
+    style MarkFailed fill:#2D2722
+    style ResultsCollect fill:#2D2722
+    style SuccessCount fill:#2D2722
+    style ReadyMode fill:#2D2722
+    style HybridMode fill:#2D2722
+    style MockMode fill:#2D2722
+    style AppReady fill:#2D2722
 `);
 
 const mermaidPoolRecycle = ref(`
@@ -1135,11 +1268,38 @@ graph TB
     
     UseMock --> ReturnMockData[返回Mock数据]
     
-    style QueryRequest fill:#f9f
-    style AcquireConn fill:#9f9
-    style ExecuteQuery fill:#9ff
-    style QueryError fill:#f66
-    style ReleaseConn fill:#ff9
+    style QueryRequest fill:#2D2722
+    style GetPool fill:#2D2722
+    style PoolExists fill:#2D2722
+    style CreatePool fill:#2D2722
+    style PoolConnected fill:#2D2722
+    style ReconnectPool fill:#2D2722
+    style PoolConfig fill:#2D2722
+    style EstablishConn fill:#2D2722
+    style PoolCache fill:#2D2722
+    style RetryConnect fill:#2D2722
+    style ConnectResult fill:#2D2722
+    style UseMock fill:#2D2722
+    style CheckAvailable fill:#2D2722
+    style AvailableConn fill:#2D2722
+    style AcquireConn fill:#2D2722
+    style WaitQueue fill:#2D2722
+    style QueueTimeout fill:#2D2722
+    style ExecuteQuery fill:#2D2722
+    style QuerySuccess fill:#2D2722
+    style ReturnData fill:#2D2722
+    style QueryError fill:#2D2722
+    style ReleaseConn fill:#2D2722
+    style ReturnToPool fill:#2D2722
+    style IdlePool fill:#2D2722
+    style IdleTimeoutCheck fill:#2D2722
+    style DestroyConn fill:#2D2722
+    style PoolMinCheck fill:#2D2722
+    style CreateNewConn fill:#2D2722
+    style RemoveFromPool fill:#2D2722
+    style KeepIdle fill:#2D2722
+    style WaitQueueNotify fill:#2D2722
+    style ReturnMockData fill:#2D2722
 `);
 
 const mermaidAIInit = ref(`
@@ -1187,9 +1347,31 @@ graph TB
     ReadyState --> DirectQuery
     InitError --> ErrorHandle[错误处理与提示]
     
-    style UserRequest fill:#f9f
-    style ReadyState fill:#9f9
-    style InitError fill:#f66
+    style UserRequest fill:#2D2722
+    style ManagerCheck fill:#2D2722
+    style DirectQuery fill:#2D2722
+    style InitializeStart fill:#2D2722
+    style ProgressUI fill:#2D2722
+    style Progress1 fill:#2D2722
+    style BackendConnect fill:#2D2722
+    style BackendResponse fill:#2D2722
+    style Progress2 fill:#2D2722
+    style LoadKnowledgeData fill:#2D2722
+    style KnowledgeLoadResult fill:#2D2722
+    style Progress3 fill:#2D2722
+    style InitializeServices fill:#2D2722
+    style ServiceInit fill:#2D2722
+    style KnowledgeRetrieverInit fill:#2D2722
+    style ConflictDetectorInit fill:#2D2722
+    style KnowledgeGraphServiceInit fill:#2D2722
+    style Progress4 fill:#2D2722
+    style ModelValidation fill:#2D2722
+    style ValidationResult fill:#2D2722
+    style Progress5 fill:#2D2722
+    style UpdateState fill:#2D2722
+    style ReadyState fill:#2D2722
+    style InitError fill:#2D2722
+    style ErrorHandle fill:#2D2722
 `);
 
 const mermaidRAGQuery = ref(`
@@ -1275,10 +1457,56 @@ graph TB
     DisplayUI --> ShowMetadata[显示推理元数据]
     DisplayUI --> ShowConflict[显示冲突提示]
     
-    style QueryInput fill:#f9f
-    style CandidateKnowledge fill:#9ff
-    style AIResponse fill:#ff9
-    style FinalResult fill:#9f9
+    style QueryInput fill:#2D2722
+    style Preprocess fill:#2D2722
+    style ExtractKeywords fill:#2D2722
+    style IdentifyType fill:#2D2722
+    style BuildVector fill:#2D2722
+    style KeywordList fill:#2D2722
+    style QuestionType fill:#2D2722
+    style QueryVector fill:#2D2722
+    style RetrievalStart fill:#2D2722
+    style BM25Search fill:#2D2722
+    style VectorSearch fill:#2D2722
+    style BM25Results fill:#2D2722
+    style VectorResults fill:#2D2722
+    style HybridMerge fill:#2D2722
+    style ScoreCalculation fill:#2D2722
+    style TopKSelection fill:#2D2722
+    style CandidateKnowledge fill:#2D2722
+    style GraphEnhance fill:#2D2722
+    style EntityQuery fill:#2D2722
+    style RelationExpand fill:#2D2722
+    style ContextChain fill:#2D2722
+    style PromptBuild fill:#2D2722
+    style SystemRole fill:#2D2722
+    style KnowledgeInjection fill:#2D2722
+    style QuestionEmbed fill:#2D2722
+    style CompletePrompt fill:#2D2722
+    style AIModelCall fill:#2D2722
+    style ModelChoice fill:#2D2722
+    style QwenAPI fill:#2D2722
+    style DeepSeekAPI fill:#2D2722
+    style XunfeiAPI fill:#2D2722
+    style AIResponse fill:#2D2722
+    style ConflictDetection fill:#2D2722
+    style CompareKnowledge fill:#2D2722
+    style FactualCheck fill:#2D2722
+    style LogicalCheck fill:#2D2722
+    style ConflictList1 fill:#2D2722
+    style ConflictList2 fill:#2D2722
+    style MergeConflicts fill:#2D2722
+    style HasConflict fill:#2D2722
+    style GenerateReport fill:#2D2722
+    style CleanResponse fill:#2D2722
+    style FinalResult fill:#2D2722
+    style FormatOutput fill:#2D2722
+    style ReturnToFrontend fill:#2D2722
+    style DisplayUI fill:#2D2722
+    style ShowResponse fill:#2D2722
+    style ShowKnowledge fill:#2D2722
+    style ShowMetadata fill:#2D2722
+    style ShowConflict fill:#2D2722
 `);
 
 const mermaidConflictDetection = ref(`
@@ -1370,17 +1598,66 @@ graph TB
     DisplayToFrontend --> ShowQuality[显示质量评级]
     DisplayToFrontend --> ShowRecommendation[显示修正建议]
     
-    style AIResponse fill:#f9f
-    style ConflictDetectionStart fill:#ff9
-    style FinalReport fill:#9ff
-    style FinalAnalysis fill:#9f9
+    style AIResponse fill:#2D2722
+    style ConflictDetectionStart fill:#2D2722
+    style LoadKnowledge fill:#2D2722
+    style KnowledgeMatch fill:#2D2722
+    style EntityExtraction fill:#2D2722
+    style RelationExtraction fill:#2D2722
+    style FactExtraction fill:#2D2722
+    style EntityList fill:#2D2722
+    style RelationList fill:#2D2722
+    style FactList fill:#2D2722
+    style ComparePhase fill:#2D2722
+    style EntityCompare fill:#2D2722
+    style RelationCompare fill:#2D2722
+    style FactCompare fill:#2D2722
+    style EntityMismatch fill:#2D2722
+    style RelationMismatch fill:#2D2722
+    style FactMismatch fill:#2D2722
+    style ConflictType1 fill:#2D2722
+    style ConflictType2 fill:#2D2722
+    style ConflictType3 fill:#2D2722
+    style SeverityAssess1 fill:#2D2722
+    style SeverityAssess2 fill:#2D2722
+    style SeverityAssess3 fill:#2D2722
+    style SeverityLevel1 fill:#2D2722
+    style SeverityLevel2 fill:#2D2722
+    style SeverityLevel3 fill:#2D2722
+    style ConflictCollect fill:#2D2722
+    style GenerateConflictReport fill:#2D2722
+    style ReportStructure fill:#2D2722
+    style SummarySection fill:#2D2722
+    style DetailsSection fill:#2D2722
+    style RecommendationSection fill:#2D2722
+    style ConflictCount fill:#2D2722
+    style SeverityDistribution fill:#2D2722
+    style ConflictDescription fill:#2D2722
+    style KnowledgeReference fill:#2D2722
+    style AnalysisReason fill:#2D2722
+    style CorrectionSuggestion fill:#2D2722
+    style ActionSuggest fill:#2D2722
+    style KnowledgeUpdate fill:#2D2722
+    style FinalReport fill:#2D2722
+    style DeviationAnalysis fill:#2D2722
+    style CoverageCalc fill:#2D2722
+    style QualityAssess fill:#2D2722
+    style CoverageScore fill:#2D2722
+    style QualityScore fill:#2D2722
+    style FinalAnalysis fill:#2D2722
+    style ReturnResult fill:#2D2722
+    style DisplayToFrontend fill:#2D2722
+    style ShowConflictReport fill:#2D2722
+    style ShowCoverage fill:#2D2722
+    style ShowQuality fill:#2D2722
+    style ShowRecommendation fill:#2D2722
 `);
 </script>
 
 <style scoped>
 .overview-page {
   min-height: 100vh;
-  background: linear-gradient(180deg, #1A1714 0%, #24201C 100%);
+  background: #1A1714;
   padding-top: 68px;
 }
 
@@ -1391,7 +1668,7 @@ graph TB
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  background: linear-gradient(135deg, #1A1714 0%, #2C241E 50%, #1A1714 100%);
+  background: #1A1714;
 }
 
 .section-hero::before {
@@ -1443,7 +1720,7 @@ graph TB
 }
 
 .section-card {
-  background: rgba(36, 32, 28, 0.8);
+  background: #24201C;
   border: 1px solid rgba(201, 169, 110, 0.1);
   border-radius: var(--r-lg);
   padding: 48px;
@@ -1501,15 +1778,15 @@ graph TB
 }
 
 .feature-card {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: #2D2722;
+  border: 1px solid rgba(201, 169, 110, 0.05);
   border-radius: var(--r-md);
   padding: 20px;
   transition: all var(--t);
 }
 
 .feature-card:hover {
-  background: rgba(201, 169, 110, 0.05);
+  background: #352E27;
   border-color: rgba(201, 169, 110, 0.15);
 }
 
@@ -1549,8 +1826,8 @@ graph TB
   display: flex;
   gap: 16px;
   padding: 16px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: #2D2722;
+  border: 1px solid rgba(201, 169, 110, 0.05);
   border-radius: var(--r-md);
 }
 
@@ -1588,8 +1865,8 @@ graph TB
 }
 
 .tech-table-card {
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.04);
+  background: #2D2722;
+  border: 1px solid rgba(201, 169, 110, 0.04);
   border-radius: var(--r-md);
   overflow: hidden;
 }
@@ -1600,8 +1877,8 @@ graph TB
   color: var(--gold);
   padding: 16px;
   margin: 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  background: rgba(201, 169, 110, 0.05);
+  border-bottom: 1px solid rgba(201, 169, 110, 0.05);
+  background: #352E27;
 }
 
 .tech-table {
@@ -1619,7 +1896,7 @@ graph TB
 .tech-table th {
   color: var(--gold);
   font-weight: 600;
-  background: rgba(201, 169, 110, 0.03);
+  background: #352E27;
 }
 
 .tech-table td {
@@ -1632,8 +1909,8 @@ graph TB
 }
 
 .selection-reasons {
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.04);
+  background: #2D2722;
+  border: 1px solid rgba(201, 169, 110, 0.04);
   border-radius: var(--r-md);
   padding: 24px;
 }
@@ -1686,8 +1963,8 @@ graph TB
 }
 
 .feature-section {
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.04);
+  background: #2D2722;
+  border: 1px solid rgba(201, 169, 110, 0.04);
   border-radius: var(--r-md);
   padding: 24px;
 }
@@ -1700,8 +1977,8 @@ graph TB
 }
 
 .feature-item-card {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: #352E27;
+  border: 1px solid rgba(201, 169, 110, 0.05);
   border-radius: var(--r-md);
   padding: 20px;
 }
@@ -1738,8 +2015,8 @@ graph TB
 }
 
 .requirement-table th {
-  background: #8B2635;
-  color: #fff;
+  background: #352E27;
+  color: var(--gold);
   padding: 12px 16px;
   font-size: 0.875rem;
   font-weight: 600;
@@ -1750,15 +2027,15 @@ graph TB
   padding: 12px 16px;
   font-size: 0.8125rem;
   color: var(--text-muted);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid rgba(201, 169, 110, 0.03);
 }
 
 .requirement-table tr:nth-child(even) td {
-  background: rgba(139, 38, 53, 0.05);
+  background: #2D2722;
 }
 
 .requirement-table tr:nth-child(odd) td {
-  background: rgba(139, 38, 53, 0.1);
+  background: #352E27;
 }
 
 .non-functional-grid {
@@ -1768,8 +2045,8 @@ graph TB
 }
 
 .non-functional-card {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: #2D2722;
+  border: 1px solid rgba(201, 169, 110, 0.05);
   border-radius: var(--r-md);
   padding: 20px;
 }
@@ -1822,28 +2099,28 @@ graph TB
 }
 
 .frontend-layer {
-  background: #8B2635;
+  background: #2D2722;
 }
 
 .frontend-layer .layer-header {
-  background: #6B1D29;
+  background: #352E27;
 }
 
 .backend-layer {
-  background: #C9A96E;
+  background: #2D2722;
 }
 
 .backend-layer .layer-header {
-  background: #A88B4A;
-  color: #1A1714;
+  background: #352E27;
+  color: var(--gold);
 }
 
 .data-layer {
-  background: #4A4A4A;
+  background: #2D2722;
 }
 
 .data-layer .layer-header {
-  background: #3A3A3A;
+  background: #352E27;
 }
 
 .layer-modules {
@@ -1855,15 +2132,15 @@ graph TB
 
 .module-item {
   padding: 8px 16px;
-  background: rgba(255, 255, 255, 0.15);
+  background: #352E27;
   border-radius: var(--r-sm);
   font-size: 0.8125rem;
-  color: #fff;
+  color: var(--text);
 }
 
 .backend-layer .module-item {
-  color: #1A1714;
-  background: rgba(26, 23, 20, 0.15);
+  color: var(--text);
+  background: #352E27;
 }
 
 .arrow-container {
@@ -1898,8 +2175,8 @@ graph TB
 }
 
 .route-division {
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.04);
+  background: #2D2722;
+  border: 1px solid rgba(201, 169, 110, 0.04);
   border-radius: var(--r-md);
   padding: 24px;
 }
@@ -1911,8 +2188,8 @@ graph TB
 }
 
 .route-table th {
-  background: #8B2635;
-  color: #fff;
+  background: #352E27;
+  color: var(--gold);
   padding: 12px 16px;
   font-size: 0.875rem;
   font-weight: 600;
@@ -1923,15 +2200,15 @@ graph TB
   padding: 12px 16px;
   font-size: 0.8125rem;
   color: var(--text-muted);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid rgba(201, 169, 110, 0.03);
 }
 
 .route-table tr:nth-child(even) td {
-  background: rgba(139, 38, 53, 0.05);
+  background: #2D2722;
 }
 
 .route-table tr:nth-child(odd) td {
-  background: rgba(139, 38, 53, 0.1);
+  background: #352E27;
 }
 
 .workshop-section {
@@ -1941,7 +2218,7 @@ graph TB
 }
 
 .workshop-main {
-  background: rgba(36, 32, 28, 0.8);
+  background: #24201C;
   border: 1px solid rgba(201, 169, 110, 0.1);
   border-radius: var(--r-lg);
   padding: 0;
@@ -1963,7 +2240,7 @@ graph TB
   position: absolute;
   bottom: 24px;
   left: 24px;
-  background: rgba(26, 23, 20, 0.95);
+  background: #1A1714;
   border: 1px solid rgba(201, 169, 110, 0.2);
   border-radius: var(--r-md);
   padding: 20px;
@@ -2018,7 +2295,7 @@ graph TB
 
 .knowledge-competition {
   margin-top: 24px;
-  background: rgba(36, 32, 28, 0.8);
+  background: #24201C;
   border: 1px solid rgba(201, 169, 110, 0.1);
   border-radius: var(--r-lg);
   padding: 32px;
@@ -2039,8 +2316,8 @@ graph TB
 }
 
 .competition-card {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: #2D2722;
+  border: 1px solid rgba(201, 169, 110, 0.05);
   border-radius: var(--r-md);
   padding: 20px;
   display: flex;
@@ -2074,7 +2351,7 @@ graph TB
 }
 
 .tech-challenge-section {
-  background: rgba(36, 32, 28, 0.8);
+  background: #24201C;
   border: 1px solid rgba(201, 169, 110, 0.1);
   border-radius: var(--r-lg);
 }
@@ -2090,8 +2367,8 @@ graph TB
 }
 
 .tech-challenge-card {
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.04);
+  background: #2D2722;
+  border: 1px solid rgba(201, 169, 110, 0.04);
   border-radius: var(--r-md);
   padding: 24px;
 }
@@ -2145,7 +2422,7 @@ graph TB
 }
 
 .innovation-section {
-  background: rgba(36, 32, 28, 0.8);
+  background: #24201C;
   border: 1px solid rgba(201, 169, 110, 0.1);
   border-radius: var(--r-lg);
 }
@@ -2184,8 +2461,8 @@ graph TB
 }
 
 .innovation-card {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: #2D2722;
+  border: 1px solid rgba(201, 169, 110, 0.05);
   border-radius: var(--r-md);
   padding: 28px;
   display: flex;
@@ -2201,9 +2478,9 @@ graph TB
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(139, 38, 53, 0.3);
+  background: #352E27;
   border-radius: var(--r-md);
-  color: #C9A96E;
+  color: var(--gold);
 }
 
 .innovation-card h3 {
@@ -2221,8 +2498,8 @@ graph TB
 }
 
 .mermaid-section {
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.04);
+  background: #2D2722;
+  border: 1px solid rgba(201, 169, 110, 0.04);
   border-radius: var(--r-md);
   padding: 24px;
   margin-bottom: 24px;
@@ -2237,7 +2514,7 @@ graph TB
   justify-content: center;
   align-items: flex-start;
   padding: 24px;
-  background: rgba(255, 255, 255, 0.02);
+  background: #2D2722;
   border-radius: var(--r-md);
   overflow-x: auto;
 }
@@ -2266,7 +2543,7 @@ graph TB
 }
 
 .sidebar-menu {
-  background: rgba(36, 32, 28, 0.8);
+  background: #24201C;
   border: 1px solid rgba(201, 169, 110, 0.1);
   border-radius: var(--r-lg);
   padding: 16px 0;
