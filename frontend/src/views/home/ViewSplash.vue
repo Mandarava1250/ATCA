@@ -46,7 +46,7 @@
 
       <!-- 标题 -->
       <h1 class="splash-title">华夏营造</h1>
-      <p class="splash-subtitle">中国古代建筑文化传承平台</p>
+      <p class="splash-subtitle">中国古建筑文化传播平台</p>
 
       <!-- 装饰线 -->
       <div class="splash-ornament">

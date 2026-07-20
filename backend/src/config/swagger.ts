@@ -11,7 +11,7 @@ const swaggerOptions = {
     info: {
       title: '华夏营造 API',
       version: '1.0.0',
-      description: '中国古代建筑文化传承平台 - 后端API文档',
+      description: '中国古建筑文化传播平台 - 后端API文档',
       contact: {
         name: 'ATCA Development Team',
         email: 'dev@atca.com',

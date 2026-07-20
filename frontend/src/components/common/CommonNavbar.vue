@@ -252,8 +252,8 @@ const siteName = computed(() => {
 });
 
 const siteSubtitle = computed(() => {
-  try { return t('site.subtitle') || '中国古代建筑文化虚拟展览馆'; } 
-  catch { return '中国古代建筑文化虚拟展览馆'; }
+  try { return t('site.subtitle') || '中国古建筑文化传播平台'; } 
+  catch { return '中国古建筑文化传播平台'; }
 });
 
 const menuTitle = computed(() => {

@@ -1,8 +1,8 @@
 # 华夏营造 (ATCA)
 
-> **Ancient Traditional Chinese Architecture** - 中国古代建筑文化数字化传承平台
+> **Ancient Traditional Chinese Architecture** - 中国古建筑文化传播平台
 
-<div align="center">
+<div align="center">  
 
 ![Vue.js](https://img.shields.io/badge/Vue.js-3.4-4FC08D?style=flat&logo=vue.js&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.4-3178C6?style=flat&logo=typescript&logoColor=white)
@@ -35,11 +35,11 @@
 
 ## 🎯 项目概述
 
-华夏营造（ATCA）是一个专注于中国古代建筑文化数字化传承的创新平台。通过融合**3D交互建模**、**AI知识图谱**、**社区互动**等前沿技术，将传统的斗拱榫卯营造技艺以现代化的方式呈现给广大用户。
+华夏营造（ATCA）是一个专注于中国古建筑文化传播的创新平台。通过融合**3D交互建模**、**AI知识图谱**、**社区互动**等前沿技术，将传统的斗拱榫卯营造技艺以现代化的方式呈现给广大用户。
 
 ### 核心价值
 
-- **文化传承**：数字化保存和传播中国古代建筑文化
+- **文化传承**：数字化保存和传播中国古建筑文化
 - **技术赋能**：利用现代技术让传统技艺触手可及
 - **教育普及**：通过互动体验降低古建筑学习门槛
 - **社区共建**：构建古建筑爱好者的交流与创作平台

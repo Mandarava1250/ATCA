@@ -1,7 +1,7 @@
 {
   "name": "atca",
   "version": "1.0.0",
-  "description": "华夏营造 - 中国古代建筑文化传承平台",
+  "description": "华夏营造 - 中国古建筑文化传播平台",
   "private": true,
   "scripts": {
     "install:all": "npm install && npm run install:frontend && npm run install:backend",

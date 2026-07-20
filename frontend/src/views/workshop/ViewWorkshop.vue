@@ -149,156 +149,236 @@
         </div>
         <!-- 顶部工具栏 -->
         <div class="toolbar atca-toolbar">
-          <div class="toolbar-group">
-            <button class="tool-btn" :class="{ active: transformMode === 'select' }" @click="setTransformMode('select')" title="选择 (Q)">
-              <svg viewBox="0 0 24 24" width="16" height="16"><path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z" stroke="currentColor" fill="none" stroke-width="1.5" stroke-linejoin="round"/></svg>
-            </button>
-            <button class="tool-btn" :class="{ active: transformMode === 'translate' }" @click="setTransformMode('translate')" title="移动 (T)">
-              <svg viewBox="0 0 24 24" width="16" height="16"><path d="M5 9l-3 3 3 3M9 5l3-3 3 3M15 19l-3 3-3-3M19 9l3 3-3 3M12 2v20M2 12h20" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
-            </button>
-            <button class="tool-btn" :class="{ active: transformMode === 'rotate' }" @click="setTransformMode('rotate')" title="旋转 (R)">
-              <svg viewBox="0 0 24 24" width="16" height="16"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0118.8-4.3M22 12.5a10 10 0 01-18.8 4.2" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
-            </button>
-            <button class="tool-btn" :class="{ active: transformMode === 'scale' }" @click="setTransformMode('scale')" title="缩放 (S)">
-              <svg viewBox="0 0 24 24" width="16" height="16"><path d="M21 3l-6.5 6.5M21 3v7M21 3h-7M3 21l6.5-6.5M3 21v-7M3 21h7" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
-            </button>
-          </div>
-          <div class="toolbar-divider"></div>
-          <div class="toolbar-group">
-            <button class="tool-btn" :class="{ active: isMeasureMode }" @click="toggleMeasure" title="测量 (M)">
-              <svg viewBox="0 0 24 24" width="16" height="16"><path d="M2 12h20M7 12v-3M12 12v-5M17 12v-2" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
-            </button>
-            <button class="tool-btn" :class="{ active: wireframeMode }" @click="toggleWireframe" title="线框">
-              <svg viewBox="0 0 24 24" width="16" height="16"><rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" fill="none" stroke-width="1.5"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18" stroke="currentColor" fill="none" stroke-width="1"/></svg>
-            </button>
-            <button class="tool-btn" :class="{ active: snapEnabled }" @click="snapEnabled = !snapEnabled" title="智能吸附">
-              <svg viewBox="0 0 24 24" width="16" height="16"><circle cx="12" cy="12" r="3" stroke="currentColor" fill="none" stroke-width="1.5"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
-            </button>
-          </div>
-          <div class="toolbar-divider"></div>
-          <div class="toolbar-group">
-            <button class="tool-btn" @click="undo" title="撤销 (Ctrl+Z)">
-              <svg viewBox="0 0 24 24" width="16" height="16"><path d="M3 7v6h6" stroke="currentColor" fill="none" stroke-width="1.5" stroke-linejoin="round"/><path d="M21 17a9 9 0 00-9-9 9 9 0 00-6 2.3L3 13" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
-            </button>
-            <button class="tool-btn" @click="redo" title="重做 (Ctrl+Y)">
-              <svg viewBox="0 0 24 24" width="16" height="16"><path d="M21 7v6h-6" stroke="currentColor" fill="none" stroke-width="1.5" stroke-linejoin="round"/><path d="M3 17a9 9 0 019-9 9 9 0 016 2.3L21 13" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
-            </button>
-            <button class="tool-btn" @click="cloneSelected" title="克隆 (Ctrl+D)">
-              <svg viewBox="0 0 24 24" width="16" height="16"><rect x="9" y="9" width="13" height="13" rx="2" ry="2" stroke="currentColor" fill="none" stroke-width="1.5"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
-            </button>
-            <button class="tool-btn" @click="deleteSelected" title="删除 (Del)">
-              <svg viewBox="0 0 24 24" width="16" height="16"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
-            </button>
-            <button class="tool-btn" @click="clearScene" title="清空">
-              <svg viewBox="0 0 24 24" width="16" height="16"><path d="M1 4h22M8 4V2a1 1 0 011-1h6a1 1 0 011 1v2" stroke="currentColor" fill="none" stroke-width="1.5"/><path d="M5 4v16a2 2 0 002 2h10a2 2 0 002-2V4" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
-            </button>
-          </div>
-          <div class="toolbar-divider"></div>
-          <div class="toolbar-group">
-            <button class="tool-btn" :class="{ active: activeView === 'perspective' }" @click="setCamera('perspective')">{{ $t('workshop.perspective') }}</button>
-            <button class="tool-btn" :class="{ active: activeView === 'top' }" @click="setCamera('top')">{{ $t('workshop.topView') }}</button>
-            <button class="tool-btn" :class="{ active: activeView === 'front' }" @click="setCamera('front')">{{ $t('workshop.frontView') }}</button>
-            <button class="tool-btn" @click="focusSelected" title="聚焦选中 (F)">&#9673;</button>
-          </div>
-          <div class="toolbar-divider"></div>
-          <div class="toolbar-group">
-            <button class="tool-btn" :class="{ active: isSnapMode }" @click="triggerSnap" title="榫卯吸附 (N)">
-              <svg viewBox="0 0 24 24" width="16" height="16"><circle cx="12" cy="12" r="3" stroke="currentColor" fill="none" stroke-width="1.5"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" stroke="currentColor" fill="none" stroke-width="1.5"/><path d="M12 8l4 4-4 4-4-4z" stroke="var(--gold)" fill="var(--gold)" opacity="0.3"/></svg>
-            </button>
-          </div>
-          <div class="toolbar-divider"></div>
-          <!-- 对齐工具 -->
-          <div class="toolbar-group">
-            <div class="tool-dropdown">
-              <button class="tool-btn" title="对齐工具">
-                <svg viewBox="0 0 24 24" width="16" height="16"><path d="M12 2H4v2h8V2zm0 18H4v2h8v-2zm0-10H2v2h10v-2zm0 6H2v2h10v-2zm10-8h-8v2h8V6zm0 6h-8v2h8v-2zm0 6h-8v2h8v-2z" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
+          <div class="toolbar-content">
+            <!-- 变换工具组 -->
+            <div class="toolbar-group">
+              <button class="tool-btn" :class="{ active: transformMode === 'select' }" @click="setTransformMode('select')" title="选择 (Q)">
+                <svg viewBox="0 0 24 24" width="16" height="16"><path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z" stroke="currentColor" fill="none" stroke-width="1.5" stroke-linejoin="round"/></svg>
               </button>
-              <div class="tool-menu">
-                <button class="tool-item" @click="alignSelected('left')">
-                  <svg viewBox="0 0 24 24" width="14" height="14"><path d="M3 12h18M6 6v12" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
-                  <span>左对齐</span>
+              <button class="tool-btn" :class="{ active: transformMode === 'translate' }" @click="setTransformMode('translate')" title="移动 (T)">
+                <svg viewBox="0 0 24 24" width="16" height="16"><path d="M5 9l-3 3 3 3M9 5l3-3 3 3M15 19l-3 3-3-3M19 9l3 3-3 3M12 2v20M2 12h20" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
+              </button>
+              <button class="tool-btn" :class="{ active: transformMode === 'rotate' }" @click="setTransformMode('rotate')" title="旋转 (R)">
+                <svg viewBox="0 0 24 24" width="16" height="16"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0118.8-4.3M22 12.5a10 10 0 01-18.8 4.2" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
+              </button>
+              <button class="tool-btn" :class="{ active: transformMode === 'scale' }" @click="setTransformMode('scale')" title="缩放 (S)">
+                <svg viewBox="0 0 24 24" width="16" height="16"><path d="M21 3l-6.5 6.5M21 3v7M21 3h-7M3 21l6.5-6.5M3 21v-7M3 21h7" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
+              </button>
+            </div>
+            <div class="toolbar-divider"></div>
+            
+            <!-- 视图工具组 -->
+            <div class="toolbar-group">
+              <button class="tool-btn" :class="{ active: isMeasureMode }" @click="toggleMeasure" title="测量 (M)">
+                <svg viewBox="0 0 24 24" width="16" height="16"><path d="M2 12h20M7 12v-3M12 12v-5M17 12v-2" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
+              </button>
+              <button class="tool-btn" :class="{ active: wireframeMode }" @click="toggleWireframe" title="线框">
+                <svg viewBox="0 0 24 24" width="16" height="16"><rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" fill="none" stroke-width="1.5"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18" stroke="currentColor" fill="none" stroke-width="1"/></svg>
+              </button>
+              <button class="tool-btn" :class="{ active: snapEnabled }" @click="snapEnabled = !snapEnabled" title="智能吸附">
+                <svg viewBox="0 0 24 24" width="16" height="16"><circle cx="12" cy="12" r="3" stroke="currentColor" fill="none" stroke-width="1.5"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
+              </button>
+            </div>
+            <div class="toolbar-divider"></div>
+            
+            <!-- 操作工具组 -->
+            <div class="toolbar-group">
+              <button class="tool-btn" @click="undo" title="撤销 (Ctrl+Z)">
+                <svg viewBox="0 0 24 24" width="16" height="16"><path d="M3 7v6h6" stroke="currentColor" fill="none" stroke-width="1.5" stroke-linejoin="round"/><path d="M21 17a9 9 0 00-9-9 9 9 0 00-6 2.3L3 13" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
+              </button>
+              <button class="tool-btn" @click="redo" title="重做 (Ctrl+Y)">
+                <svg viewBox="0 0 24 24" width="16" height="16"><path d="M21 7v6h-6" stroke="currentColor" fill="none" stroke-width="1.5" stroke-linejoin="round"/><path d="M3 17a9 9 0 019-9 9 9 0 016 2.3L21 13" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
+              </button>
+              <button class="tool-btn" @click="cloneSelected" title="克隆 (Ctrl+D)">
+                <svg viewBox="0 0 24 24" width="16" height="16"><rect x="9" y="9" width="13" height="13" rx="2" ry="2" stroke="currentColor" fill="none" stroke-width="1.5"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
+              </button>
+              <button class="tool-btn" @click="deleteSelected" title="删除 (Del)">
+                <svg viewBox="0 0 24 24" width="16" height="16"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
+              </button>
+              <button class="tool-btn" @click="clearScene" title="清空">
+                <svg viewBox="0 0 24 24" width="16" height="16"><path d="M1 4h22M8 4V2a1 1 0 011-1h6a1 1 0 011 1v2" stroke="currentColor" fill="none" stroke-width="1.5"/><path d="M5 4v16a2 2 0 002 2h10a2 2 0 002-2V4" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
+              </button>
+            </div>
+            <div class="toolbar-divider"></div>
+            
+            <!-- 视角工具组 -->
+            <div class="toolbar-group">
+              <button class="tool-btn" :class="{ active: activeView === 'perspective' }" @click="setCamera('perspective')">{{ $t('workshop.perspective') }}</button>
+              <button class="tool-btn" :class="{ active: activeView === 'top' }" @click="setCamera('top')">{{ $t('workshop.topView') }}</button>
+              <button class="tool-btn" :class="{ active: activeView === 'front' }" @click="setCamera('front')">{{ $t('workshop.frontView') }}</button>
+              <button class="tool-btn" @click="focusSelected" title="聚焦选中 (F)">&#9673;</button>
+            </div>
+            <div class="toolbar-divider"></div>
+            
+            <!-- 榫卯吸附 -->
+            <div class="toolbar-group">
+              <button class="tool-btn" :class="{ active: isSnapMode }" @click="triggerSnap" title="榫卯吸附 (N)">
+                <svg viewBox="0 0 24 24" width="16" height="16"><circle cx="12" cy="12" r="3" stroke="currentColor" fill="none" stroke-width="1.5"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" stroke="currentColor" fill="none" stroke-width="1.5"/><path d="M12 8l4 4-4 4-4-4z" stroke="var(--gold)" fill="var(--gold)" opacity="0.3"/></svg>
+              </button>
+            </div>
+            <div class="toolbar-divider"></div>
+            
+            <!-- 对齐工具 -->
+            <div class="toolbar-group collapse-lg">
+              <div class="tool-dropdown">
+                <button class="tool-btn" title="对齐工具">
+                  <svg viewBox="0 0 24 24" width="16" height="16"><path d="M12 2H4v2h8V2zm0 18H4v2h8v-2zm0-10H2v2h10v-2zm0 6H2v2h10v-2zm10-8h-8v2h8V6zm0 6h-8v2h8v-2zm0 6h-8v2h8v-2z" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
                 </button>
-                <button class="tool-item" @click="alignSelected('center')">
-                  <svg viewBox="0 0 24 24" width="14" height="14"><path d="M3 12h18M12 6v12" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
-                  <span>水平居中</span>
-                </button>
-                <button class="tool-item" @click="alignSelected('right')">
-                  <svg viewBox="0 0 24 24" width="14" height="14"><path d="M3 12h18M18 6v12" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
-                  <span>右对齐</span>
-                </button>
-                <div class="menu-divider"></div>
-                <button class="tool-item" @click="alignSelected('top')">
-                  <svg viewBox="0 0 24 24" width="14" height="14"><path d="M12 3v18M6 6h12" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
-                  <span>顶部对齐</span>
-                </button>
-                <button class="tool-item" @click="alignSelected('middle')">
-                  <svg viewBox="0 0 24 24" width="14" height="14"><path d="M12 3v18M6 12h12" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
-                  <span>垂直居中</span>
-                </button>
-                <button class="tool-item" @click="alignSelected('bottom')">
-                  <svg viewBox="0 0 24 24" width="14" height="14"><path d="M12 3v18M6 18h12" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
-                  <span>底部对齐</span>
-                </button>
+                <div class="tool-menu">
+                  <button class="tool-item" @click="alignSelected('left')">
+                    <svg viewBox="0 0 24 24" width="14" height="14"><path d="M3 12h18M6 6v12" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
+                    <span>左对齐</span>
+                  </button>
+                  <button class="tool-item" @click="alignSelected('center')">
+                    <svg viewBox="0 0 24 24" width="14" height="14"><path d="M3 12h18M12 6v12" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
+                    <span>水平居中</span>
+                  </button>
+                  <button class="tool-item" @click="alignSelected('right')">
+                    <svg viewBox="0 0 24 24" width="14" height="14"><path d="M3 12h18M18 6v12" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
+                    <span>右对齐</span>
+                  </button>
+                  <div class="menu-divider"></div>
+                  <button class="tool-item" @click="alignSelected('top')">
+                    <svg viewBox="0 0 24 24" width="14" height="14"><path d="M12 3v18M6 6h12" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
+                    <span>顶部对齐</span>
+                  </button>
+                  <button class="tool-item" @click="alignSelected('middle')">
+                    <svg viewBox="0 0 24 24" width="14" height="14"><path d="M12 3v18M6 12h12" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
+                    <span>垂直居中</span>
+                  </button>
+                  <button class="tool-item" @click="alignSelected('bottom')">
+                    <svg viewBox="0 0 24 24" width="14" height="14"><path d="M12 3v18M6 18h12" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
+                    <span>底部对齐</span>
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
-          <!-- 镜像工具 -->
-          <div class="toolbar-group">
-            <div class="tool-dropdown">
-              <button class="tool-btn" title="镜像工具">
-                <svg viewBox="0 0 24 24" width="16" height="16"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15l-5-5 1.41-1.41L11 14.17l7.59-7.59L20 8l-9 9z" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
-              </button>
-              <div class="tool-menu">
-                <button class="tool-item" @click="mirrorSelected('x')">
-                  <svg viewBox="0 0 24 24" width="14" height="14"><path d="M12 3v18M5 12h7M19 12h-7M5 9l7-3M5 15l7 3" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
-                  <span>X轴镜像</span>
+            
+            <!-- 镜像工具 -->
+            <div class="toolbar-group collapse-lg">
+              <div class="tool-dropdown">
+                <button class="tool-btn" title="镜像工具">
+                  <svg viewBox="0 0 24 24" width="16" height="16"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15l-5-5 1.41-1.41L11 14.17l7.59-7.59L20 8l-9 9z" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
                 </button>
-                <button class="tool-item" @click="mirrorSelected('y')">
-                  <svg viewBox="0 0 24 24" width="14" height="14"><path d="M3 12h18M12 5v7M12 19v-7M9 5l3-3M15 5l-3-3" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
-                  <span>Y轴镜像</span>
-                </button>
-                <button class="tool-item" @click="mirrorSelected('z')">
-                  <svg viewBox="0 0 24 24" width="14" height="14"><path d="M12 3v18M5 12h14M12 6l6 3M6 18l6-3" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
-                  <span>Z轴镜像</span>
-                </button>
+                <div class="tool-menu">
+                  <button class="tool-item" @click="mirrorSelected('x')">
+                    <svg viewBox="0 0 24 24" width="14" height="14"><path d="M12 3v18M5 12h7M19 12h-7M5 9l7-3M5 15l7 3" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
+                    <span>X轴镜像</span>
+                  </button>
+                  <button class="tool-item" @click="mirrorSelected('y')">
+                    <svg viewBox="0 0 24 24" width="14" height="14"><path d="M3 12h18M12 5v7M12 19v-7M9 5l3-3M15 5l-3-3" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
+                    <span>Y轴镜像</span>
+                  </button>
+                  <button class="tool-item" @click="mirrorSelected('z')">
+                    <svg viewBox="0 0 24 24" width="14" height="14"><path d="M12 3v18M5 12h14M12 6l6 3M6 18l6-3" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
+                    <span>Z轴镜像</span>
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
-          <!-- 阵列工具 -->
-          <div class="toolbar-group">
-            <div class="tool-dropdown">
-              <button class="tool-btn" title="阵列工具">
-                <svg viewBox="0 0 24 24" width="16" height="16"><path d="M3 3h6v6H3zM3 15h6v6H3zM15 3h6v6h-6zM15 15h6v6h-6z" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
-              </button>
-              <div class="tool-menu">
-                <button class="tool-item" @click="showArrayModal = true">
-                  <svg viewBox="0 0 24 24" width="14" height="14"><path d="M5 12h14M12 5v14" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
-                  <span>线性阵列</span>
+            
+            <!-- 阵列工具 -->
+            <div class="toolbar-group collapse-lg">
+              <div class="tool-dropdown">
+                <button class="tool-btn" title="阵列工具">
+                  <svg viewBox="0 0 24 24" width="16" height="16"><path d="M3 3h6v6H3zM3 15h6v6H3zM15 3h6v6h-6zM15 15h6v6h-6z" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
                 </button>
-                <button class="tool-item" @click="showRadialArrayModal = true">
-                  <svg viewBox="0 0 24 24" width="14" height="14"><circle cx="12" cy="12" r="3" stroke="currentColor" fill="none" stroke-width="1.5"/><circle cx="12" cy="12" r="8" stroke="currentColor" fill="none" stroke-width="1.5"/><circle cx="12" cy="4" r="1" fill="currentColor"/><circle cx="20" cy="12" r="1" fill="currentColor"/><circle cx="12" cy="20" r="1" fill="currentColor"/><circle cx="4" cy="12" r="1" fill="currentColor"/></svg>
-                  <span>环形阵列</span>
-                </button>
+                <div class="tool-menu">
+                  <button class="tool-item" @click="showArrayModal = true">
+                    <svg viewBox="0 0 24 24" width="14" height="14"><path d="M5 12h14M12 5v14" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
+                    <span>线性阵列</span>
+                  </button>
+                  <button class="tool-item" @click="showRadialArrayModal = true">
+                    <svg viewBox="0 0 24 24" width="14" height="14"><circle cx="12" cy="12" r="3" stroke="currentColor" fill="none" stroke-width="1.5"/><circle cx="12" cy="12" r="8" stroke="currentColor" fill="none" stroke-width="1.5"/><circle cx="12" cy="4" r="1" fill="currentColor"/><circle cx="20" cy="12" r="1" fill="currentColor"/><circle cx="12" cy="20" r="1" fill="currentColor"/><circle cx="4" cy="12" r="1" fill="currentColor"/></svg>
+                    <span>环形阵列</span>
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
-          <div class="toolbar-divider"></div>
-          <div class="toolbar-group io-group">
-            <button class="tool-btn" @click="fileInput?.click()" title="导入">
-              <svg viewBox="0 0 24 24" width="14" height="14"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" stroke="currentColor" fill="none" stroke-width="1.5" stroke-linejoin="round"/></svg>
-            </button>
-            <div class="io-dropdown">
-              <button class="tool-btn" title="导出">
-                <svg viewBox="0 0 24 24" width="14" height="14"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" stroke="currentColor" fill="none" stroke-width="1.5" stroke-linejoin="round"/></svg>
+            <div class="toolbar-divider collapse-lg"></div>
+            
+            <!-- IO工具组 -->
+            <div class="toolbar-group io-group">
+              <button class="tool-btn" @click="fileInput?.click()" title="导入">
+                <svg viewBox="0 0 24 24" width="14" height="14"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" stroke="currentColor" fill="none" stroke-width="1.5" stroke-linejoin="round"/></svg>
               </button>
-              <div class="io-menu">
-                <button class="io-item" @click="exportJSON">导出 JSON</button>
-                <button class="io-item" @click="exportGLTF">导出 GLB</button>
+              <div class="io-dropdown">
+                <button class="tool-btn" title="导出">
+                  <svg viewBox="0 0 24 24" width="14" height="14"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" stroke="currentColor" fill="none" stroke-width="1.5" stroke-linejoin="round"/></svg>
+                </button>
+                <div class="io-menu">
+                  <button class="io-item" @click="exportJSON">导出 JSON</button>
+                  <button class="io-item" @click="exportGLTF">导出 GLB</button>
+                </div>
+              </div>
+              <button class="tool-btn primary atca-btn-gold" @click="openSaveModal" title="保存">
+                <svg viewBox="0 0 24 24" width="14" height="14"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z" stroke="currentColor" fill="none" stroke-width="1.5"/><polyline points="17 21 17 13 7 13 7 21" stroke="currentColor" fill="none" stroke-width="1.5"/><path d="M7 3v5h8" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
+              </button>
+            </div>
+            
+            <!-- 更多按钮 -->
+            <div class="toolbar-more">
+              <div class="more-dropdown">
+                <button class="tool-btn more-btn" title="更多工具">
+                  <svg viewBox="0 0 24 24" width="16" height="16"><circle cx="12" cy="12" r="3" stroke="currentColor" fill="none" stroke-width="1.5"/><circle cx="12" cy="12" r="8" stroke="currentColor" fill="none" stroke-width="1.5"/><circle cx="12" cy="12" r="13" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
+                </button>
+                <div class="more-menu">
+                  <div class="more-section">
+                    <div class="more-section-title">对齐工具</div>
+                    <button class="more-item" @click="alignSelected('left')">
+                      <svg viewBox="0 0 24 24" width="14" height="14"><path d="M3 12h18M6 6v12" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
+                      <span>左对齐</span>
+                    </button>
+                    <button class="more-item" @click="alignSelected('center')">
+                      <svg viewBox="0 0 24 24" width="14" height="14"><path d="M3 12h18M12 6v12" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
+                      <span>水平居中</span>
+                    </button>
+                    <button class="more-item" @click="alignSelected('right')">
+                      <svg viewBox="0 0 24 24" width="14" height="14"><path d="M3 12h18M18 6v12" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
+                      <span>右对齐</span>
+                    </button>
+                    <button class="more-item" @click="alignSelected('top')">
+                      <svg viewBox="0 0 24 24" width="14" height="14"><path d="M12 3v18M6 6h12" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
+                      <span>顶部对齐</span>
+                    </button>
+                    <button class="more-item" @click="alignSelected('middle')">
+                      <svg viewBox="0 0 24 24" width="14" height="14"><path d="M12 3v18M6 12h12" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
+                      <span>垂直居中</span>
+                    </button>
+                    <button class="more-item" @click="alignSelected('bottom')">
+                      <svg viewBox="0 0 24 24" width="14" height="14"><path d="M12 3v18M6 18h12" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
+                      <span>底部对齐</span>
+                    </button>
+                  </div>
+                  <div class="more-section">
+                    <div class="more-section-title">镜像工具</div>
+                    <button class="more-item" @click="mirrorSelected('x')">
+                      <svg viewBox="0 0 24 24" width="14" height="14"><path d="M12 3v18M5 12h7M19 12h-7M5 9l7-3M5 15l7 3" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
+                      <span>X轴镜像</span>
+                    </button>
+                    <button class="more-item" @click="mirrorSelected('y')">
+                      <svg viewBox="0 0 24 24" width="14" height="14"><path d="M3 12h18M12 5v7M12 19v-7M9 5l3-3M15 5l-3-3" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
+                      <span>Y轴镜像</span>
+                    </button>
+                    <button class="more-item" @click="mirrorSelected('z')">
+                      <svg viewBox="0 0 24 24" width="14" height="14"><path d="M12 3v18M5 12h14M12 6l6 3M6 18l6-3" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
+                      <span>Z轴镜像</span>
+                    </button>
+                  </div>
+                  <div class="more-section">
+                    <div class="more-section-title">阵列工具</div>
+                    <button class="more-item" @click="showArrayModal = true">
+                      <svg viewBox="0 0 24 24" width="14" height="14"><path d="M5 12h14M12 5v14" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
+                      <span>线性阵列</span>
+                    </button>
+                    <button class="more-item" @click="showRadialArrayModal = true">
+                      <svg viewBox="0 0 24 24" width="14" height="14"><circle cx="12" cy="12" r="3" stroke="currentColor" fill="none" stroke-width="1.5"/><circle cx="12" cy="12" r="8" stroke="currentColor" fill="none" stroke-width="1.5"/><circle cx="12" cy="4" r="1" fill="currentColor"/><circle cx="20" cy="12" r="1" fill="currentColor"/><circle cx="12" cy="20" r="1" fill="currentColor"/><circle cx="4" cy="12" r="1" fill="currentColor"/></svg>
+                      <span>环形阵列</span>
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
-            <button class="tool-btn primary atca-btn-gold" @click="openSaveModal" title="保存">
-              <svg viewBox="0 0 24 24" width="14" height="14"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z" stroke="currentColor" fill="none" stroke-width="1.5"/><polyline points="17 21 17 13 7 13 7 21" stroke="currentColor" fill="none" stroke-width="1.5"/><path d="M7 3v5h8" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
-            </button>
           </div>
         </div>
 
@@ -1178,6 +1258,18 @@ const libCollapsed = ref(false);
 const treeCollapsed = ref(false);
 const propCollapsed = ref(false);
 const sceneCollapsed = ref(false);
+
+// 工具栏响应式折叠
+const toolbarRef = ref<HTMLElement>();
+const showMoreMenu = ref(false);
+
+function toggleMoreMenu() {
+  showMoreMenu.value = !showMoreMenu.value;
+}
+
+function closeMoreMenu() {
+  showMoreMenu.value = false;
+}
 
 // 全屏模式状态
 const isFullscreen = ref(false);
@@ -3548,13 +3640,28 @@ onUnmounted(() => {
 .toolbar {
   display: flex;
   align-items: center;
-  gap: 8px;
   padding: 8px 12px;
   background: linear-gradient(180deg, var(--bg-card) 0%, rgba(var(--gold-rgb), 0.02) 100%);
   border-bottom: 1px solid var(--border-light);
-  overflow-x: auto;
   flex-shrink: 0;
   position: relative;
+  flex-wrap: nowrap;
+  width: 100%;
+  box-sizing: border-box;
+}
+.toolbar-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  flex: 1;
+  min-width: 0;
+  scrollbar-width: none;
+  flex-wrap: nowrap;
+}
+.toolbar-content::-webkit-scrollbar {
+  display: none;
 }
 .toolbar::after {
   content: '';
@@ -3565,7 +3672,7 @@ onUnmounted(() => {
   height: 1px;
   background: linear-gradient(90deg, transparent 0%, rgba(var(--gold-rgb), 0.1) 50%, transparent 100%);
 }
-.toolbar-group { display: flex; gap: 3px; }
+.toolbar-group { display: flex; gap: 3px; flex-shrink: 0; white-space: nowrap; }
 .toolbar-divider { 
   width: 1px; 
   height: 26px; 
@@ -3623,6 +3730,94 @@ onUnmounted(() => {
 }
 .tool-btn:hover svg { transform: scale(1.1); }
 .tool-btn.active svg { transform: scale(1.1); }
+
+/* ===== 工具栏更多按钮 ===== */
+.toolbar-more {
+  flex-shrink: 0;
+  position: relative;
+}
+.more-dropdown {
+  position: relative;
+}
+.more-btn {
+  border-left: 1px solid var(--border-light);
+  padding-left: 12px;
+  margin-left: 4px;
+}
+.more-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  min-width: 180px;
+  max-width: 240px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  padding: 8px;
+  z-index: 1000;
+  animation: scaleIn 0.15s ease-out;
+}
+.more-section {
+  margin-bottom: 8px;
+}
+.more-section:last-child {
+  margin-bottom: 0;
+}
+.more-section-title {
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  padding: 4px 8px 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.more-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  border-radius: var(--r-md);
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  transition: all var(--t);
+  cursor: pointer;
+}
+.more-item:hover {
+  background: rgba(var(--gold-rgb), 0.08);
+  color: var(--text);
+}
+.more-item svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+/* ===== 工具栏响应式折叠 ===== */
+@media (max-width: 1200px) {
+  .toolbar-group.collapse-lg,
+  .toolbar-divider.collapse-lg {
+    display: none;
+  }
+}
+
+@media (max-width: 900px) {
+  .toolbar-group:nth-child(5),
+  .toolbar-divider:nth-child(6) {
+    display: none;
+  }
+}
+
+@media (max-width: 700px) {
+  .toolbar-group:nth-child(3),
+  .toolbar-divider:nth-child(4) {
+    display: none;
+  }
+}
 
 /* ===== 3D画布 ===== */
 .three-canvas {
