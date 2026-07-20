@@ -248,7 +248,7 @@ export function cached(ttl?: number) {
 
 // 批量查询缓存（支持并行查询）
 export async function cachedBatchQuery(
-  dbName: 'user' | 'architecture' | 'competition' | 'activity' | 'media3d' | 'social',
+  dbName: string,
   queries: Array<{ sql: string; params?: any; ttl?: number }>
 ): Promise<any[]> {
   // 分离已缓存和未缓存的查询

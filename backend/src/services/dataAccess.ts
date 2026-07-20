@@ -38,7 +38,7 @@ export interface BatchQueryResult<T = any> {
 class DataAccessService {
   // 智能查询（自动选择最佳策略）
   async smartQuery<T = any>(
-    dbName: keyof typeof dbConfigs,
+    dbName: string,
     sql: string,
     params: any = {},
     options: QueryOptions = {}
@@ -72,7 +72,7 @@ class DataAccessService {
 
   // 分页查询（优化版）
   async paginatedQuery<T = any>(
-    dbName: keyof typeof dbConfigs,
+    dbName: string,
     baseSql: string,
     params: any = {},
     page: number = 1,
@@ -110,7 +110,7 @@ class DataAccessService {
 
   // 批量查询（支持并行）
   async batchQuery<T = any>(
-    dbName: keyof typeof dbConfigs,
+    dbName: string,
     queries: Array<{ sql: string; params?: any; ttl?: number }>
   ): Promise<BatchQueryResult<T>> {
     const errors: Array<{ index: number; error: string }> = [];
@@ -145,7 +145,7 @@ class DataAccessService {
 
   // 批量获取（IN查询优化）
   async batchGet<T = any>(
-    dbName: keyof typeof dbConfigs,
+    dbName: string,
     tableName: string,
     ids: number[],
     options: {
@@ -207,7 +207,7 @@ class DataAccessService {
 
   // 条件查询（带缓存策略）
   async conditionalQuery<T = any>(
-    dbName: keyof typeof dbConfigs,
+    dbName: string,
     baseSql: string,
     conditions: Record<string, any> = {},
     options: {
@@ -267,7 +267,7 @@ class DataAccessService {
   }
 
   // 缓存预热
-  async warmupCache(dbName: keyof typeof dbConfigs, queries: Array<{ sql: string; params?: any; ttl?: number }>): Promise<void> {
+  async warmupCache(dbName: string, queries: Array<{ sql: string; params?: any; ttl?: number }>): Promise<void> {
     logger.info(`开始缓存预热: ${dbName}, ${queries.length} 条查询`);
     
     const startTime = Date.now();
@@ -278,7 +278,7 @@ class DataAccessService {
   }
 
   // 清除相关缓存
-  invalidateCache(dbName: keyof typeof dbConfigs, tableName?: string): void {
+  invalidateCache(dbName: string, tableName?: string): void {
     if (tableName) {
       // 清除与特定表相关的缓存
       for (const key of queryCache['cache'].keys()) {

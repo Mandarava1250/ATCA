@@ -1,6 +1,6 @@
 // ============================================
 // 华夏营造 - 数据库配置与连接池管理
-// 支持5个独立数据库配置，从 process.env 读取
+// 支持动态发现SQL Server上的所有数据库
 // 连接失败时自动降级到 Mock 模式
 // ============================================
 
@@ -29,6 +29,8 @@ export interface DbConfig {
 let mockMode = process.env.MOCK_MODE === 'true';
 // 连接失败的数据库记录
 const failedDbs: Set<string> = new Set();
+// 是否已执行自动发现
+let autoDiscoveryDone = false;
 
 // 如果环境变量设置了MOCK_MODE=true，直接启用Mock模式
 if (mockMode) {
@@ -85,7 +87,7 @@ function buildConfig(
   };
 }
 
-export const dbConfigs = {
+export const dbConfigs: Record<string, DbConfig> = {
   user: buildConfig(
       'USER_DB_HOST', 'USER_DB_PORT', 'USER_DB_NAME',
       'USER_DB_USER', 'USER_DB_PASSWORD',
@@ -118,7 +120,78 @@ export const dbConfigs = {
   ),
 };
 
-// 连接池缓存
+function getBaseConfig(): DbConfig {
+  const firstDb = Object.values(dbConfigs)[0];
+  return {
+    server: firstDb.server,
+    port: firstDb.port,
+    database: 'master',
+    user: firstDb.user,
+    password: firstDb.password,
+    options: firstDb.options,
+    pool: {
+      max: 1,
+      min: 0,
+      idleTimeoutMillis: 5000,
+    },
+  };
+}
+
+export async function discoverDatabases(): Promise<void> {
+  if (autoDiscoveryDone || mockMode) {
+    return;
+  }
+  
+  console.log('[DB] 开始自动发现SQL Server上的所有数据库...');
+  
+  try {
+    const baseConfig = getBaseConfig();
+    const masterPool = new sql.ConnectionPool({
+      ...baseConfig,
+      connectionTimeout: globalConnectionTimeout,
+      requestTimeout: globalRequestTimeout,
+    });
+    
+    await masterPool.connect();
+    console.log('[DB] 已连接到master数据库，开始查询数据库列表...');
+    
+    const result = await masterPool.request().query(
+      "SELECT name FROM sys.databases WHERE name NOT IN ('master', 'tempdb', 'model', 'msdb') ORDER BY name"
+    );
+    
+    await masterPool.close();
+    
+    const discoveredDbs = result.recordset.map((row: any) => row.name);
+    console.log(`[DB] 发现 ${discoveredDbs.length} 个用户数据库: ${discoveredDbs.join(', ')}`);
+    
+    let addedCount = 0;
+    for (const dbName of discoveredDbs) {
+      const normalizedName = dbName.toLowerCase();
+      
+      if (!dbConfigs[normalizedName]) {
+        dbConfigs[normalizedName] = {
+          ...baseConfig,
+          database: dbName,
+          pool: {
+            max: globalPoolMax,
+            min: globalPoolMin,
+            idleTimeoutMillis: globalPoolIdleTimeout,
+          },
+        };
+        addedCount++;
+        console.log(`[DB] 已添加数据库连接: ${normalizedName} (${dbName})`);
+      }
+    }
+    
+    console.log(`[DB] 自动发现完成，新增 ${addedCount} 个数据库连接`);
+    autoDiscoveryDone = true;
+    
+  } catch (err: any) {
+    console.error(`[DB] 自动发现数据库失败: ${err.message}`);
+    console.error('[DB] 将继续使用已配置的6个数据库');
+  }
+}
+
 const pools: Record<string, sql.ConnectionPool> = {};
 
 // 带重试的连接函数
@@ -160,12 +233,11 @@ async function connectWithRetry(
   throw lastError || new Error(`无法连接到数据库 ${dbName}`);
 }
 
-export async function getPool(dbName: keyof typeof dbConfigs): Promise<sql.ConnectionPool> {
+export async function getPool(dbName: string): Promise<sql.ConnectionPool> {
   if (mockMode) {
     throw new Error('Mock mode: no database connection');
   }
 
-  // 如果之前连接失败，直接抛出
   if (failedDbs.has(dbName)) {
     throw new Error(`Database ${dbName} previously failed to connect`);
   }
@@ -175,6 +247,10 @@ export async function getPool(dbName: keyof typeof dbConfigs): Promise<sql.Conne
   }
 
   const config = dbConfigs[dbName];
+  if (!config) {
+    throw new Error(`Database configuration not found for ${dbName}`);
+  }
+  
   if (!config.database || !config.user) {
     throw new Error(`Database configuration incomplete for ${dbName}`);
   }
@@ -192,7 +268,10 @@ export async function getPool(dbName: keyof typeof dbConfigs): Promise<sql.Conne
 // 启动时预连接所有数据库
 export async function preconnectAll(): Promise<void> {
   console.log('[DB] 开始预连接所有数据库...');
-  const dbNames = Object.keys(dbConfigs) as (keyof typeof dbConfigs)[];
+  
+  await discoverDatabases();
+  
+  const dbNames = Object.keys(dbConfigs);
   const results = await Promise.allSettled(
     dbNames.map(async (name) => {
       try {
@@ -230,14 +309,13 @@ export async function preconnectAll(): Promise<void> {
 }
 
 export async function query<T = any>(
-    dbName: keyof typeof dbConfigs,
+    dbName: string,
     sqlString: string,
     params?: any,
     useCache: boolean = true
 ): Promise<T[]> {
   const startTime = Date.now();
   
-  // 如果启用缓存，先尝试从缓存获取
   if (useCache && !mockMode) {
     const cachedData = queryCache.get(dbName, sqlString, params);
     if (cachedData !== null) {
@@ -272,10 +350,8 @@ export async function query<T = any>(
   const data = result.recordset as T[];
   const duration = Date.now() - startTime;
 
-  // 记录查询统计
   queryStats.record(dbName, sqlString, params, duration, false, data.length);
 
-  // 如果启用缓存，将结果存入缓存
   if (useCache && !mockMode) {
     queryCache.set(dbName, sqlString, params, data);
   }
@@ -284,7 +360,7 @@ export async function query<T = any>(
 }
 
 export async function execute(
-    dbName: keyof typeof dbConfigs,
+    dbName: string,
     sqlString: string,
     params?: Record<string, any>
 ): Promise<sql.IResult<any>> {
@@ -322,7 +398,7 @@ export async function execute(
 }
 
 export async function transaction<T>(
-    dbName: keyof typeof dbConfigs,
+    dbName: string,
     callback: (transaction: sql.Transaction) => Promise<T>
 ): Promise<T> {
   const pool = await getPool(dbName);
