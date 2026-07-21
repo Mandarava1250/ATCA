@@ -290,12 +290,93 @@ function getAIName(id?: string | number) {
 }
 
 function formatMsg(content: string) {
-  let formatted = content
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*(.+?)\*/g, '<em>$1</em>')
-    .replace(/\*\*/g, '')
-    .replace(/\*/g, '')
-    .replace(/\n/g, '<br>');
+  let formatted = content;
+
+  formatted = formatted.replace(/```(\w+)?\n([\s\S]*?)```/g, '<pre><code>$2</code></pre>');
+  formatted = formatted.replace(/`([^`]+)`/g, '<code>$1</code>');
+
+  formatted = formatted.replace(/^#{6}\s(.+)$/gm, '<h6>$1</h6>');
+  formatted = formatted.replace(/^#{5}\s(.+)$/gm, '<h5>$1</h5>');
+  formatted = formatted.replace(/^#{4}\s(.+)$/gm, '<h4>$1</h4>');
+  formatted = formatted.replace(/^#{3}\s(.+)$/gm, '<h3>$1</h3>');
+  formatted = formatted.replace(/^#{2}\s(.+)$/gm, '<h2>$1</h2>');
+  formatted = formatted.replace(/^#\s(.+)$/gm, '<h1>$1</h1>');
+
+  formatted = formatted.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
+  formatted = formatted.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1">');
+
+  formatted = formatted.replace(/^>\s(.+)$/gm, '<blockquote>$1</blockquote>');
+
+  formatted = formatted.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  formatted = formatted.replace(/\*(.+?)\*/g, '<em>$1</em>');
+
+  const lines = formatted.split('\n');
+  const result: string[] = [];
+  let inList = false;
+  let inOrderedList = false;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+
+    if (/^(\d+)\.\s/.test(line)) {
+      if (!inOrderedList) {
+        if (inList) {
+          result.push('</ul>');
+          inList = false;
+        }
+        result.push('<ol>');
+        inOrderedList = true;
+      }
+      result.push(`<li>${line.replace(/^\d+\.\s/, '')}</li>`);
+    } else if (/^([-*+])\s/.test(line)) {
+      if (!inList) {
+        if (inOrderedList) {
+          result.push('</ol>');
+          inOrderedList = false;
+        }
+        result.push('<ul>');
+        inList = true;
+      }
+      result.push(`<li>${line.replace(/^[-*+]\s/, '')}</li>`);
+    } else {
+      if (inList) {
+        result.push('</ul>');
+        inList = false;
+      }
+      if (inOrderedList) {
+        result.push('</ol>');
+        inOrderedList = false;
+      }
+
+      if (line.startsWith('|') && line.endsWith('|')) {
+        const cells = line.split('|').filter(c => c.trim() !== '');
+        if (cells.length > 0 && line.includes('-')) {
+          result.push('</thead><tbody>');
+        } else if (result[result.length - 1] !== '</thead><tbody>' && !line.includes('-')) {
+          result.push('<tr>' + cells.map(c => `<td>${c.trim()}</td>`).join('') + '</tr>');
+        }
+      } else if (line.startsWith('|')) {
+        result.push('<table><thead><tr>' + line.split('|').filter(c => c.trim() !== '').map(c => `<th>${c.trim()}</th>`).join('') + '</tr>');
+      } else if (line === '') {
+        result.push('');
+      } else {
+        if (!/^<(h[1-6]|pre|blockquote|ul|ol|li|table|tr|td|th)/.test(line)) {
+          result.push(`<p>${line}</p>`);
+        } else {
+          result.push(line);
+        }
+      }
+    }
+  }
+
+  if (inList) result.push('</ul>');
+  if (inOrderedList) result.push('</ol>');
+
+  formatted = result.join('\n');
+
+  formatted = formatted.replace(/\*\*/g, '');
+  formatted = formatted.replace(/\*/g, '');
+
   return formatted;
 }
 
@@ -516,7 +597,7 @@ async function sendMessageInternal(text: string) {
           return {
             aiId: String(ai.ai_id),
             aiName: ai.name || `AI_${ai.ai_id}`,
-            content: isTimeout ? '⏱️ 响应超时，该AI暂时不可用' : `❌ 连接失败：${err.message || '未知错误'}`,
+            content: isTimeout ? '⏱响应超时，该AI暂时不可用' : `连接失败：${err.message || '未知错误'}`,
             success: false,
           };
         }
@@ -566,7 +647,7 @@ async function sendMessageInternal(text: string) {
           messages.value.push({
             id: `kg_${Date.now()}`,
             role: 'assistant',
-            content: `📚 本回答基于华夏营造知识库（${knowledgeEntryCount.value}条知识）进行增强。`,
+            content: `本回答基于华夏营造知识库（${knowledgeEntryCount.value}条知识）进行增强。`,
             timestamp: Date.now(),
           });
           await scrollToBottom();
@@ -662,7 +743,7 @@ async function performLocalAIAnalysis(aiResponse: string) {
       messages.value.push({
         id: `analysis_err_${Date.now()}`,
         role: 'assistant',
-        content: `⚠️ 本地AI模型初始化失败：${error.message}\n\n无法进行增强检查，请稍后重试或关闭增强检查模式。`,
+        content: `本地AI模型初始化失败：${error.message}\n\n无法进行增强检查，请稍后重试或关闭增强检查模式。`,
         timestamp: Date.now(),
       });
       await scrollToBottom();
@@ -675,7 +756,7 @@ async function performLocalAIAnalysis(aiResponse: string) {
   messages.value.push({
     id: analyzingMsgId,
     role: 'assistant',
-    content: '🔍 本地AI模型正在分析中...',
+    content: '本地AI模型正在分析中...',
     timestamp: Date.now(),
   });
   await scrollToBottom();
@@ -809,7 +890,7 @@ ${aiResponse}
     let analysisReport = ``;
     
     // 报告标题
-    analysisReport += ` 🔍 分析报告\n\n`;
+    analysisReport += `分析报告\n\n`;
     
     // 一、内容质量评估
     analysisReport += `【一、内容质量评估】\n\n`;
@@ -818,7 +899,7 @@ ${aiResponse}
     if (analysisResult.accuracy !== undefined) {
       const accuracyLevel = getAccuracyLevel(analysisResult.accuracy);
       const accuracyBar = generateScoreBar(analysisResult.accuracy);
-      analysisReport += `  📌 准确性: ${analysisResult.accuracy}/100 (${accuracyLevel})\n`;
+      analysisReport += `  准确性: ${analysisResult.accuracy}/100 (${accuracyLevel})\n`;
       analysisReport += `     ${accuracyBar}\n\n`;
     }
 
@@ -826,7 +907,7 @@ ${aiResponse}
     if (analysisResult.completeness !== undefined) {
       const completenessLevel = getCompletenessLevel(analysisResult.completeness);
       const completenessBar = generateScoreBar(analysisResult.completeness);
-      analysisReport += `  📋 完整性: ${analysisResult.completeness}/100 (${completenessLevel})\n`;
+      analysisReport += `  完整性: ${analysisResult.completeness}/100 (${completenessLevel})\n`;
       analysisReport += `     ${completenessBar}\n\n`;
     }
 
@@ -834,7 +915,7 @@ ${aiResponse}
     if (analysisResult.logic !== undefined) {
       const logicLevel = getLogicLevel(analysisResult.logic);
       const logicBar = generateScoreBar(analysisResult.logic);
-      analysisReport += `  🧠 逻辑性: ${analysisResult.logic}/100 (${logicLevel})\n`;
+      analysisReport += `  逻辑性: ${analysisResult.logic}/100 (${logicLevel})\n`;
       analysisReport += `     ${logicBar}\n\n`;
     }
 
@@ -842,7 +923,7 @@ ${aiResponse}
     if (analysisResult.relevance !== undefined) {
       const relevanceLevel = getRelevanceLevel(analysisResult.relevance);
       const relevanceBar = generateScoreBar(analysisResult.relevance);
-      analysisReport += `  🎯 相关性: ${analysisResult.relevance}/100 (${relevanceLevel})\n`;
+      analysisReport += `  相关性: ${analysisResult.relevance}/100 (${relevanceLevel})\n`;
       analysisReport += `     ${relevanceBar}\n\n`;
     }
     
@@ -855,25 +936,25 @@ ${aiResponse}
     
     // 偏离内容分析
     if (analysisResult.deviationContent && analysisResult.deviationContent !== '无') {
-      analysisReport += `  📋 偏离内容:\n`;
+      analysisReport += `  偏离内容:\n`;
       analysisReport += `     ${analysisResult.deviationContent}\n\n`;
     }
     
     // 偏离原因分析
     if (analysisResult.deviationReason && analysisResult.deviationReason !== '无') {
-      analysisReport += `  🔍 偏离原因:\n`;
+      analysisReport += `  偏离原因:\n`;
       analysisReport += `     ${analysisResult.deviationReason}\n\n`;
     }
     
     // 影响范围评估
     if (analysisResult.impactScope && analysisResult.impactScope !== '无') {
-      analysisReport += `  📊 影响范围:\n`;
+      analysisReport += `  影响范围:\n`;
       analysisReport += `     ${analysisResult.impactScope}\n\n`;
     }
     
     // 相关依据
     if (analysisResult.reference && analysisResult.reference !== '无') {
-      analysisReport += `  📚 参考依据:\n`;
+      analysisReport += `  参考依据:\n`;
       analysisReport += `     ${analysisResult.reference}\n\n`;
     }
     
@@ -882,18 +963,18 @@ ${aiResponse}
     
     // 具体修正方向
     if (analysisResult.correctionDirection && analysisResult.correctionDirection !== '无') {
-      analysisReport += `  ✏️ 修正方向:\n`;
+      analysisReport += `  修正方向:\n`;
       analysisReport += `     ${analysisResult.correctionDirection}\n\n`;
     }
     
     // 综合评价与建议
     if (analysisResult.summary) {
-      analysisReport += `  💬 综合评价:\n`;
+      analysisReport += `  综合评价:\n`;
       analysisReport += `     ${analysisResult.summary}\n\n`;
     }
     
     if (analysisResult.recommendation && analysisResult.recommendation !== '无') {
-      analysisReport += `  💡 优化建议:\n`;
+      analysisReport += `  优化建议:\n`;
       analysisReport += `     ${analysisResult.recommendation}\n\n`;
     }
     
@@ -902,7 +983,7 @@ ${aiResponse}
     const avgBar = generateScoreBar(avgScore);
     
     analysisReport += `【四、综合评分】\n`;
-    analysisReport += `  ⭐ 总体评分: ${avgScore}/100 (${avgLevel})\n`;
+    analysisReport += `  总体评分: ${avgScore}/100 (${avgLevel})\n`;
     analysisReport += `     ${avgBar}\n`;
 
     // 显示分析报告
@@ -929,7 +1010,7 @@ ${aiResponse}
     messages.value.push({
       id: `analysis_err_${Date.now()}`,
       role: 'assistant',
-      content: `⚠️ 本地AI分析失败：${error.message}`,
+      content: `本地AI分析失败：${error.message}`,
       timestamp: Date.now(),
     });
     await scrollToBottom();
@@ -949,7 +1030,7 @@ async function displayEnhancedReport(enhancedResult: any) {
   let analysisReport = ``;
   
   // 报告标题
-  analysisReport += ` 🔍 知识图谱分析报告\n\n`;
+  analysisReport += ` 知识图谱分析报告\n\n`;
   
   // 一、冲突检测概览
   analysisReport += `【一、冲突检测概览】\n\n`;
@@ -971,10 +1052,10 @@ async function displayEnhancedReport(enhancedResult: any) {
   
   analysisReport += `  ${severityIcon} 风险等级: ${severityLevel}\n`;
   analysisReport += `     ${severityDesc}\n\n`;
-  analysisReport += `  📊 检测到冲突数: ${conflictCount}\n`;
+  analysisReport += `  检测到冲突数: ${conflictCount}\n`;
   
   if (conflictReport.summary) {
-    analysisReport += `  📝 分析摘要: ${conflictReport.summary}\n\n`;
+    analysisReport += `  分析摘要: ${conflictReport.summary}\n\n`;
   }
   
   // 二、冲突详情
@@ -986,16 +1067,16 @@ async function displayEnhancedReport(enhancedResult: any) {
       const severityLabel = getSeverityLabel(conflict.severity);
       
       analysisReport += `  ${index + 1}. [${typeLabel}] [${severityLabel}]\n`;
-      analysisReport += `     📋 冲突陈述: ${conflict.conflictingStatement}\n`;
+      analysisReport += `     冲突陈述: ${conflict.conflictingStatement}\n`;
       
       if (conflict.analysis) {
-        analysisReport += `     🔍 分析: ${conflict.analysis}\n`;
+        analysisReport += `     分析: ${conflict.analysis}\n`;
       }
       
       // 移除修正建议部分
       
       if (conflict.knowledgeReference) {
-        analysisReport += `     📚 参考来源: ${conflict.knowledgeReference.source || '知识图谱'}\n`;
+        analysisReport += `     参考来源: ${conflict.knowledgeReference.source || '知识图谱'}\n`;
         if (conflict.knowledgeReference.name) {
           analysisReport += `        - ${conflict.knowledgeReference.name}\n`;
         }
@@ -1008,7 +1089,7 @@ async function displayEnhancedReport(enhancedResult: any) {
   // 三、知识覆盖率评估
   if (conflictReport.knowledgeCoverage !== undefined) {
     analysisReport += `【三、知识覆盖率评估】\n`;
-    analysisReport += `  📈 覆盖率: ${conflictReport.knowledgeCoverage}%\n`;
+    analysisReport += `  覆盖率: ${conflictReport.knowledgeCoverage}%\n`;
     
     const coverageDesc = conflictReport.knowledgeCoverage >= 80 
       ? '回答内容与知识库高度匹配' 
@@ -1203,7 +1284,7 @@ async function performMultiAIEvaluation(question: string, responses: Array<{ aiI
     messages.value.push({
       id: evalMsgId,
       role: 'assistant',
-      content: '🔍 正在进行多AI评估分析...',
+      content: '正在进行多AI评估分析...',
       timestamp: Date.now(),
     });
     await scrollToBottom();
@@ -1719,6 +1800,80 @@ async function performMultiAIEvaluation(question: string, responses: Array<{ aiI
   word-break: break-word;
   white-space: pre-wrap;
   color: var(--text);
+}
+.msg-content h1, .msg-content h2, .msg-content h3, .msg-content h4, .msg-content h5, .msg-content h6 {
+  margin: 12px 0 8px;
+  font-weight: 600;
+  color: var(--gold);
+}
+.msg-content h1 { font-size: 1.5rem; }
+.msg-content h2 { font-size: 1.3rem; }
+.msg-content h3 { font-size: 1.15rem; }
+.msg-content h4 { font-size: 1rem; }
+.msg-content h5 { font-size: 0.9rem; }
+.msg-content h6 { font-size: 0.85rem; }
+.msg-content ul, .msg-content ol {
+  margin: 8px 0;
+  padding-left: 24px;
+}
+.msg-content li {
+  margin: 4px 0;
+}
+.msg-content p {
+  margin: 8px 0;
+}
+.msg-content blockquote {
+  border-left: 3px solid var(--gold);
+  padding-left: 12px;
+  margin: 12px 0;
+  color: var(--text-muted);
+  font-style: italic;
+}
+.msg-content pre {
+  background: var(--bg-hover);
+  border-radius: 4px;
+  padding: 12px;
+  margin: 8px 0;
+  overflow-x: auto;
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 0.85rem;
+}
+.msg-content code {
+  background: var(--bg-hover);
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-family: 'Consolas', 'Monaco', monospace;
+  font-size: 0.85rem;
+}
+.msg-content pre code {
+  background: none;
+  padding: 0;
+}
+.msg-content a {
+  color: var(--gold);
+  text-decoration: underline;
+}
+.msg-content a:hover {
+  color: var(--gold-hover);
+}
+.msg-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 12px 0;
+  font-size: 0.85rem;
+}
+.msg-content th, .msg-content td {
+  border: 1px solid var(--border);
+  padding: 8px 12px;
+  text-align: left;
+}
+.msg-content th {
+  background: var(--bg-hover);
+  font-weight: 600;
+  color: var(--gold);
+}
+.msg-content tr:nth-child(even) {
+  background: rgba(255, 255, 255, 0.02);
 }
 .msg-time {
   font-size: 0.65rem;
