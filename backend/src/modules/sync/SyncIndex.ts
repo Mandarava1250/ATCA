@@ -3,6 +3,7 @@ import { query, execute, isMockMode } from '../../config/database';
 import { authMiddleware } from '../../middleware/auth';
 import { asyncHandler } from '../../middleware/errorHandler';
 import { getSyncStats, pushToUser } from '../../services/SyncService';
+import { dataSyncService, SyncStatusInfo, SyncConflict } from '../../services/DataSyncService';
 
 const router = Router();
 
@@ -12,25 +13,81 @@ const logger = {
   error: (msg: string, data?: any) => console.error(`[Sync] ${msg}`, data || ''),
 };
 
-// ========================
-// 同步状态管理
-// ========================
-
 router.get('/status', authMiddleware, asyncHandler(async (req, res) => {
+  const userId = (req as any).user?.userId;
   const stats = getSyncStats();
   
+  let userStatus: SyncStatusInfo | null = null;
+  if (!isMockMode() && userId) {
+    userStatus = await dataSyncService.getSyncStatus(userId);
+  }
+
   res.json({
     success: true,
     data: {
       serviceStatus: 'running',
       ...stats,
+      userStatus,
     },
   });
 }));
 
-// ========================
-// 数据同步接口
-// ========================
+router.get('/detailed-status', authMiddleware, asyncHandler(async (req, res) => {
+  const userId = (req as any).user?.userId;
+
+  if (!userId) {
+    res.status(401).json({ success: false, error: { message: '未登录' } });
+    return;
+  }
+
+  if (isMockMode()) {
+    res.json({
+      success: true,
+      data: {
+        user_id: userId,
+        last_sync_at: new Date().toISOString(),
+        last_checkin_sync_at: new Date().toISOString(),
+        last_points_sync_at: new Date(Date.now() - 3600000).toISOString(),
+        sync_version: 15,
+        pending_operations: 0,
+        pending_conflicts: 0,
+        device_count: 2,
+        sync_latency_ms: 120,
+        sync_health: 'healthy',
+      },
+    });
+    return;
+  }
+
+  const status = await dataSyncService.getSyncStatus(userId);
+  if (status) {
+    const latency = status.last_sync_at ? Date.now() - new Date(status.last_sync_at).getTime() : 0;
+    res.json({
+      success: true,
+      data: {
+        ...status,
+        sync_latency_ms: latency,
+        sync_health: latency < 30000 ? 'healthy' : latency < 60000 ? 'warning' : 'critical',
+      },
+    });
+  } else {
+    res.json({
+      success: true,
+      data: {
+        user_id: userId,
+        last_sync_at: null,
+        last_checkin_sync_at: null,
+        last_points_sync_at: null,
+        sync_version: 0,
+        pending_operations: 0,
+        pending_conflicts: 0,
+        device_count: 0,
+        sync_latency_ms: 0,
+        sync_health: 'unknown',
+      },
+    });
+  }
+}));
 
 router.get('/devices', authMiddleware, asyncHandler(async (req, res) => {
   const userId = (req as any).user?.userId;
@@ -74,11 +131,23 @@ router.get('/logs', authMiddleware, asyncHandler(async (req, res) => {
   }
 
   try {
-    const result = await query(
-      'sync',
-      'SELECT [operation_id] AS sync_id, [user_id], [operation_type] AS sync_type, [device_id], [sync_status] AS status, [operation_time] AS timestamp, [operation_data] AS details FROM dbo.sync_operations WHERE [user_id] = @uid ORDER BY [operation_time] DESC OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY',
-      { uid: userId, offset: (parseInt(page as string) - 1) * parseInt(limit as string), limit: parseInt(limit as string) }
-    );
+    let queryStr = 'SELECT [operation_id] AS sync_id, [user_id], [operation_type] AS sync_type, [device_id], [sync_status] AS status, [operation_time] AS timestamp, [operation_data] AS details FROM dbo.sync_operations WHERE [user_id] = @uid';
+    const params: Record<string, any> = { uid: userId };
+
+    if (startDate) {
+      queryStr += ' AND [operation_time] >= @startDate';
+      params.startDate = startDate;
+    }
+    if (endDate) {
+      queryStr += ' AND [operation_time] <= @endDate';
+      params.endDate = endDate;
+    }
+
+    queryStr += ' ORDER BY [operation_time] DESC OFFSET @offset ROWS FETCH NEXT @limit ROWS ONLY';
+    params.offset = (parseInt(page as string) - 1) * parseInt(limit as string);
+    params.limit = parseInt(limit as string);
+
+    const result = await query('sync', queryStr, params);
     
     const countResult = await query(
       'sync',
@@ -119,38 +188,20 @@ router.post('/full-sync', authMiddleware, asyncHandler(async (req, res) => {
     return;
   }
 
-  try {
-    const checkinsResult = await query(
-      'sync',
-      'EXEC sp_sync_get_user_checkins @user_id = @uid',
-      { uid: userId }
-    );
-    
-    await execute(
-      'sync',
-      'EXEC sp_sync_mark_checkins_synced @user_id = @uid, @device_id = @did',
-      { uid: userId, did: deviceId || 'unknown' }
-    );
-
-    await execute(
-      'sync',
-      'EXEC sp_sync_update_user_status @user_id = @uid, @sync_type = @type',
-      { uid: userId, type: 'checkin' }
-    );
-
-    logger.info(`全量同步完成 - 用户: ${userId}, 设备: ${deviceId}`);
-
+  const result = await dataSyncService.performFullSync(userId, deviceId || 'api_sync');
+  
+  if (result.success) {
     res.json({ 
       success: true, 
       data: { 
-        syncId: `sync_${Date.now()}`, 
+        syncId: result.sync_id, 
         status: 'completed',
-        syncedData: { checkins: Array.isArray(checkinsResult) ? checkinsResult.length : 0 }
+        syncedData: { checkins: result.synced_count },
+        latency_ms: result.latency_ms,
       } 
     });
-  } catch (err: any) {
-    logger.error(`全量同步失败 - 用户: ${userId}, 错误: ${err.message}`);
-    res.status(500).json({ success: false, error: { message: '全量同步失败', details: err.message } });
+  } else {
+    res.status(500).json({ success: false, error: { message: result.message } });
   }
 }));
 
@@ -179,48 +230,24 @@ router.post('/delta-sync', authMiddleware, asyncHandler(async (req, res) => {
     return;
   }
 
-  try {
-    let changes: any[] = [];
+  const lastSyncDate = new Date(lastSyncTime);
+  const result = await dataSyncService.performDeltaSync(userId, lastSyncDate, deviceId || 'api_sync');
+  
+  if (result.success) {
+    const pendingOps = await dataSyncService.getPendingOperations(userId, deviceId || 'api_sync');
     
-    const includeCheckins = !syncTypes || syncTypes.includes('checkin');
-    if (includeCheckins) {
-      const pendingCheckins = await query(
-        'sync',
-        'EXEC sp_sync_get_pending_checkins @user_id = @uid',
-        { uid: userId }
-      );
-      
-      if (Array.isArray(pendingCheckins) && pendingCheckins.length > 0) {
-        changes.push(...pendingCheckins.map((c: any) => ({
-          type: 'checkin',
-          payload: {
-            checkinId: c.checkin_id,
-            checkinDate: c.checkin_date,
-            streakCount: c.streak_count,
-            pointsEarned: c.points_earned,
-          },
-        })));
-      }
-    }
-
-    await execute(
-      'sync',
-      'EXEC sp_sync_mark_checkins_synced @user_id = @uid, @device_id = @did',
-      { uid: userId, did: deviceId || 'unknown' }
-    );
-
     res.json({ 
       success: true, 
       data: { 
-        hasChanges: changes.length > 0,
+        hasChanges: pendingOps.length > 0,
         syncTime: new Date().toISOString(),
-        changes,
+        changes: pendingOps,
         deviceId,
+        latency_ms: result.latency_ms,
       } 
     });
-  } catch (err: any) {
-    logger.error(`增量同步失败 - 用户: ${userId}, 错误: ${err.message}`);
-    res.status(500).json({ success: false, error: { message: '增量同步失败', details: err.message } });
+  } else {
+    res.status(500).json({ success: false, error: { message: result.message } });
   }
 }));
 
@@ -247,13 +274,9 @@ router.post('/client-status', authMiddleware, asyncHandler(async (req, res) => {
   }
 }));
 
-// ========================
-// 手动同步触发
-// ========================
-
 router.post('/sync-checkins', authMiddleware, asyncHandler(async (req, res) => {
   const userId = (req as any).user?.userId;
-  const { checkins } = req.body;
+  const { checkins, deviceId } = req.body;
 
   if (!checkins || !Array.isArray(checkins)) {
     res.status(400).json({ success: false, error: { message: '缺少必要参数 checkins' } });
@@ -266,52 +289,44 @@ router.post('/sync-checkins', authMiddleware, asyncHandler(async (req, res) => {
       data: {
         syncedCount: checkins.length,
         conflicts: 0,
+        latency_ms: 50,
       },
     });
     return;
   }
 
-  try {
-    let syncedCount = 0;
-    for (const checkin of checkins) {
-      try {
-        await execute(
-          'sync',
-          'EXEC sp_sync_record_checkin @user_id = @uid, @checkin_id = @cid, @checkin_date = @cd, @checkin_time = @ct, @streak_count = @sc, @points_earned = @pe, @device_type = @dt, @device_info = @di',
-          {
-            uid: userId,
-            cid: checkin.checkin_id || Date.now(),
-            cd: checkin.checkin_date,
-            ct: checkin.checkin_time || new Date().toISOString(),
-            sc: checkin.streak_count || 1,
-            pe: checkin.points_earned || 10,
-            dt: checkin.device_type || null,
-            di: checkin.device_info || null,
-          }
-        );
-        syncedCount++;
-      } catch (err: any) {
-        logger.warn(`同步单条打卡失败 - 用户: ${userId}, 日期: ${checkin.checkin_date}, 错误: ${err.message}`);
-      }
+  let syncedCount = 0;
+  let conflictCount = 0;
+  const results = [];
+
+  for (const checkin of checkins) {
+    const result = await dataSyncService.syncCheckinData(userId, checkin, deviceId || 'api_sync');
+    results.push(result);
+    if (result.success) {
+      syncedCount++;
     }
-    
-    pushToUser(userId, 'sync:checkin_update', { checkins, timestamp: Date.now() });
-    
-    logger.info(`批量同步打卡完成 - 用户: ${userId}, 同步数量: ${syncedCount}`);
-    
-    res.json({ success: true, data: { syncedCount, conflicts: checkins.length - syncedCount } });
-  } catch (err: any) {
-    logger.error(`批量同步打卡失败 - 用户: ${userId}, 错误: ${err.message}`);
-    res.status(500).json({ success: false, error: { message: '同步打卡记录失败', details: err.message } });
+    conflictCount += result.conflict_count;
   }
+
+  logger.info(`批量同步打卡完成 - 用户: ${userId}, 同步数量: ${syncedCount}, 冲突数量: ${conflictCount}`);
+  
+  res.json({ 
+    success: syncedCount > 0, 
+    data: { 
+      syncedCount, 
+      conflicts: conflictCount,
+      failedCount: checkins.length - syncedCount,
+      latency_ms: results.reduce((acc, r) => acc + r.latency_ms, 0) / results.length,
+    } 
+  });
 }));
 
-router.post('/sync-favorites', authMiddleware, asyncHandler(async (req, res) => {
+router.post('/sync-points', authMiddleware, asyncHandler(async (req, res) => {
   const userId = (req as any).user?.userId;
-  const { favorites } = req.body;
+  const { pointsData, deviceId } = req.body;
 
-  if (!favorites || !Array.isArray(favorites)) {
-    res.status(400).json({ success: false, error: { message: '缺少必要参数 favorites' } });
+  if (!pointsData || typeof pointsData !== 'object') {
+    res.status(400).json({ success: false, error: { message: '缺少必要参数 pointsData' } });
     return;
   }
 
@@ -319,44 +334,36 @@ router.post('/sync-favorites', authMiddleware, asyncHandler(async (req, res) => 
     res.json({
       success: true,
       data: {
-        syncedCount: favorites.length,
+        synced: true,
         conflicts: 0,
+        latency_ms: 30,
       },
     });
     return;
   }
 
-  try {
-    for (const favorite of favorites) {
-      await execute(
-        'sync',
-        'EXEC sp_sync_log_operation @user_id = @uid, @device_id = @did, @operation_type = @type, @entity_type = @et, @entity_id = @eid, @operation_data = @data',
-        {
-          uid: userId,
-          did: 'api_sync',
-          type: favorite.action === 'remove' ? 'DELETE' : 'INSERT',
-          et: favorite.entityType || 'architecture',
-          eid: favorite.entityId,
-          data: JSON.stringify(favorite),
-        }
-      );
-    }
-    
-    pushToUser(userId, 'sync:favorite_change', { favorites, timestamp: Date.now() });
-    
-    res.json({ success: true, data: { syncedCount: favorites.length, conflicts: 0 } });
-  } catch (err: any) {
-    logger.error(`同步收藏列表失败 - 用户: ${userId}, 错误: ${err.message}`);
-    res.status(500).json({ success: false, error: { message: '同步收藏列表失败', details: err.message } });
+  const result = await dataSyncService.syncUserPointsData(userId, pointsData, deviceId || 'api_sync');
+  
+  if (result.success) {
+    res.json({ 
+      success: true, 
+      data: { 
+        synced: true, 
+        conflicts: result.conflict_count,
+        latency_ms: result.latency_ms,
+      } 
+    });
+  } else {
+    res.status(500).json({ success: false, error: { message: result.message } });
   }
 }));
 
-router.post('/sync-notes', authMiddleware, asyncHandler(async (req, res) => {
+router.post('/sync-answer', authMiddleware, asyncHandler(async (req, res) => {
   const userId = (req as any).user?.userId;
-  const { notes } = req.body;
+  const { answerData, deviceId } = req.body;
 
-  if (!notes || !Array.isArray(notes)) {
-    res.status(400).json({ success: false, error: { message: '缺少必要参数 notes' } });
+  if (!answerData || typeof answerData !== 'object') {
+    res.status(400).json({ success: false, error: { message: '缺少必要参数 answerData' } });
     return;
   }
 
@@ -364,78 +371,97 @@ router.post('/sync-notes', authMiddleware, asyncHandler(async (req, res) => {
     res.json({
       success: true,
       data: {
-        syncedCount: notes.length,
+        synced: true,
         conflicts: 0,
+        latency_ms: 25,
       },
     });
     return;
   }
 
-  try {
-    for (const note of notes) {
-      await execute(
-        'sync',
-        'EXEC sp_sync_log_operation @user_id = @uid, @device_id = @did, @operation_type = @type, @entity_type = @et, @entity_id = @eid, @operation_data = @data',
-        {
-          uid: userId,
-          did: 'api_sync',
-          type: note.note_id ? 'UPDATE' : 'INSERT',
-          et: 'note',
-          eid: note.note_id || Date.now(),
-          data: JSON.stringify(note),
-        }
-      );
-    }
-    
-    pushToUser(userId, 'sync:note_change', { notes, timestamp: Date.now() });
-    
-    res.json({ success: true, data: { syncedCount: notes.length, conflicts: 0 } });
-  } catch (err: any) {
-    logger.error(`同步笔记失败 - 用户: ${userId}, 错误: ${err.message}`);
-    res.status(500).json({ success: false, error: { message: '同步笔记失败', details: err.message } });
+  const result = await dataSyncService.syncAnswerHistoryData(userId, answerData, deviceId || 'api_sync');
+  
+  if (result.success) {
+    res.json({ 
+      success: true, 
+      data: { 
+        synced: true, 
+        conflicts: result.conflict_count,
+        latency_ms: result.latency_ms,
+      } 
+    });
+  } else {
+    res.status(500).json({ success: false, error: { message: result.message } });
   }
 }));
 
-router.post('/sync-settings', authMiddleware, asyncHandler(async (req, res) => {
-  const userId = (req as any).user?.userId;
-  const { settings } = req.body;
+router.post('/sync-mode', authMiddleware, asyncHandler(async (req, res) => {
+  const { modeData, deviceId } = req.body;
 
-  if (!settings || typeof settings !== 'object') {
-    res.status(400).json({ success: false, error: { message: '缺少必要参数 settings' } });
+  if (!modeData || typeof modeData !== 'object') {
+    res.status(400).json({ success: false, error: { message: '缺少必要参数 modeData' } });
     return;
   }
 
   if (isMockMode()) {
-    res.json({ success: true, data: { synced: true } });
+    res.json({
+      success: true,
+      data: {
+        synced: true,
+        latency_ms: 20,
+      },
+    });
     return;
   }
 
-  try {
-    await execute(
-      'sync',
-      'EXEC sp_sync_log_operation @user_id = @uid, @device_id = @did, @operation_type = @type, @entity_type = @et, @entity_id = @eid, @operation_data = @data',
-      {
-        uid: userId,
-        did: 'api_sync',
-        type: 'UPDATE',
-        et: 'settings',
-        eid: userId,
-        data: JSON.stringify(settings),
-      }
-    );
-    
-    pushToUser(userId, 'sync:settings_change', { settings, timestamp: Date.now() });
-    
-    res.json({ success: true, data: { synced: true } });
-  } catch (err: any) {
-    logger.error(`同步设置失败 - 用户: ${userId}, 错误: ${err.message}`);
-    res.status(500).json({ success: false, error: { message: '同步设置失败', details: err.message } });
+  const result = await dataSyncService.syncCompetitionModeData(modeData, deviceId || 'api_sync');
+  
+  if (result.success) {
+    res.json({ 
+      success: true, 
+      data: { 
+        synced: true,
+        latency_ms: result.latency_ms,
+      } 
+    });
+  } else {
+    res.status(500).json({ success: false, error: { message: result.message } });
   }
 }));
 
-// ========================
-// 打卡同步查询接口
-// ========================
+router.post('/sync-challenge', authMiddleware, asyncHandler(async (req, res) => {
+  const { challengeData, deviceId } = req.body;
+
+  if (!challengeData || typeof challengeData !== 'object') {
+    res.status(400).json({ success: false, error: { message: '缺少必要参数 challengeData' } });
+    return;
+  }
+
+  if (isMockMode()) {
+    res.json({
+      success: true,
+      data: {
+        synced: true,
+        latency_ms: 22,
+      },
+    });
+    return;
+  }
+
+  const result = await dataSyncService.syncDailyChallengeData(challengeData, deviceId || 'api_sync');
+  
+  if (result.success) {
+    res.json({ 
+      success: true, 
+      data: { 
+        synced: true,
+        latency_ms: result.latency_ms,
+      } 
+    });
+  } else {
+    res.status(500).json({ success: false, error: { message: result.message } });
+  }
+}));
 
 router.get('/checkins', authMiddleware, asyncHandler(async (req, res) => {
   const userId = (req as any).user?.userId;
@@ -523,6 +549,160 @@ router.get('/checkins/stats', authMiddleware, asyncHandler(async (req, res) => {
     logger.error(`获取打卡同步统计失败 - 用户: ${userId}, 错误: ${err.message}`);
     res.json({ success: true, data: { total_records: 0, pending_count: 0, synced_count: 0, last_checkin_date: null, last_sync_time: null } });
   }
+}));
+
+router.get('/conflicts', authMiddleware, asyncHandler(async (req, res) => {
+  const userId = (req as any).user?.userId;
+  const { resolved = '0' } = req.query as Record<string, string>;
+
+  if (isMockMode()) {
+    res.json({ success: true, data: [] });
+    return;
+  }
+
+  try {
+    const conflicts: SyncConflict[] = await dataSyncService.getPendingConflicts(userId);
+    res.json({ success: true, data: conflicts });
+  } catch (err: any) {
+    logger.error(`获取冲突列表失败 - 用户: ${userId}, 错误: ${err.message}`);
+    res.json({ success: true, data: [] });
+  }
+}));
+
+router.post('/resolve-conflict', authMiddleware, asyncHandler(async (req, res) => {
+  const userId = (req as any).user?.userId;
+  const { conflictId, strategy } = req.body;
+
+  if (!conflictId) {
+    res.status(400).json({ success: false, error: { message: '缺少必要参数 conflictId' } });
+    return;
+  }
+
+  if (isMockMode()) {
+    res.json({ success: true, data: { resolved: true, strategy: strategy || 'latest_wins' } });
+    return;
+  }
+
+  try {
+    const conflicts = await dataSyncService.getPendingConflicts(userId);
+    const conflict = conflicts.find(c => c.conflict_id === conflictId);
+
+    if (!conflict) {
+      res.status(404).json({ success: false, error: { message: '冲突不存在或已解决' } });
+      return;
+    }
+
+    const resolution = await dataSyncService.resolveConflict(conflict, strategy || 'latest_wins');
+    
+    if (resolution.resolved) {
+      res.json({ success: true, data: { resolved: true, strategy: strategy || 'latest_wins' } });
+    } else {
+      res.status(500).json({ success: false, error: { message: '冲突解决失败' } });
+    }
+  } catch (err: any) {
+    logger.error(`解决冲突失败 - 用户: ${userId}, 冲突ID: ${conflictId}, 错误: ${err.message}`);
+    res.status(500).json({ success: false, error: { message: '冲突解决失败', details: err.message } });
+  }
+}));
+
+router.get('/pending-operations', authMiddleware, asyncHandler(async (req, res) => {
+  const userId = (req as any).user?.userId;
+  const { deviceId } = req.query;
+
+  if (isMockMode()) {
+    res.json({ success: true, data: [] });
+    return;
+  }
+
+  try {
+    const operations = await dataSyncService.getPendingOperations(userId, deviceId as string || 'api_sync');
+    res.json({ success: true, data: operations });
+  } catch (err: any) {
+    logger.error(`获取待同步操作失败 - 用户: ${userId}, 错误: ${err.message}`);
+    res.json({ success: true, data: [] });
+  }
+}));
+
+router.post('/mark-synced', authMiddleware, asyncHandler(async (req, res) => {
+  const { operationId, deviceId } = req.body;
+
+  if (!operationId) {
+    res.status(400).json({ success: false, error: { message: '缺少必要参数 operationId' } });
+    return;
+  }
+
+  if (isMockMode()) {
+    res.json({ success: true, data: { marked: true } });
+    return;
+  }
+
+  try {
+    const success = await dataSyncService.markOperationSynced(operationId, deviceId);
+    res.json({ success, data: { marked: success } });
+  } catch (err: any) {
+    logger.error(`标记操作已同步失败 - 操作ID: ${operationId}, 错误: ${err.message}`);
+    res.status(500).json({ success: false, error: { message: '标记失败', details: err.message } });
+  }
+}));
+
+router.post('/validate-checkin', authMiddleware, asyncHandler(async (req, res) => {
+  const { checkinData } = req.body;
+
+  if (!checkinData) {
+    res.status(400).json({ success: false, error: { message: '缺少必要参数 checkinData' } });
+    return;
+  }
+
+  const validation = await dataSyncService.validateCheckinData(checkinData);
+  
+  res.json({
+    success: true,
+    data: {
+      valid: validation.valid,
+      errors: validation.errors,
+      warnings: validation.warnings,
+    },
+  });
+}));
+
+router.post('/validate-points', authMiddleware, asyncHandler(async (req, res) => {
+  const { pointsData } = req.body;
+
+  if (!pointsData) {
+    res.status(400).json({ success: false, error: { message: '缺少必要参数 pointsData' } });
+    return;
+  }
+
+  const validation = await dataSyncService.validateUserPointsData(pointsData);
+  
+  res.json({
+    success: true,
+    data: {
+      valid: validation.valid,
+      errors: validation.errors,
+      warnings: validation.warnings,
+    },
+  });
+}));
+
+router.post('/validate-answer', authMiddleware, asyncHandler(async (req, res) => {
+  const { answerData } = req.body;
+
+  if (!answerData) {
+    res.status(400).json({ success: false, error: { message: '缺少必要参数 answerData' } });
+    return;
+  }
+
+  const validation = await dataSyncService.validateAnswerHistoryData(answerData);
+  
+  res.json({
+    success: true,
+    data: {
+      valid: validation.valid,
+      errors: validation.errors,
+      warnings: validation.warnings,
+    },
+  });
 }));
 
 export default router;
