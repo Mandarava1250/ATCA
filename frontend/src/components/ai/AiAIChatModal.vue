@@ -290,7 +290,13 @@ function getAIName(id?: string | number) {
 }
 
 function formatMsg(content: string) {
-  return content.replace(/\n/g, '<br>');
+  let formatted = content
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    .replace(/\*\*/g, '')
+    .replace(/\*/g, '')
+    .replace(/\n/g, '<br>');
+  return formatted;
 }
 
 function formatTime(ts: number) {
@@ -1225,13 +1231,13 @@ async function performMultiAIEvaluation(question: string, responses: Array<{ aiI
       const report = data.comparisonReport;
       const recommendations = data.recommendations;
 
-      let reportContent = `📊 **多AI评估报告**\n\n`;
+      let reportContent = `多AI评估报告\n\n`;
       
       // 最佳表现
-      reportContent += `🏆 **最佳表现**: ${report.summary.bestAI.aiName} (${report.summary.bestAI.overallScore}分)\n`;
+      reportContent += `最佳表现: ${report.summary.bestAI.aiName} (${report.summary.bestAI.overallScore}分)\n`;
       
       // 平均分
-      reportContent += `📈 **平均评分**:\n`;
+      reportContent += `平均评分:\n`;
       reportContent += `   - 准确性: ${report.summary.avgScores.accuracy}分\n`;
       reportContent += `   - 相关性: ${report.summary.avgScores.relevance}分\n`;
       reportContent += `   - 完整性: ${report.summary.avgScores.completeness}分\n`;
@@ -1239,21 +1245,13 @@ async function performMultiAIEvaluation(question: string, responses: Array<{ aiI
       reportContent += `   - 专业性: ${report.summary.avgScores.professionalism}分\n\n`;
 
       // 排名
-      reportContent += `📋 **综合排名**:\n`;
+      reportContent += `综合排名:\n`;
       report.ranking.forEach((item: any) => {
-        const rankIcon = item.rank === 1 ? '🥇' : item.rank === 2 ? '🥈' : item.rank === 3 ? '🥉' : `${item.rank}.`;
+        const rankIcon = item.rank === 1 ? '1' : item.rank === 2 ? '2' : item.rank === 3 ? '3' : `${item.rank}.`;
         reportContent += `   ${rankIcon} ${item.aiName}: ${item.overallScore}分\n`;
       });
 
-      reportContent += `\n💡 **建议**: ${recommendations.overallRecommendations.join(' ')}\n`;
-
-      // 适用场景
-      if (recommendations.scenarioSuggestions.length > 0) {
-        reportContent += `\n🎯 **适用场景建议**:\n`;
-        recommendations.scenarioSuggestions.forEach((scenario: any) => {
-          reportContent += `   • ${scenario.aiName}: ${scenario.scenarios.join('、')}\n`;
-        });
-      }
+      reportContent += `\n建议: ${recommendations.overallRecommendations.join(' ')}\n`;
 
       messages.value.push({
         id: `eval_result_${Date.now()}`,
@@ -1269,7 +1267,7 @@ async function performMultiAIEvaluation(question: string, responses: Array<{ aiI
       messages.value.push({
         id: `eval_err_${Date.now()}`,
         role: 'assistant',
-        content: `⚠️ 评估分析失败：${(result as any).error?.message || '未知错误'}`,
+        content: `评估分析失败：${(result as any).error?.message || '未知错误'}`,
         timestamp: Date.now(),
       });
       await scrollToBottom();
@@ -1285,7 +1283,7 @@ async function performMultiAIEvaluation(question: string, responses: Array<{ aiI
     messages.value.push({
       id: `eval_err_${Date.now()}`,
       role: 'assistant',
-      content: `⚠️ 评估分析异常：${error.message || '网络错误'}`,
+      content: `评估分析异常：${error.message || '网络错误'}`,
       timestamp: Date.now(),
     });
     await scrollToBottom();
