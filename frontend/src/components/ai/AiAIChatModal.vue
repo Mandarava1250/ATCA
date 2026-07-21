@@ -292,6 +292,8 @@ function getAIName(id?: string | number) {
 function formatMsg(content: string) {
   let formatted = content;
 
+  formatted = formatted.replace(/\n\s*---\s*\n/g, '\n');
+
   formatted = formatted.replace(/```(\w+)?\n([\s\S]*?)```/g, '<pre><code>$2</code></pre>');
   formatted = formatted.replace(/`([^`]+)`/g, '<code>$1</code>');
 
