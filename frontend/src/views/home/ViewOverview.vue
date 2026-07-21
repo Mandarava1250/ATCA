@@ -243,7 +243,7 @@
       <div class="section-card">
         <div class="section-header">
           <span class="section-number">三</span>
-          <h2 class="section-title">技术栈总览与选型理由</h2>
+          <h2 class="section-title">技术栈</h2>
         </div>
 
         <div class="tech-section">
@@ -371,7 +371,7 @@
       <div class="section-card">
         <div class="section-header">
           <span class="section-number">四</span>
-          <h2 class="section-title">核心功能实现</h2>
+          <h2 class="section-title">技术难点</h2>
         </div>
 
         <div class="core-features">
@@ -584,37 +584,37 @@
       <div class="section-card innovation-section">
         <div class="section-header">
           <span class="section-number">六</span>
-          <h2 class="section-title">技术创新</h2>
+          <h2 class="section-title">未来发展</h2>
         </div>
-      </div>
         <div class="innovation-grid">
           <div class="innovation-card">
             <div class="innovation-icon">
               <svg viewBox="0 0 24 24" width="48" height="48">
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" fill="currentColor"/>
+                <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z" fill="currentColor"/>
               </svg>
             </div>
-            <h3>多AI模型融合</h3>
-            <p>统一封装三种不同协议的AI接入方式，支持动态切换与自动降级，确保问答服务的高可用性</p>
+            <h3>继续优化建模的使用体验与功能</h3>
+            <p>不断完善3D建模工具的交互体验，增加模型编辑、材质调整、场景保存等实用功能，让用户能够更便捷地创作和分享建筑作品</p>
           </div>
           <div class="innovation-card">
             <div class="innovation-icon">
               <svg viewBox="0 0 24 24" width="48" height="48">
-                <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z" fill="currentColor"/>
+                <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z" fill="currentColor"/>
               </svg>
             </div>
-            <h3>3D建模+文化融合</h3>
-            <p>将专业级3D建模技术引入文化展示领域，用户可亲手"建造"古建筑，实现文化传承与技术创新的结合</p>
+            <h3>加入更多真实的建筑模型</h3>
+            <p>持续收录全国各地著名古建筑的高精度3D模型，涵盖宫殿、寺庙、园林、民居等多种建筑类型，为用户提供更丰富的文化学习素材</p>
           </div>
           <div class="innovation-card">
             <div class="innovation-icon">
               <svg viewBox="0 0 24 24" width="48" height="48">
-                <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 11c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z" fill="currentColor"/>
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z" fill="currentColor"/>
               </svg>
             </div>
-            <h3>可选认证架构</h3>
-            <p>optionalAuthMiddleware设计实现"浏览公开、操作需登录"的无感知用户体验，降低用户使用门槛</p>
+            <h3>引入VR沉浸式漫游</h3>
+            <p>基于WebXR技术实现VR沉浸式漫游功能，用户可佩戴VR设备身临其境地游览古建筑场景，感受历史建筑的宏伟与精致</p>
           </div>
+        </div>
       </div>
     </section>
     
@@ -635,7 +635,7 @@
       <div class="section-card">
         <div class="section-header">
           <span class="section-number">八</span>
-          <h2 class="section-title">本地AI管理器工作流程图</h2>
+          <h2 class="section-title">本地AI工作流程图</h2>
         </div>
 
         <div class="mermaid-section">
@@ -666,7 +666,7 @@ import Navbar from '@/components/common/CommonNavbar.vue';
 
 const activeSection = ref('');
 let lastScrollPosition = 0;
-let lastActiveSection = '';
+let lastActiveSection = ''
 
 const navItems = [
   { id: 'section-background', number: '一', label: '项目背景'},
@@ -674,9 +674,9 @@ const navItems = [
   { id: 'section-tech', number: '三', label: '技术栈' },
   { id: 'section-features', number: '四', label: '技术创新'},
   { id: 'section-workshop', number: '五', label: '技术难点'},
-  { id: 'section-technology', number: '六', label: '技术创新' },
+  { id: 'section-technology', number: '六', label: '未来发展' },
   { id: 'section-er', number: '七', label: '数据库E-R图' },
-  { id: 'section-ai-manager', number: '八', label: 'AI管理器'},
+  { id: 'section-ai-manager', number: '八', label: 'AI工作流程图'},
 ];
 
 function scrollToSection(id: string) {
