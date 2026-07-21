@@ -294,6 +294,8 @@ function formatMsg(content: string) {
 
   formatted = formatted.replace(/\n\s*---\s*\n/g, '\n');
 
+  formatted = formatted.replace(/\n{2,}/g, '\n');
+
   formatted = formatted.replace(/```(\w+)?\n([\s\S]*?)```/g, '<pre><code>$2</code></pre>');
   formatted = formatted.replace(/`([^`]+)`/g, '<code>$1</code>');
 
@@ -378,6 +380,8 @@ function formatMsg(content: string) {
 
   formatted = formatted.replace(/\*\*/g, '');
   formatted = formatted.replace(/\*/g, '');
+
+  formatted = formatted.replace(/>\s+</g, '><');
 
   return formatted;
 }
@@ -1800,11 +1804,12 @@ async function performMultiAIEvaluation(question: string, responses: Array<{ aiI
 }
 .msg-content { 
   word-break: break-word;
-  white-space: pre-wrap;
+  white-space: normal;
   color: var(--text);
+  line-height: 1;
 }
 .msg-content h1, .msg-content h2, .msg-content h3, .msg-content h4, .msg-content h5, .msg-content h6 {
-  margin: 12px 0 8px;
+  margin: 8px 0 4px;
   font-weight: 600;
   color: var(--gold);
 }
@@ -1815,19 +1820,19 @@ async function performMultiAIEvaluation(question: string, responses: Array<{ aiI
 .msg-content h5 { font-size: 0.9rem; }
 .msg-content h6 { font-size: 0.85rem; }
 .msg-content ul, .msg-content ol {
-  margin: 8px 0;
+  margin: 4px 0;
   padding-left: 24px;
 }
 .msg-content li {
-  margin: 4px 0;
+  margin: 2px 0;
 }
 .msg-content p {
-  margin: 8px 0;
+  margin: 4px 0;
 }
 .msg-content blockquote {
   border-left: 3px solid var(--gold);
   padding-left: 12px;
-  margin: 12px 0;
+  margin: 8px 0;
   color: var(--text-muted);
   font-style: italic;
 }
@@ -1835,7 +1840,7 @@ async function performMultiAIEvaluation(question: string, responses: Array<{ aiI
   background: var(--bg-hover);
   border-radius: 4px;
   padding: 12px;
-  margin: 8px 0;
+  margin: 4px 0;
   overflow-x: auto;
   font-family: 'Consolas', 'Monaco', monospace;
   font-size: 0.85rem;
@@ -1861,7 +1866,7 @@ async function performMultiAIEvaluation(question: string, responses: Array<{ aiI
 .msg-content table {
   width: 100%;
   border-collapse: collapse;
-  margin: 12px 0;
+  margin: 4px 0;
   font-size: 0.85rem;
 }
 .msg-content th, .msg-content td {
