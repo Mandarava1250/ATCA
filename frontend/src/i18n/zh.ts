@@ -39,7 +39,7 @@ export default {
     introP1: '中国古建筑文化传播平台，以三维数字化技术复原中国古建筑文化营造技艺。从佛光寺东大殿的唐代雄姿，到太和殿的皇家威仪，每一座建筑都是一部凝固的史书。',
     introP2: '在这里，您可以沉浸式游览古建详情，参与知识竞赛检验学识，亲手拼装传统构件，更可向AI助手咨询任何古建问题。',
     featureArch: '古建筑详情馆',
-    featureArchDesc: '历史 · 结构 · 文化 · 专家观点',
+    featureArchDesc: '历史 · 结构 · 文化 · 匠人观点',
     featureAI: '智能AI助手',
     featureAIDesc: '7大模型 · 流式对话',
 
@@ -51,7 +51,7 @@ export default {
     functionTitle: '三大展厅',
 
     hallArch: '古建详情馆',
-    hallArchDesc: '深度了解每座建筑的历史沿革、技术结构、文化意义与专家解读，涵盖从先秦到明清的千年建筑史',
+    hallArchDesc: '深度了解每座建筑的历史沿革、技术结构、文化意义与匠人解读，涵盖从先秦到明清的千年建筑史',
     hallArchEnter: '进入展厅',
 
     hallQuiz: '知识竞赛厅',
@@ -163,7 +163,7 @@ export default {
         structure: '技术结构',
         features: '建筑特色',
         culture: '文化意义',
-        quotes: '专家观点',
+        quotes: '匠人观点',
       },
       unfavorite: '已收藏',
       favorite: '收藏',
@@ -188,7 +188,7 @@ export default {
       interpretation: '文化阐释',
       socialInfluence: '社会影响',
       contemporaryValue: '当代价值',
-      expert: '专家',
+      expert: '匠人',
       title: '头衔',
       source: '来源',
     },

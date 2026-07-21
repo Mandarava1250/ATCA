@@ -550,7 +550,7 @@ export const archSubTableApi = {
   batchDeleteCulture: (architectureId: number, ids: number[]) =>
       http.post<{ success: boolean; data: any }>(`/admin/architectures/${architectureId}/culture/batch-delete`, { ids }),
 
-  // 专家观点 (expert_quotes)
+  // 匠人观点 (expert_quotes)
   getExperts: (architectureId: number) =>
       http.get<{ success: boolean; data: any[] }>(`/admin/architectures/${architectureId}/experts`),
   createExpert: (architectureId: number, data: any) =>

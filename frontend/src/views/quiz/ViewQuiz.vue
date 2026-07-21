@@ -120,7 +120,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRouter, onBeforeRouteUpdate } from 'vue-router';
 import { useUserStore } from '@/stores';
 import Navbar from '@/components/common/CommonNavbar.vue';
 import Footer from '@/components/common/CommonFooter.vue';
@@ -277,12 +277,9 @@ function handleAvatarError(e: Event) {
   img.src = '/images/default-avatar.svg';
 }
 
-onMounted(async () => {
-  logMount('ViewQuiz');
+async function refreshData() {
   loadCheckin();
   loadWrongCount();
-  window.addEventListener('storage', handleStorageSync);
-  logListenerAdd('ViewQuiz', 'storage', 'window');
   try {
     const [modesRes, statsRes, lbRes] = await Promise.all([
       quizApi.getModes(),
@@ -295,6 +292,17 @@ onMounted(async () => {
   } catch (e) {
     console.error(e);
   }
+}
+
+onMounted(async () => {
+  logMount('ViewQuiz');
+  window.addEventListener('storage', handleStorageSync);
+  logListenerAdd('ViewQuiz', 'storage', 'window');
+  await refreshData();
+});
+
+onBeforeRouteUpdate(async () => {
+  await refreshData();
 });
 
 onUnmounted(() => {

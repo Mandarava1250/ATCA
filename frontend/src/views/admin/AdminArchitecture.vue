@@ -106,7 +106,7 @@
           <button class="form-tab" :class="{ active: activeTab === 'structure' }" @click="activeTab = 'structure'; loadSubTableData('structure')">技术结构</button>
           <button class="form-tab" :class="{ active: activeTab === 'features' }" @click="activeTab = 'features'; loadSubTableData('features')">建筑特色</button>
           <button class="form-tab" :class="{ active: activeTab === 'culture' }" @click="activeTab = 'culture'; loadSubTableData('culture')">文化意义</button>
-          <button class="form-tab" :class="{ active: activeTab === 'experts' }" @click="activeTab = 'experts'; loadSubTableData('experts')">专家观点</button>
+          <button class="form-tab" :class="{ active: activeTab === 'experts' }" @click="activeTab = 'experts'; loadSubTableData('experts')">匠人观点</button>
           </div>
 
           <!-- 基本信息 -->
@@ -411,12 +411,12 @@
             </table>
           </div>
 
-          <!-- 子表管理：专家观点 -->
+          <!-- 子表管理：匠人观点 -->
           <div v-show="activeTab === 'experts'" class="form-panel">
             <div class="subtable-header">
               <button v-if="!viewMode" class="atca-btn atca-btn-sm atca-btn-primary" @click="openSubTableForm('experts')">
                 <svg viewBox="0 0 24 24" width="14" height="14"><path d="M12 4v16m8-8H4" stroke="currentColor" fill="none" stroke-width="2"/></svg>
-                添加专家观点
+                添加匠人观点
               </button>
               <button v-if="!viewMode && subTableSelection['experts'].length > 0" class="atca-btn atca-btn-sm atca-btn-danger" @click="batchDeleteSubTable('experts')">
                 批量删除 ({{ subTableSelection['experts'].length }})
@@ -427,13 +427,13 @@
             </div>
             <div v-else-if="subTableData['experts'].length === 0" class="empty-subtable">
               <svg viewBox="0 0 24 24" width="32" height="32"><path d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" stroke="currentColor" fill="none" stroke-width="1.5"/></svg>
-              <p>暂无专家观点数据</p>
+              <p>暂无匠人观点数据</p>
             </div>
             <table v-else class="subtable">
               <thead>
                 <tr>
                   <th class="col-check"><input type="checkbox" :checked="isSubTableAllSelected('experts')" @change="toggleSubTableSelectAll('experts')" /></th>
-                  <th>专家姓名</th>
+                  <th>匠人姓名</th>
                   <th>职称</th>
                   <th>观点摘要</th>
                   <th>{{ $t('admin.actions') || '操作' }}</th>
@@ -597,20 +597,20 @@
             </div>
           </template>
 
-          <!-- 专家观点表单 -->
+          <!-- 匠人观点表单 -->
           <template v-if="currentSubTable === 'experts'">
             <div class="form-grid single-col">
               <div class="form-group">
-                <label>专家姓名 *</label>
-                <input v-model="subTableForm.expert_name" class="atca-input" required placeholder="如: 梁思成" />
+                <label>匠人姓名 *</label>
+                <input v-model="subTableForm.expert_name" class="atca-input" required placeholder="如: 蒯祥" />
               </div>
               <div class="form-group">
                 <label>职称</label>
-                <input v-model="subTableForm.expert_title" class="atca-input" placeholder="如: 建筑学家" />
+                <input v-model="subTableForm.expert_title" class="atca-input" placeholder="如: 工匠大师" />
               </div>
               <div class="form-group">
                 <label>观点内容 *</label>
-                <textarea v-model="subTableForm.quote_content" class="atca-input" rows="4" required placeholder="专家观点内容..."></textarea>
+                <textarea v-model="subTableForm.quote_content" class="atca-input" rows="4" required placeholder="匠人观点内容..."></textarea>
               </div>
               <div class="form-group">
                 <label>来源</label>
@@ -953,7 +953,7 @@ const subTableModalTitle = computed(() => {
     structure: subTableEditingId.value ? '编辑技术结构' : '添加技术结构',
     features: subTableEditingId.value ? '编辑建筑特色' : '添加建筑特色',
     culture: subTableEditingId.value ? '编辑文化意义' : '添加文化意义',
-    experts: subTableEditingId.value ? '编辑专家观点' : '添加专家观点',
+    experts: subTableEditingId.value ? '编辑匠人观点' : '添加匠人观点',
   };
   return titles[currentSubTable.value];
 });

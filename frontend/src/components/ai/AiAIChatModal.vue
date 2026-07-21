@@ -294,8 +294,6 @@ function formatMsg(content: string) {
 
   formatted = formatted.replace(/\n\s*---\s*\n/g, '\n');
 
-  formatted = formatted.replace(/\n{2,}/g, '\n');
-
   formatted = formatted.replace(/```(\w+)?\n([\s\S]*?)```/g, '<pre><code>$2</code></pre>');
   formatted = formatted.replace(/`([^`]+)`/g, '<code>$1</code>');
 
@@ -332,6 +330,16 @@ function formatMsg(content: string) {
         inOrderedList = true;
       }
       result.push(`<li>${line.replace(/^\d+\.\s/, '')}</li>`);
+    } else if (/^[一二三四五六七八九十]+、\s/.test(line)) {
+      if (!inOrderedList) {
+        if (inList) {
+          result.push('</ul>');
+          inList = false;
+        }
+        result.push('<ol>');
+        inOrderedList = true;
+      }
+      result.push(`<li>${line.replace(/^[一二三四五六七八九十]+、\s/, '')}</li>`);
     } else if (/^([-*+])\s/.test(line)) {
       if (!inList) {
         if (inOrderedList) {
@@ -1806,12 +1814,15 @@ async function performMultiAIEvaluation(question: string, responses: Array<{ aiI
   word-break: break-word;
   white-space: normal;
   color: var(--text);
-  line-height: 1;
+  line-height: 1.8;
+  font-size: 0.95rem;
 }
 .msg-content h1, .msg-content h2, .msg-content h3, .msg-content h4, .msg-content h5, .msg-content h6 {
-  margin: 8px 0 4px;
-  font-weight: 600;
+  margin: 16px 0 8px;
+  font-weight: 700;
   color: var(--gold);
+  padding-bottom: 4px;
+  border-bottom: 1px solid rgba(201, 169, 110, 0.2);
 }
 .msg-content h1 { font-size: 1.5rem; }
 .msg-content h2 { font-size: 1.3rem; }
@@ -1820,58 +1831,68 @@ async function performMultiAIEvaluation(question: string, responses: Array<{ aiI
 .msg-content h5 { font-size: 0.9rem; }
 .msg-content h6 { font-size: 0.85rem; }
 .msg-content ul, .msg-content ol {
-  margin: 4px 0;
-  padding-left: 24px;
+  margin: 12px 0;
+  padding-left: 28px;
 }
 .msg-content li {
-  margin: 2px 0;
+  margin: 6px 0;
 }
 .msg-content p {
-  margin: 4px 0;
+  margin: 12px 0;
+  text-indent: 2em;
 }
 .msg-content blockquote {
   border-left: 3px solid var(--gold);
-  padding-left: 12px;
-  margin: 8px 0;
+  padding: 8px 16px;
+  margin: 16px 0;
   color: var(--text-muted);
   font-style: italic;
+  background: rgba(201, 169, 110, 0.05);
+  border-radius: 0 4px 4px 0;
 }
 .msg-content pre {
-  background: var(--bg-hover);
-  border-radius: 4px;
-  padding: 12px;
-  margin: 4px 0;
+  background: #1A1714;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  margin: 16px 0;
   overflow-x: auto;
   font-family: 'Consolas', 'Monaco', monospace;
   font-size: 0.85rem;
 }
 .msg-content code {
-  background: var(--bg-hover);
+  background: rgba(201, 169, 110, 0.15);
   padding: 2px 6px;
   border-radius: 3px;
   font-family: 'Consolas', 'Monaco', monospace;
-  font-size: 0.85rem;
+  font-size: 0.9em;
 }
 .msg-content pre code {
   background: none;
   padding: 0;
+  font-size: 0.85rem;
 }
 .msg-content a {
   color: var(--gold);
-  text-decoration: underline;
+  text-decoration: none;
+  border-bottom: 1px dashed rgba(201, 169, 110, 0.5);
 }
 .msg-content a:hover {
   color: var(--gold-hover);
+  border-bottom: 1px solid var(--gold);
 }
 .msg-content table {
   width: 100%;
   border-collapse: collapse;
-  margin: 4px 0;
-  font-size: 0.85rem;
+  margin: 16px 0;
+  font-size: 0.9rem;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--border);
 }
 .msg-content th, .msg-content td {
   border: 1px solid var(--border);
-  padding: 8px 12px;
+  padding: 10px 14px;
   text-align: left;
 }
 .msg-content th {

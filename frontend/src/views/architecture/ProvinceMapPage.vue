@@ -1022,7 +1022,7 @@ async function loadBuildings() {
         }
         
         const building = {
-          name: arch.name,
+          name: arch.chinese_name || arch.name,
           value: [defaultLng, defaultLat, arch.founding_dynasty || '', province || arch.location || ''],
           intro: arch.description || arch.introduction || '该建筑的详细档案正在整理中...',
           image_url: arch.image_url || '',
