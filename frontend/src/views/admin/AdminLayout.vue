@@ -125,8 +125,12 @@ const currentLocale = computed(() => locale.value);
 
 const pageTitle = computed(() => {
     const path = route.path;
+    
+    if (path === '/admin') {
+      return t('admin.dashboard.title');
+    }
+    
     const titles: Record<string, string> = {
-      '/admin': t('admin.dashboard.title'),
       '/admin/users': t('admin.users'),
       '/admin/architectures': t('admin.architectures'),
       '/admin/questions': t('admin.questions'),
@@ -139,7 +143,6 @@ const pageTitle = computed(() => {
       '/admin/translation': t('admin.translation.title'),
       '/admin/monitor': t('admin.monitor'),
     };
-    // 使用前缀匹配，确保子路由也能正确显示标题
     for (const [prefix, title] of Object.entries(titles)) {
       if (path === prefix || path.startsWith(prefix + '/')) {
         return title;
