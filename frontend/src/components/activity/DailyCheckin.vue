@@ -118,6 +118,9 @@ import { useI18n } from 'vue-i18n';
 import { activityApi } from '@/services/api';
 import { useToast } from '@/composables/useToast';
 import { logMount, logUnmount, logListenerAdd, logListenerRemove } from '@/utils/memoryLifecycle';
+import { createLogger } from '@/utils/logger';
+
+const logger = createLogger('DailyCheckin');
 
 const { t } = useI18n();
 const { toast, success, error } = useToast();
@@ -244,6 +247,7 @@ async function handleCheckin() {
   if (checkedToday.value || loading.value) return;
   
   loading.value = true;
+  const today = new Date().toISOString().split('T')[0];
   
   try {
     const deviceInfo = getDeviceInfo();
@@ -254,34 +258,57 @@ async function handleCheckin() {
     
     if (res.success) {
       checkedToday.value = true;
+      stats.value.max_streak = res.streak_count || stats.value.max_streak;
       await loadStats();
       await loadCalendar();
       
       const newCheckin = {
         todayChecked: true,
         streak: res.streak_count || stats.value.max_streak,
-        lastCheckin: new Date().toISOString().split('T')[0],
+        lastCheckin: today,
+        pointsEarned: res.points_earned || 0,
         calendarUpdated: true,
       };
       localStorage.setItem('atca_checkin', JSON.stringify(newCheckin));
       localStorage.setItem('atca_checkin_sync_time', Date.now().toString());
-      window.dispatchEvent(new StorageEvent('storage', {
-        key: 'atca_checkin',
-        newValue: JSON.stringify(newCheckin),
-      }));
+      
+      setTimeout(() => {
+        window.dispatchEvent(new StorageEvent('storage', {
+          key: 'atca_checkin',
+          newValue: JSON.stringify(newCheckin),
+        }));
+      }, 100);
       
       if (res.points_earned) {
         success(`${t('checkin.success')} +${res.points_earned} ${t('checkin.points')}`);
       }
+      logger?.info?.('打卡成功', { streak: newCheckin.streak, points: res.points_earned });
     } else if (res.already_checked) {
       checkedToday.value = true;
       error(res.message);
+      logger?.info?.('今日已打卡');
     } else {
       error(res.message);
+      logger?.error?.('打卡失败', { message: res.message });
     }
   } catch (e: any) {
     console.error('[Checkin] 打卡失败:', e);
     error(t('checkin.error'));
+    
+    const pendingCheckins = JSON.parse(localStorage.getItem('atca_pending_checkins') || '[]');
+    if (!pendingCheckins.includes(today)) {
+      pendingCheckins.push(today);
+      localStorage.setItem('atca_pending_checkins', JSON.stringify(pendingCheckins));
+    }
+    
+    const localCheckin = {
+      todayChecked: true,
+      streak: stats.value.max_streak,
+      lastCheckin: today,
+      calendarUpdated: true,
+    };
+    localStorage.setItem('atca_checkin', JSON.stringify(localCheckin));
+    localStorage.setItem('atca_checkin_sync_time', Date.now().toString());
   } finally {
     loading.value = false;
   }

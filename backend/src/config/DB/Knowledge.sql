@@ -88,7 +88,97 @@ END
 GO
 
 -- ============================================
--- 5. 创建索引
+-- 5. 知识图谱导入历史表 (knowledge_graph_import_history)
+-- ============================================
+IF OBJECT_ID('dbo.knowledge_graph_import_history', 'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.knowledge_graph_import_history (
+        [import_id] NVARCHAR(50) NOT NULL PRIMARY KEY,
+        [format] NVARCHAR(20) NOT NULL,
+        [status] NVARCHAR(20) NOT NULL,
+        [conflict_strategy] NVARCHAR(20) NOT NULL,
+        [total_records] INT DEFAULT 0,
+        [success_count] INT DEFAULT 0,
+        [failed_count] INT DEFAULT 0,
+        [skipped_count] INT DEFAULT 0,
+        [created_by] NVARCHAR(100) NOT NULL,
+        [created_at] DATETIME DEFAULT GETDATE(),
+        [duration] INT NULL,
+        [error_message] NVARCHAR(MAX) NULL,
+        [report] NVARCHAR(MAX) NULL,
+        [errors] NVARCHAR(MAX) NULL
+    );
+END
+GO
+
+-- ============================================
+-- 6. 知识图谱实体表 (knowledge_graph_entity)
+-- ============================================
+IF OBJECT_ID('dbo.knowledge_graph_entity', 'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.knowledge_graph_entity (
+        [entity_id] NVARCHAR(100) NOT NULL PRIMARY KEY,
+        [name] NVARCHAR(200) NOT NULL,
+        [type] NVARCHAR(50) NOT NULL,
+        [description] NVARCHAR(MAX) NULL,
+        [data] NVARCHAR(MAX) NULL,
+        [created_at] DATETIME DEFAULT GETDATE()
+    );
+END
+GO
+
+-- ============================================
+-- 7. 知识图谱关系表 (knowledge_graph_relation)
+-- ============================================
+IF OBJECT_ID('dbo.knowledge_graph_relation', 'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.knowledge_graph_relation (
+        [relation_id] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        [source_id] NVARCHAR(100) NOT NULL,
+        [relation_type] NVARCHAR(50) NOT NULL,
+        [target_id] NVARCHAR(100) NOT NULL,
+        [data] NVARCHAR(MAX) NULL,
+        [created_at] DATETIME DEFAULT GETDATE()
+    );
+END
+GO
+
+-- ============================================
+-- 8. 知识图谱审计日志表 (knowledge_graph_audit_log)
+-- ============================================
+IF OBJECT_ID('dbo.knowledge_graph_audit_log', 'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.knowledge_graph_audit_log (
+        [id] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        [action] NVARCHAR(50) NOT NULL,
+        [user] NVARCHAR(100) NOT NULL,
+        [user_id] INT NOT NULL,
+        [target_type] NVARCHAR(50) NOT NULL,
+        [target_id] NVARCHAR(100) NULL,
+        [details] NVARCHAR(MAX) NULL,
+        [created_at] DATETIME DEFAULT GETDATE()
+    );
+END
+GO
+
+-- ============================================
+-- 9. 知识图谱关系类型表 (knowledge_graph_relation_type)
+-- ============================================
+IF OBJECT_ID('dbo.knowledge_graph_relation_type', 'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.knowledge_graph_relation_type (
+        [id] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
+        [name] NVARCHAR(100) NOT NULL,
+        [name_en] NVARCHAR(100) NOT NULL,
+        [description] NVARCHAR(500) NULL,
+        [domain] NVARCHAR(100) NULL,
+        [range] NVARCHAR(100) NULL
+    );
+END
+GO
+
+-- ============================================
+-- 10. 创建索引
 -- ============================================
 IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'idx_kg_topics_category' AND object_id = OBJECT_ID('dbo.kg_topics'))
     CREATE INDEX [idx_kg_topics_category] ON dbo.kg_topics([category]);

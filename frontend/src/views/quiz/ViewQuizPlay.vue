@@ -388,6 +388,7 @@ async function doCheckinAfterSubmit() {
   if (!fromCheckin) return;
 
   sessionStorage.removeItem('quiz_from_checkin');
+  sessionStorage.setItem('from_quiz_play', 'true');
 
   const today = new Date().toISOString().split('T')[0];
   let localCheckin: any = {};

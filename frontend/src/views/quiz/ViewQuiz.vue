@@ -154,10 +154,34 @@ const checkin = ref({ todayChecked: false, streak: 0, lastCheckin: '' });
 const countdownText = ref('');
 let countdownTimer: ReturnType<typeof setInterval> | null = null;
 const checkinLoading = ref(false);
+const forceRefreshCheckin = ref(false);
 
-async function loadCheckin() {
+async function loadCheckin(force = false) {
   checkinLoading.value = true;
   const today = new Date().toISOString().split('T')[0];
+  let shouldUpdateFromCache = false;
+
+  const saved = localStorage.getItem('atca_checkin');
+  if (saved) {
+    try {
+      const cached = JSON.parse(saved);
+      const cachedTodayChecked = cached.todayChecked || cached.lastCheckin === today;
+      const cacheTime = parseInt(localStorage.getItem('atca_checkin_sync_time') || '0');
+      const cacheAge = Date.now() - cacheTime;
+
+      if (!force && cacheAge < 30000 && cachedTodayChecked !== undefined) {
+        checkin.value.todayChecked = cachedTodayChecked;
+        checkin.value.streak = cached.streak || 0;
+        checkin.value.lastCheckin = cached.lastCheckin || '';
+        shouldUpdateFromCache = true;
+        logger?.info?.('使用本地缓存的打卡状态', checkin.value);
+      } else if (cachedTodayChecked !== undefined) {
+        checkin.value.todayChecked = cachedTodayChecked;
+        checkin.value.streak = cached.streak || 0;
+        checkin.value.lastCheckin = cached.lastCheckin || '';
+      }
+    } catch { /* ignore */ }
+  }
 
   try {
     const [statusRes, statsRes] = await Promise.all([
@@ -165,37 +189,39 @@ async function loadCheckin() {
       activityApi.getCheckinStats(),
     ]);
 
+    let backendChecked = false;
+    let backendStreak = 0;
+    let backendLastCheckin = '';
+
     if (statusRes.success && statusRes.data) {
-      checkin.value.todayChecked = statusRes.data.checked_today;
+      backendChecked = statusRes.data.checked_today;
     }
     if (statsRes.success && statsRes.data) {
-      checkin.value.streak = statsRes.data.max_streak || 0;
-      checkin.value.lastCheckin = statsRes.data.last_checkin_date || '';
+      backendStreak = statsRes.data.max_streak || 0;
+      backendLastCheckin = statsRes.data.last_checkin_date || '';
     }
+
+    checkin.value.todayChecked = backendChecked;
+    checkin.value.streak = backendStreak;
+    checkin.value.lastCheckin = backendLastCheckin || (backendChecked ? today : '');
 
     const newCheckin = {
       todayChecked: checkin.value.todayChecked,
       streak: checkin.value.streak,
-      lastCheckin: checkin.value.lastCheckin || (checkin.value.todayChecked ? today : ''),
+      lastCheckin: checkin.value.lastCheckin,
     };
     localStorage.setItem('atca_checkin', JSON.stringify(newCheckin));
     localStorage.setItem('atca_checkin_sync_time', Date.now().toString());
 
-    logger?.info?.('打卡状态已同步', newCheckin);
+    logger?.info?.('打卡状态已从后端同步', newCheckin);
   } catch (e: any) {
-    logger?.warn?.('打卡状态同步失败，使用本地缓存', { error: e.message });
-    const saved = localStorage.getItem('atca_checkin');
-    if (saved) {
-      try {
-        const cached = JSON.parse(saved);
-        checkin.value.todayChecked = cached.todayChecked || cached.lastCheckin === today;
-        checkin.value.streak = cached.streak || 0;
-        checkin.value.lastCheckin = cached.lastCheckin || '';
-      } catch { /* ignore */ }
-    }
+    logger?.warn?.('打卡状态同步失败，保持当前状态', { error: e.message });
   } finally {
     checkinLoading.value = false;
-    if (!checkin.value.todayChecked) {
+    if (countdownTimer && checkin.value.todayChecked) {
+      clearInterval(countdownTimer);
+      countdownTimer = null;
+    } else if (!checkin.value.todayChecked && !countdownTimer) {
       startCountdown();
     }
   }
@@ -224,12 +250,17 @@ function handleStorageSync(e: StorageEvent) {
   if (e.key === 'atca_checkin' && e.newValue) {
     try {
       const newCheckin = JSON.parse(e.newValue);
+      const oldChecked = checkin.value.todayChecked;
       checkin.value.todayChecked = newCheckin.todayChecked || false;
       checkin.value.streak = newCheckin.streak || 0;
       checkin.value.lastCheckin = newCheckin.lastCheckin || '';
-      if (checkin.value.todayChecked && countdownTimer) {
-        clearInterval(countdownTimer);
-        countdownTimer = null;
+      
+      if (checkin.value.todayChecked && !oldChecked) {
+        if (countdownTimer) {
+          clearInterval(countdownTimer);
+          countdownTimer = null;
+        }
+        logger?.info?.('打卡状态已通过StorageEvent更新', checkin.value);
       }
     } catch { /* ignore */ }
   }
@@ -278,7 +309,7 @@ function handleAvatarError(e: Event) {
 }
 
 async function refreshData() {
-  loadCheckin();
+  await loadCheckin();
   loadWrongCount();
   try {
     const [modesRes, statsRes, lbRes] = await Promise.all([
@@ -298,6 +329,14 @@ onMounted(async () => {
   logMount('ViewQuiz');
   window.addEventListener('storage', handleStorageSync);
   logListenerAdd('ViewQuiz', 'storage', 'window');
+  
+  const fromQuizPlay = sessionStorage.getItem('from_quiz_play');
+  if (fromQuizPlay === 'true') {
+    sessionStorage.removeItem('from_quiz_play');
+    logger?.info?.('从答题页面返回，强制刷新打卡状态');
+    await loadCheckin(true);
+  }
+  
   await refreshData();
 });
 

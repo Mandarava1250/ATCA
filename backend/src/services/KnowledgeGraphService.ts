@@ -467,7 +467,7 @@ class KnowledgeGraphService implements IService {
       if (entityId) {
         try {
           // 检查实体是否已存在
-          const results = await query('architecture', 
+          const results = await query('knowledge', 
             'SELECT COUNT(*) as cnt FROM [knowledge_graph_entity] WHERE [entity_id] = @entityId',
             { entityId }
           );
@@ -495,7 +495,7 @@ class KnowledgeGraphService implements IService {
     }
 
     try {
-      await execute('architecture', 
+      await execute('knowledge', 
         `INSERT INTO [knowledge_graph_audit_log] 
          ([action], [user], [user_id], [target_type], [target_id], [details], [created_at])
          VALUES (@action, @user, @userId, @targetType, @targetId, @details, GETDATE())`,
@@ -672,7 +672,7 @@ class KnowledgeGraphService implements IService {
    */
   private async importEntity(entity: any): Promise<void> {
     // 简化实现，实际项目中需要根据实体类型进行不同处理
-    await execute('architecture',
+    await execute('knowledge',
       `INSERT INTO [knowledge_graph_entity] 
        ([entity_id], [name], [type], [description], [data], [created_at])
        VALUES (@entityId, @name, @type, @description, @data, GETDATE())`,
@@ -688,7 +688,7 @@ class KnowledgeGraphService implements IService {
     // 如果有关系数据，导入关系
     if (entity.relations && Array.isArray(entity.relations)) {
       for (const rel of entity.relations) {
-        await execute('architecture',
+        await execute('knowledge',
           `INSERT INTO [knowledge_graph_relation]
            ([source_id], [relation_type], [target_id], [data], [created_at])
            VALUES (@sourceId, @relationType, @targetId, @data, GETDATE())`,
@@ -754,7 +754,7 @@ class KnowledgeGraphService implements IService {
     createdAt: string;
     duration: number;
   }): Promise<void> {
-    await execute('architecture',
+    await execute('knowledge',
       `INSERT INTO [knowledge_graph_import_history]
        ([import_id], [format], [status], [conflict_strategy], 
         [total_records], [success_count], [failed_count], [skipped_count],
@@ -852,7 +852,7 @@ class KnowledgeGraphService implements IService {
 
     const offset = (params.page - 1) * params.limit;
 
-    const records = await query('architecture',
+    const records = await query('knowledge',
       `SELECT [import_id] as importId, [format], [status], [conflict_strategy] as conflictStrategy,
               [total_records] as totalRecords, [success_count] as successCount, 
               [failed_count] as failedCount, [skipped_count] as skippedCount,
@@ -864,7 +864,7 @@ class KnowledgeGraphService implements IService {
       { ...queryParams, offset, limit: params.limit }
     );
 
-    const countResult = await query('architecture',
+    const countResult = await query('knowledge',
       `SELECT COUNT(*) as total FROM [knowledge_graph_import_history] ${whereClause}`,
       queryParams
     );
@@ -905,7 +905,7 @@ class KnowledgeGraphService implements IService {
       };
     }
 
-    const result = await query('architecture',
+    const result = await query('knowledge',
       `SELECT [import_id] as importId, [format], [status], [conflict_strategy] as conflictStrategy,
               [total_records] as totalRecords, [success_count] as successCount, 
               [failed_count] as failedCount, [skipped_count] as skippedCount,
@@ -942,7 +942,7 @@ class KnowledgeGraphService implements IService {
       return true;
     }
 
-    const result = await execute('architecture',
+    const result = await execute('knowledge',
       'DELETE FROM [knowledge_graph_import_history] WHERE [import_id] = @importId',
       { importId }
     );
@@ -965,7 +965,7 @@ class KnowledgeGraphService implements IService {
       ];
     }
 
-    const result = await query('architecture',
+    const result = await query('knowledge',
       'SELECT [id], [name], [name_en] as nameEn, [description], [domain], [range] FROM [knowledge_graph_relation_type] ORDER BY [id]'
     );
 
@@ -980,7 +980,7 @@ class KnowledgeGraphService implements IService {
       return Math.floor(Math.random() * 1000);
     }
 
-    const result = await execute('architecture',
+    const result = await execute('knowledge',
       `INSERT INTO [knowledge_graph_relation_type]
        ([name], [name_en], [description], [domain], [range])
        OUTPUT INSERTED.[id]
@@ -1000,7 +1000,7 @@ class KnowledgeGraphService implements IService {
     }
 
     const fields = Object.keys(data).map(k => `[${k === 'nameEn' ? 'name_en' : k}] = @${k}`).join(', ');
-    const result = await execute('architecture',
+    const result = await execute('knowledge',
       `UPDATE [knowledge_graph_relation_type] SET ${fields} WHERE [id] = @id`,
       { ...data, id }
     );
@@ -1016,7 +1016,7 @@ class KnowledgeGraphService implements IService {
       return true;
     }
 
-    const result = await execute('architecture',
+    const result = await execute('knowledge',
       'DELETE FROM [knowledge_graph_relation_type] WHERE [id] = @id',
       { id }
     );
@@ -1097,7 +1097,7 @@ class KnowledgeGraphService implements IService {
 
     const offset = (params.page - 1) * params.limit;
 
-    const logs = await query('architecture',
+    const logs = await query('knowledge',
       `SELECT [id], [action], [user], [user_id] as userId, [target_type] as targetType,
               [target_id] as targetId, [details], [created_at] as createdAt
        FROM [knowledge_graph_audit_log]
@@ -1107,7 +1107,7 @@ class KnowledgeGraphService implements IService {
       { ...queryParams, offset, limit: params.limit }
     );
 
-    const countResult = await query('architecture',
+    const countResult = await query('knowledge',
       `SELECT COUNT(*) as total FROM [knowledge_graph_audit_log] ${whereClause}`,
       queryParams
     );
@@ -1153,10 +1153,10 @@ class KnowledgeGraphService implements IService {
 
     // 实际统计查询
     const [entityCount, relationCount, relationTypeCount, importCount] = await Promise.all([
-      query('architecture', 'SELECT COUNT(*) as cnt FROM [knowledge_graph_entity]'),
-      query('architecture', 'SELECT COUNT(*) as cnt FROM [knowledge_graph_relation]'),
-      query('architecture', 'SELECT COUNT(*) as cnt FROM [knowledge_graph_relation_type]'),
-      query('architecture', 'SELECT COUNT(*) as cnt, MAX(created_at) as lastDate FROM [knowledge_graph_import_history]'),
+      query('knowledge', 'SELECT COUNT(*) as cnt FROM [knowledge_graph_entity]'),
+      query('knowledge', 'SELECT COUNT(*) as cnt FROM [knowledge_graph_relation]'),
+      query('knowledge', 'SELECT COUNT(*) as cnt FROM [knowledge_graph_relation_type]'),
+      query('knowledge', 'SELECT COUNT(*) as cnt, MAX(created_at) as lastDate FROM [knowledge_graph_import_history]'),
     ]);
 
     // 获取实体类型统计（简化）
