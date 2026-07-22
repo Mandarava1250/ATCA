@@ -140,11 +140,8 @@ GO
 -- ============================================
 -- 7. 更新时间触发器
 -- ============================================
-IF OBJECT_ID('tr_translations_updated_at', 'TR') IS NOT NULL
-    DROP TRIGGER tr_translations_updated_at;
 GO
-
-CREATE TRIGGER tr_translations_updated_at
+CREATE OR ALTER TRIGGER tr_translations_updated_at
 ON dbo.translations
 AFTER UPDATE
 AS

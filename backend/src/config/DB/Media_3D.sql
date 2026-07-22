@@ -43,11 +43,8 @@ IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'idx_user_models_created_a
     CREATE INDEX [idx_user_models_created_at] ON dbo.user_models([created_at]);
 GO
 
-IF OBJECT_ID('dbo.tr_user_models_updated_at', 'TR') IS NOT NULL
-    DROP TRIGGER dbo.tr_user_models_updated_at;
 GO
-
-CREATE TRIGGER dbo.tr_user_models_updated_at
+CREATE OR ALTER TRIGGER dbo.tr_user_models_updated_at
 ON dbo.user_models
 AFTER UPDATE
 AS
@@ -119,11 +116,8 @@ IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'idx_instances_instance_uu
     CREATE INDEX [idx_instances_instance_uuid] ON dbo.model_component_instances([instance_uuid]);
 GO
 
-IF OBJECT_ID('dbo.tr_component_instances_updated_at', 'TR') IS NOT NULL
-    DROP TRIGGER dbo.tr_component_instances_updated_at;
 GO
-
-CREATE TRIGGER dbo.tr_component_instances_updated_at
+CREATE OR ALTER TRIGGER dbo.tr_component_instances_updated_at
 ON dbo.model_component_instances
     AFTER UPDATE
     AS
@@ -156,11 +150,8 @@ IF OBJECT_ID('dbo.model_firmware_groups', 'U') IS NULL
     END
 GO
 
-IF OBJECT_ID('dbo.tr_firmware_groups_updated_at', 'TR') IS NOT NULL
-    DROP TRIGGER dbo.tr_firmware_groups_updated_at;
 GO
-
-CREATE TRIGGER dbo.tr_firmware_groups_updated_at
+CREATE OR ALTER TRIGGER dbo.tr_firmware_groups_updated_at
 ON dbo.model_firmware_groups
     AFTER UPDATE
     AS
@@ -217,11 +208,8 @@ IF OBJECT_ID('dbo.architecture_models', 'U') IS NULL
     END
 GO
 
-IF OBJECT_ID('dbo.tr_architecture_models_updated_at', 'TR') IS NOT NULL
-    DROP TRIGGER dbo.tr_architecture_models_updated_at;
 GO
-
-CREATE TRIGGER dbo.tr_architecture_models_updated_at
+CREATE OR ALTER TRIGGER dbo.tr_architecture_models_updated_at
 ON dbo.architecture_models
     AFTER UPDATE
     AS
@@ -259,11 +247,8 @@ IF OBJECT_ID('dbo.three_d_models', 'U') IS NULL
     END
 GO
 
-IF OBJECT_ID('dbo.tr_three_d_models_updated_at', 'TR') IS NOT NULL
-    DROP TRIGGER dbo.tr_three_d_models_updated_at;
 GO
-
-CREATE TRIGGER dbo.tr_three_d_models_updated_at
+CREATE OR ALTER TRIGGER dbo.tr_three_d_models_updated_at
 ON dbo.three_d_models
     AFTER UPDATE
     AS
@@ -300,11 +285,8 @@ IF OBJECT_ID('dbo.building_templates', 'U') IS NULL
     END
 GO
 
-IF OBJECT_ID('dbo.tr_building_templates_updated_at', 'TR') IS NOT NULL
-    DROP TRIGGER dbo.tr_building_templates_updated_at;
 GO
-
-CREATE TRIGGER dbo.tr_building_templates_updated_at
+CREATE OR ALTER TRIGGER dbo.tr_building_templates_updated_at
 ON dbo.building_templates
     AFTER UPDATE
     AS

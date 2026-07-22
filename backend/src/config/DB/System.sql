@@ -62,11 +62,8 @@ END
 GO
 
 -- ai_config 表更新触发器
-IF OBJECT_ID('tr_ai_config_updated_at', 'TR') IS NOT NULL
-    DROP TRIGGER tr_ai_config_updated_at;
 GO
-
-CREATE TRIGGER tr_ai_config_updated_at
+CREATE OR ALTER TRIGGER tr_ai_config_updated_at
 ON dbo.ai_config
 AFTER UPDATE
 AS
@@ -98,11 +95,8 @@ END
 GO
 
 -- 系统设置表更新触发器
-IF OBJECT_ID('tr_system_settings_updated_at', 'TR') IS NOT NULL
-    DROP TRIGGER tr_system_settings_updated_at;
 GO
-
-CREATE TRIGGER tr_system_settings_updated_at
+CREATE OR ALTER TRIGGER tr_system_settings_updated_at
 ON dbo.system_settings
 AFTER UPDATE
 AS

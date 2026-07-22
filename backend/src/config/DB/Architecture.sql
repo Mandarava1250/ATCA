@@ -451,7 +451,7 @@ IF OBJECT_ID('dbo.translation_memory', 'U') IS NULL
 BEGIN
     CREATE TABLE dbo.translation_memory (
         [memory_id] INT IDENTITY(1,1) NOT NULL PRIMARY KEY,
-        [source_text_hash] NVARCHAR(64) NULL,
+        [source_text_hash] NVARCHAR(64) NOT NULL,
         [source_text] NVARCHAR(MAX) NOT NULL,
         [target_text] NVARCHAR(MAX) NOT NULL,
         [source_language] NVARCHAR(10) NOT NULL,
@@ -462,7 +462,6 @@ BEGIN
         [last_used_at] DATETIME DEFAULT GETDATE(),
         [quality_score] INT DEFAULT 80,
         [created_at] DATETIME DEFAULT GETDATE(),
-        CONSTRAINT UQ_translation_memory UNIQUE ([source_text], [target_language]),
         CONSTRAINT UQ_translation_memory_hash UNIQUE ([source_text_hash], [target_language])
     );
 END
@@ -550,7 +549,7 @@ IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'idx_tv_translation' AND o
 IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'idx_translation_versions_tid' AND object_id = OBJECT_ID('dbo.translation_versions'))
     CREATE INDEX [idx_translation_versions_tid] ON dbo.translation_versions([translation_id]);
 IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'idx_tm_source' AND object_id = OBJECT_ID('dbo.translation_memory'))
-    CREATE INDEX [idx_tm_source] ON dbo.translation_memory([source_text], [target_language]);
+    CREATE INDEX [idx_tm_source] ON dbo.translation_memory([source_text_hash], [target_language]);
 IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'idx_translation_memory_hash' AND object_id = OBJECT_ID('dbo.translation_memory'))
     CREATE INDEX [idx_translation_memory_hash] ON dbo.translation_memory([source_text_hash]);
 IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'idx_translation_memory_lang' AND object_id = OBJECT_ID('dbo.translation_memory'))

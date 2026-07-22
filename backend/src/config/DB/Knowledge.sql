@@ -193,11 +193,8 @@ GO
 -- ============================================
 -- 6. 更新时间触发器
 -- ============================================
-IF OBJECT_ID('tr_kg_topics_updated_at', 'TR') IS NOT NULL
-    DROP TRIGGER tr_kg_topics_updated_at;
 GO
-
-CREATE TRIGGER tr_kg_topics_updated_at
+CREATE OR ALTER TRIGGER tr_kg_topics_updated_at
 ON dbo.kg_topics
 AFTER UPDATE
 AS

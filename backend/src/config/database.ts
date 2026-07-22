@@ -583,8 +583,8 @@ export async function initDatabase(dbName: keyof typeof dbConfigs): Promise<void
 async function executeSqlScript(pool: sql.ConnectionPool, scriptPath: string): Promise<void> {
   const sqlContent = fs.readFileSync(scriptPath, 'utf8');
   
-  // 使用正则分割 GO 语句，支持大小写和前后空格
-  const batches = sqlContent.split(/\bGO\b/i).map(b => b.trim()).filter(b => b);
+  // 使用正则分割 GO 语句，仅匹配行首的 GO（避免匹配注释或字符串中的 GO）
+  const batches = sqlContent.split(/^\s*GO\s*$/im).map(b => b.trim()).filter(b => b);
   
   // SQL Server 错误码列表：忽略已存在/重复执行的错误
   // 2714: 对象已存在
