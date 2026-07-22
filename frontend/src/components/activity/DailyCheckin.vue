@@ -11,18 +11,18 @@
         <span>{{ toast.message }}</span>
       </div>
     </transition>
-    <div class="checkin-card" :class="{ checked: checkedToday }">
-      <div class="checkin-icon" :class="{ checked: checkedToday }">
-        <svg v-if="!checkedToday" viewBox="0 0 24 24" width="40" height="40"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="currentColor" fill="none" stroke-width="2"/></svg>
+    <div class="checkin-card" :class="{ checked: checkinStore.todayChecked }">
+      <div class="checkin-icon" :class="{ checked: checkinStore.todayChecked }">
+        <svg v-if="!checkinStore.todayChecked" viewBox="0 0 24 24" width="40" height="40"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="currentColor" fill="none" stroke-width="2"/></svg>
         <svg v-else viewBox="0 0 24 24" width="40" height="40"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z" fill="currentColor"/></svg>
       </div>
       <div class="checkin-info">
-        <h3>{{ checkedToday ? t('checkin.checked') : t('checkin.title') }}</h3>
-        <p>{{ checkedToday ? t('checkin.checkedDesc') : t('checkin.desc') }}</p>
+        <h3>{{ checkinStore.todayChecked ? t('checkin.checked') : t('checkin.title') }}</h3>
+        <p>{{ checkinStore.todayChecked ? t('checkin.checkedDesc') : t('checkin.desc') }}</p>
       </div>
-      <div class="checkin-streak" v-if="stats.max_streak > 0">
+      <div class="checkin-streak" v-if="checkinStore.streak > 0">
         <span class="streak-icon">🔥</span>
-        <span class="streak-text">{{ stats.max_streak }} {{ t('checkin.streak') }}</span>
+        <span class="streak-text">{{ checkinStore.streak }} {{ t('checkin.streak') }}</span>
       </div>
     </div>
 
@@ -47,12 +47,12 @@
 
     <button 
       class="checkin-btn" 
-      :class="{ disabled: checkedToday || loading }"
-      :disabled="checkedToday || loading"
+      :class="{ disabled: checkinStore.todayChecked || loading }"
+      :disabled="checkinStore.todayChecked || loading"
       @click="handleCheckin"
     >
       <span v-if="loading" class="btn-spinner"></span>
-      <span>{{ checkedToday ? t('checkin.checked') : t('checkin.btn') }}</span>
+      <span>{{ checkinStore.todayChecked ? t('checkin.checked') : t('checkin.btn') }}</span>
     </button>
 
     <div class="checkin-calendar" v-if="calendarData.length > 0">
@@ -113,20 +113,20 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { activityApi } from '@/services/api';
 import { useToast } from '@/composables/useToast';
+import { useCheckinStore } from '@/stores';
 import { logMount, logUnmount, logListenerAdd, logListenerRemove } from '@/utils/memoryLifecycle';
 import { createLogger } from '@/utils/logger';
-import { getSyncService } from '@/utils/syncService';
 
 const logger = createLogger('DailyCheckin');
 
 const { t } = useI18n();
 const { toast, success, error } = useToast();
+const checkinStore = useCheckinStore();
 
-const checkedToday = ref(false);
 const loading = ref(false);
 const stats = ref({
   total_checkins: 0,
@@ -212,14 +212,8 @@ function nextMonth() {
 }
 
 async function loadTodayStatus() {
-  try {
-    const res = await activityApi.checkTodayCheckin();
-    if (res.success) {
-      checkedToday.value = res.data.checked_today;
-    }
-  } catch (e) {
-    console.warn('[Checkin] 获取今日状态失败:', e);
-  }
+  checkinStore.loadFromStorage();
+  await checkinStore.loadCheckin();
 }
 
 async function loadStats() {
@@ -245,64 +239,35 @@ async function loadCalendar() {
 }
 
 async function handleCheckin() {
-  if (checkedToday.value || loading.value) return;
+  if (checkinStore.todayChecked || loading.value) return;
   
   loading.value = true;
-  const today = new Date().toISOString().split('T')[0];
   
   try {
     const deviceInfo = getDeviceInfo();
-    const res = await activityApi.checkin({
+    const result = await checkinStore.performCheckin({
       device_type: deviceInfo.type,
       device_info: deviceInfo.info,
     });
     
-    if (res.success) {
-      checkedToday.value = true;
-      stats.value.max_streak = res.streak_count || stats.value.max_streak;
+    if (result.success) {
       await loadStats();
       await loadCalendar();
       
-      const newCheckin = {
-        todayChecked: true,
-        streak: res.streak_count || stats.value.max_streak,
-        lastCheckin: today,
-        pointsEarned: res.points_earned || 0,
-        calendarUpdated: true,
-      };
-      localStorage.setItem('atca_checkin', JSON.stringify(newCheckin));
-      localStorage.setItem('atca_checkin_sync_time', Date.now().toString());
-
-      if (res.points_earned) {
-        success(`${t('checkin.success')} +${res.points_earned} ${t('checkin.points')}`);
+      if (result.points_earned) {
+        success(`${t('checkin.success')} +${result.points_earned} ${t('checkin.points')}`);
       }
-      logger?.info?.('打卡成功', { streak: newCheckin.streak, points: res.points_earned });
-    } else if (res.already_checked) {
-      checkedToday.value = true;
-      error(res.message);
+      logger?.info?.('打卡成功', { streak: result.streak, points: result.points_earned });
+    } else if (result.already_checked) {
+      error(t('checkin.alreadyChecked'));
       logger?.info?.('今日已打卡');
     } else {
-      error(res.message);
-      logger?.error?.('打卡失败', { message: res.message });
+      error(result.message || t('checkin.error'));
+      logger?.error?.('打卡失败', { message: result.message });
     }
   } catch (e: any) {
     console.error('[Checkin] 打卡失败:', e);
     error(t('checkin.error'));
-    
-    const pendingCheckins = JSON.parse(localStorage.getItem('atca_pending_checkins') || '[]');
-    if (!pendingCheckins.includes(today)) {
-      pendingCheckins.push(today);
-      localStorage.setItem('atca_pending_checkins', JSON.stringify(pendingCheckins));
-    }
-    
-    const localCheckin = {
-      todayChecked: true,
-      streak: stats.value.max_streak,
-      lastCheckin: today,
-      calendarUpdated: true,
-    };
-    localStorage.setItem('atca_checkin', JSON.stringify(localCheckin));
-    localStorage.setItem('atca_checkin_sync_time', Date.now().toString());
   } finally {
     loading.value = false;
   }
@@ -328,14 +293,7 @@ function handleStorageSync(e: StorageEvent) {
   if (e.key === 'atca_checkin' && e.newValue) {
     try {
       const newCheckin = JSON.parse(e.newValue);
-      if (newCheckin.calendarUpdated) {
-        loadStats();
-        loadCalendar();
-        if (newCheckin.todayChecked !== undefined && newCheckin.todayChecked !== checkedToday.value) {
-          checkedToday.value = newCheckin.todayChecked;
-        }
-      } else if (newCheckin.todayChecked !== undefined && newCheckin.todayChecked !== checkedToday.value) {
-        checkedToday.value = newCheckin.todayChecked;
+      if (newCheckin.todayChecked !== undefined || newCheckin.calendarUpdated) {
         loadStats();
         loadCalendar();
       }
@@ -351,35 +309,22 @@ onMounted(async () => {
   window.addEventListener('storage', handleStorageSync);
   logListenerAdd('DailyCheckin', 'storage', 'window');
 
-  // 注册 WebSocket 同步事件监听
-  const syncService = getSyncService();
-  const handleSyncCheckinUpdate = (data: any) => {
-    const today = new Date().toISOString().split('T')[0];
-    if (data.payload?.checkin_date === today && !checkedToday.value) {
-      checkedToday.value = true;
-      loadStats();
-      loadCalendar();
-      logger?.info?.('通过 WebSocket 同步更新打卡状态');
-    }
-  };
-  syncService.on('checkin_update', handleSyncCheckinUpdate);
-  logListenerAdd('DailyCheckin', 'sync:checkin_update', 'syncService');
+  checkinStore.initSyncListener();
 
-  // 保存引用以便在 onUnmounted 中移除
-  (window as any).__dailyCheckinSyncHandler = handleSyncCheckinUpdate;
+  watch(() => checkinStore.todayChecked, async (newVal) => {
+    if (newVal) {
+      await loadStats();
+      await loadCalendar();
+      logger?.info?.('通过 Store 同步更新打卡状态');
+    }
+  });
 });
 
 onUnmounted(() => {
   window.removeEventListener('storage', handleStorageSync);
   logListenerRemove('DailyCheckin', 'storage', 'window');
 
-  // 移除 WebSocket 同步事件监听
-  const syncService = getSyncService();
-  if ((window as any).__dailyCheckinSyncHandler) {
-    syncService.off('checkin_update', (window as any).__dailyCheckinSyncHandler);
-    delete (window as any).__dailyCheckinSyncHandler;
-    logListenerRemove('DailyCheckin', 'sync:checkin_update', 'syncService');
-  }
+  checkinStore.removeSyncListener();
 
   logUnmount('DailyCheckin');
 });

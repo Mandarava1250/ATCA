@@ -40,19 +40,19 @@
       </div>
 
       <!-- 每日打卡 -->
-      <div class="checkin-card" v-if="checkin">
+      <div class="checkin-card">
         <div class="checkin-left">
-          <div class="checkin-icon" :class="{ checked: checkin.todayChecked }">
-            <svg v-if="checkin.todayChecked" viewBox="0 0 24 24" width="24" height="24"><path d="M5 13l4 4L19 7" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <div class="checkin-icon" :class="{ checked: checkinStore.todayChecked }">
+            <svg v-if="checkinStore.todayChecked" viewBox="0 0 24 24" width="24" height="24"><path d="M5 13l4 4L19 7" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
             <svg v-else viewBox="0 0 24 24" width="24" height="24"><circle cx="12" cy="12" r="10" stroke="currentColor" fill="none" stroke-width="1.5"/><path d="M12 6v6l4 2" stroke="currentColor" fill="none" stroke-width="1.5" stroke-linecap="round"/></svg>
           </div>
           <div class="checkin-info">
-            <h4>{{ checkin.todayChecked ? '今日已打卡' : '每日打卡' }}</h4>
-            <p>连续 {{ checkin.streak }} 天</p>
+            <h4>{{ checkinStore.todayChecked ? '今日已打卡' : '每日打卡' }}</h4>
+            <p>连续 {{ checkinStore.streak }} 天</p>
           </div>
         </div>
         <div class="checkin-right">
-          <div v-if="!checkin.todayChecked" class="checkin-action">
+          <div v-if="!checkinStore.todayChecked" class="checkin-action">
             <div class="countdown">
               <span class="countdown-label">距重置</span>
               <span class="countdown-time">{{ countdownText }}</span>
@@ -119,21 +119,21 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { useRouter, onBeforeRouteUpdate } from 'vue-router';
-import { useUserStore } from '@/stores';
+import { useUserStore, useCheckinStore } from '@/stores';
 import Navbar from '@/components/common/CommonNavbar.vue';
 import Footer from '@/components/common/CommonFooter.vue';
 import PageBackground from '@/components/common/PageBackground.vue';
-import { quizApi, indexApi, activityApi } from '@/services/api';
+import { quizApi, indexApi } from '@/services/api';
 import { createLogger } from '@/utils/logger';
-import { getSyncService } from '@/utils/syncService';
-import { logMount, logUnmount, logTimerStart, logTimerStop, logListenerAdd, logListenerRemove } from '@/utils/memoryLifecycle';
+import { logMount, logUnmount, logTimerStart, logTimerStop } from '@/utils/memoryLifecycle';
 
 const logger = createLogger('ViewQuiz');
 
 const router = useRouter();
 const userStore = useUserStore();
+const checkinStore = useCheckinStore();
 const modes = ref<any[]>([]);
 const userStats = ref<any>(null);
 const leaderboard = ref<any[]>([]);
@@ -150,113 +150,8 @@ function loadWrongCount() {
   wrongCount.value = wrong.length;
 }
 
-// 每日打卡
-const checkin = ref({ todayChecked: false, streak: 0, lastCheckin: '' });
 const countdownText = ref('');
 let countdownTimer: ReturnType<typeof setInterval> | null = null;
-const checkinLoading = ref(false);
-const forceRefreshCheckin = ref(false);
-
-async function loadCheckin(force = false) {
-  checkinLoading.value = true;
-  const today = new Date().toISOString().split('T')[0];
-
-  const saved = localStorage.getItem('atca_checkin');
-  let cachedChecked = false;
-  let cachedStreak = 0;
-  let cachedLastCheckin = '';
-  let isPending = false;
-  let isConfirmed = false;
-
-  if (saved) {
-    try {
-      const cached = JSON.parse(saved);
-      cachedChecked = cached.todayChecked || cached.lastCheckin === today;
-      cachedStreak = cached.streak || 0;
-      cachedLastCheckin = cached.lastCheckin || '';
-      isPending = cached.pending === true;
-      isConfirmed = cached.confirmed === true;
-    } catch { /* ignore */ }
-  }
-
-  checkin.value.todayChecked = cachedChecked;
-  checkin.value.streak = cachedStreak;
-  checkin.value.lastCheckin = cachedLastCheckin;
-
-  const cacheTime = parseInt(localStorage.getItem('atca_checkin_sync_time') || '0');
-  const cacheAge = Date.now() - cacheTime;
-
-  const useCacheOnly = cachedChecked && !force && !isPending && cacheAge < 30000;
-
-  if (useCacheOnly) {
-    logger?.info?.('使用本地缓存的已打卡状态（30秒内有效）', checkin.value);
-    checkinLoading.value = false;
-    if (countdownTimer && checkin.value.todayChecked) {
-      clearInterval(countdownTimer);
-      countdownTimer = null;
-    }
-    return;
-  }
-
-  try {
-    const [statusRes, statsRes] = await Promise.all([
-      activityApi.checkTodayCheckin(),
-      activityApi.getCheckinStats(),
-    ]);
-
-    let backendChecked = false;
-    let backendStreak = 0;
-    let backendLastCheckin = '';
-
-    if (statusRes.success && statusRes.data) {
-      backendChecked = statusRes.data.checked_today;
-    }
-    if (statsRes.success && statsRes.data) {
-      backendStreak = statsRes.data.max_streak || 0;
-      backendLastCheckin = statsRes.data.last_checkin_date || '';
-    }
-
-    const localChecked = checkin.value.todayChecked;
-
-    if (localChecked && !backendChecked && !isConfirmed) {
-      logger?.warn?.('状态不一致：本地已打卡但后端未同步，保留本地状态并延迟刷新', {
-        localChecked,
-        backendChecked,
-        isPending,
-        cacheAge,
-      });
-      setTimeout(() => {
-        loadCheckin(true);
-      }, 3000);
-    } else {
-      checkin.value.todayChecked = backendChecked;
-      checkin.value.streak = backendStreak;
-      checkin.value.lastCheckin = backendLastCheckin || (backendChecked ? today : '');
-    }
-
-    const newCheckin = {
-      todayChecked: checkin.value.todayChecked,
-      streak: checkin.value.streak,
-      lastCheckin: checkin.value.lastCheckin,
-      pending: false,
-      confirmed: backendChecked,
-    };
-    localStorage.setItem('atca_checkin', JSON.stringify(newCheckin));
-    localStorage.setItem('atca_checkin_sync_time', Date.now().toString());
-
-    logger?.info?.('打卡状态已从后端同步', newCheckin);
-  } catch (e: any) {
-    logger?.warn?.('打卡状态同步失败，保持当前状态', { error: e.message });
-  } finally {
-    checkinLoading.value = false;
-    if (countdownTimer && checkin.value.todayChecked) {
-      clearInterval(countdownTimer);
-      countdownTimer = null;
-    } else if (!checkin.value.todayChecked && !countdownTimer) {
-      startCountdown();
-    }
-  }
-}
 
 function startCountdown() {
   updateCountdown();
@@ -277,25 +172,14 @@ function markCheckinEntry() {
   sessionStorage.setItem('quiz_from_checkin', '1');
 }
 
-function handleStorageSync(e: StorageEvent) {
-  if (e.key === 'atca_checkin' && e.newValue) {
-    try {
-      const newCheckin = JSON.parse(e.newValue);
-      const oldChecked = checkin.value.todayChecked;
-      checkin.value.todayChecked = newCheckin.todayChecked || false;
-      checkin.value.streak = newCheckin.streak || 0;
-      checkin.value.lastCheckin = newCheckin.lastCheckin || '';
-      
-      if (checkin.value.todayChecked && !oldChecked) {
-        if (countdownTimer) {
-          clearInterval(countdownTimer);
-          countdownTimer = null;
-        }
-        logger?.info?.('打卡状态已通过StorageEvent更新', checkin.value);
-      }
-    } catch { /* ignore */ }
+watch(() => checkinStore.todayChecked, (newVal) => {
+  if (newVal && countdownTimer) {
+    clearInterval(countdownTimer);
+    countdownTimer = null;
+  } else if (!newVal && !countdownTimer) {
+    startCountdown();
   }
-}
+});
 
 const accuracy = computed(() => {
   if (!userStats.value || !userStats.value.total_questions) return 0;
@@ -340,7 +224,8 @@ function handleAvatarError(e: Event) {
 }
 
 async function refreshData() {
-  await loadCheckin();
+  checkinStore.loadFromStorage();
+  await checkinStore.loadCheckin();
   loadWrongCount();
   try {
     const [modesRes, statsRes, lbRes] = await Promise.all([
@@ -358,66 +243,25 @@ async function refreshData() {
 
 onMounted(async () => {
   logMount('ViewQuiz');
-  window.addEventListener('storage', handleStorageSync);
-  logListenerAdd('ViewQuiz', 'storage', 'window');
 
-  // 从答题页面返回时，先立即从 localStorage 读取乐观状态，再异步刷新
+  checkinStore.loadFromStorage();
+
   const fromQuizPlay = sessionStorage.getItem('from_quiz_play');
   if (fromQuizPlay === 'true') {
     sessionStorage.removeItem('from_quiz_play');
-    logger?.info?.('从答题页面返回，立即显示本地缓存状态，后台刷新确认');
-    // 先读取本地缓存设置响应式状态（不阻塞 UI）
-    const saved = localStorage.getItem('atca_checkin');
-    if (saved) {
-      try {
-        const cached = JSON.parse(saved);
-        if (cached.todayChecked) {
-          checkin.value.todayChecked = true;
-          checkin.value.streak = cached.streak || checkin.value.streak;
-          checkin.value.lastCheckin = cached.lastCheckin || '';
-          if (countdownTimer) {
-            clearInterval(countdownTimer);
-            countdownTimer = null;
-          }
-        }
-      } catch { /* ignore */ }
-    }
-    // 后台异步刷新，确保状态与后端一致
-    loadCheckin(false);
+    logger?.info?.('从答题页面返回，使用Store状态，后台刷新确认');
+    checkinStore.loadCheckin(false);
   } else {
-    await loadCheckin(false);
+    await checkinStore.loadCheckin(false);
   }
 
   await refreshData();
 
-  // 注册 WebSocket 同步事件监听
-  const syncService = getSyncService();
-  const handleSyncCheckinUpdate = (data: any) => {
-    const today = new Date().toISOString().split('T')[0];
-    if (data.payload?.checkin_date === today) {
-      checkin.value.todayChecked = true;
-      checkin.value.streak = data.payload.streak_count || checkin.value.streak;
-      checkin.value.lastCheckin = today;
-      localStorage.setItem('atca_checkin', JSON.stringify({
-        todayChecked: true,
-        streak: checkin.value.streak,
-        lastCheckin: today,
-        pending: false,
-        confirmed: true,
-      }));
-      localStorage.setItem('atca_checkin_sync_time', Date.now().toString());
-      if (countdownTimer) {
-        clearInterval(countdownTimer);
-        countdownTimer = null;
-      }
-      logger?.info?.('通过 WebSocket 同步更新打卡状态', { checked: true, streak: checkin.value.streak });
-    }
-  };
-  syncService.on('checkin_update', handleSyncCheckinUpdate);
-  logListenerAdd('ViewQuiz', 'sync:checkin_update', 'syncService');
+  checkinStore.initSyncListener();
 
-  // 保存引用以便在 onUnmounted 中移除
-  (window as any).__viewQuizSyncHandler = handleSyncCheckinUpdate;
+  if (!checkinStore.todayChecked && !countdownTimer) {
+    startCountdown();
+  }
 });
 
 onBeforeRouteUpdate(async () => {
@@ -429,16 +273,8 @@ onUnmounted(() => {
     clearInterval(countdownTimer);
     logTimerStop('ViewQuiz', 'countdown');
   }
-  window.removeEventListener('storage', handleStorageSync);
-  logListenerRemove('ViewQuiz', 'storage', 'window');
 
-  // 移除 WebSocket 同步事件监听
-  const syncService = getSyncService();
-  if ((window as any).__viewQuizSyncHandler) {
-    syncService.off('checkin_update', (window as any).__viewQuizSyncHandler);
-    delete (window as any).__viewQuizSyncHandler;
-    logListenerRemove('ViewQuiz', 'sync:checkin_update', 'syncService');
-  }
+  checkinStore.removeSyncListener();
 
   logUnmount('ViewQuiz');
 });

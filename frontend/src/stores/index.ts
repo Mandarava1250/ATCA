@@ -7,6 +7,7 @@ import { ref, computed } from 'vue';
 import type { User, AuthTokens, QuizSession, QuizResult } from '@shared/types';
 import { authApi } from '@/services/api';
 import { initSync, closeSync } from '@/utils/syncService';
+export { useCheckinStore } from './checkin';
 
 // 用户Store
 export const useUserStore = defineStore('user', () => {

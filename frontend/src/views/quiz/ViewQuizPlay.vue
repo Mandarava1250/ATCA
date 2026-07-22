@@ -131,8 +131,8 @@ import { ref, computed, onMounted, onUnmounted, onBeforeMount, onBeforeUnmount }
 import { useRoute, useRouter } from 'vue-router';
 import Navbar from '@/components/common/CommonNavbar.vue';
 import Footer from '@/components/common/CommonFooter.vue';
-import { useQuizStore } from '@/stores';
-import { quizApi, activityApi } from '@/services/api';
+import { useQuizStore, useCheckinStore } from '@/stores';
+import { quizApi } from '@/services/api';
 import { noteManager } from '@/utils/noteManager';
 import { createLogger } from '@/utils/logger';
 import { logMount, logUnmount, logTimerStart, logTimerStop } from '@/utils/memoryLifecycle';
@@ -143,6 +143,7 @@ const perfLogger = logger.child('Performance');
 const route = useRoute();
 const router = useRouter();
 const quizStore = useQuizStore();
+const checkinStore = useCheckinStore();
 
 const currentIndex = ref(0);
 const selectedAnswer = ref('');
@@ -389,24 +390,6 @@ async function doCheckinAfterSubmit() {
 
   sessionStorage.removeItem('quiz_from_checkin');
 
-  const today = new Date().toISOString().split('T')[0];
-  let localCheckin: any = {};
-  try { localCheckin = JSON.parse(localStorage.getItem('atca_checkin') || '{}'); } catch { /* ignore */ }
-
-  if (localCheckin.lastCheckin === today) return;
-
-  // 乐观更新：在 API 调用之前先写入 localStorage，确保返回锚块时立即显示"已打卡"
-  const optimisticCheckin = {
-    todayChecked: true,
-    streak: localCheckin.streak || 1,
-    lastCheckin: today,
-    pending: true,
-    confirmed: false,
-  };
-  localStorage.setItem('atca_checkin', JSON.stringify(optimisticCheckin));
-  localStorage.setItem('atca_checkin_sync_time', Date.now().toString());
-
-  // 设置 from_quiz_play 标志（在乐观写入之后），让 ViewQuiz 的 onMounted 可以检测到
   sessionStorage.setItem('from_quiz_play', 'true');
 
   try {
@@ -415,49 +398,19 @@ async function doCheckinAfterSubmit() {
       device_info: navigator.userAgent.substring(0, 200),
     };
 
-    const res = await activityApi.checkin(deviceInfo);
-    if (res.success) {
-      const confirmedCheckin = {
-        todayChecked: true,
-        streak: res.streak_count || 1,
-        lastCheckin: today,
-        pointsEarned: res.points_earned || 0,
-        pending: false,
-        confirmed: true,
-      };
-      localStorage.setItem('atca_checkin', JSON.stringify(confirmedCheckin));
-      localStorage.setItem('atca_checkin_sync_time', Date.now().toString());
-      logger.info('打卡成功', { result: res });
-    } else if (res.already_checked) {
-      const confirmedCheckin = {
-        todayChecked: true,
-        streak: localCheckin.streak || 1,
-        lastCheckin: today,
-        pending: false,
-        confirmed: true,
-      };
-      localStorage.setItem('atca_checkin', JSON.stringify(confirmedCheckin));
+    const result = await checkinStore.performCheckin(deviceInfo);
+
+    if (result.success) {
+      logger.info('打卡成功', { result });
+    } else if (result.already_checked) {
       logger.info('今日已打卡，无需重复打卡');
     } else {
-      logger.error('打卡失败', { error: res.message });
-      const failedCheckin = {
-        todayChecked: false,
-        streak: localCheckin.streak || 0,
-        lastCheckin: localCheckin.lastCheckin || '',
-        pending: false,
-        confirmed: false,
-      };
-      localStorage.setItem('atca_checkin', JSON.stringify(failedCheckin));
+      logger.error('打卡失败', { message: result.message });
     }
   } catch (e: any) {
     logger.error('打卡网络异常，将在下次同步时重试', {
       error: e.message,
     });
-    const pendingCheckins = JSON.parse(localStorage.getItem('atca_pending_checkins') || '[]');
-    if (!pendingCheckins.includes(today)) {
-      pendingCheckins.push(today);
-      localStorage.setItem('atca_pending_checkins', JSON.stringify(pendingCheckins));
-    }
   }
 }
 
