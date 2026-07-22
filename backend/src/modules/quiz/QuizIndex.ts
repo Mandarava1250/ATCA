@@ -151,10 +151,38 @@ router.post('/submit', authMiddleware, asyncHandler(async (req: any, res) => {
   if (!isAdmin) {
     logger.info('记录用户答题历史', { userId });
     try {
-      await execute('competition', 'INSERT INTO [user_answer_history] ([external_user_id], [question_id], [selected_answer], [is_correct], [points_earned], [answered_at]) VALUES (@user_id, @question_id, @answer, @is_correct, @points, GETDATE())', { user_id: userId, question_id: sessionId, answer: JSON.stringify(answers), is_correct: correctCount, points: totalPoints });
+      const insertPromises = questions.map((q: any) => {
+        const isCorrect = answers[q.question_id] === q.correct_answer;
+        return execute('competition', 
+          'INSERT INTO [user_answer_history] ([external_user_id], [question_id], [selected_answer], [is_correct], [points_earned], [answered_at], [session_id]) VALUES (@user_id, @question_id, @answer, @is_correct, @points, GETDATE(), @session_id)', 
+          { user_id: userId, question_id: q.question_id, answer: answers[q.question_id], is_correct: isCorrect ? 1 : 0, points: isCorrect ? q.points : 0, session_id: sessionId }
+        );
+      });
+      await Promise.all(insertPromises);
       logger.info('答题历史记录成功');
     } catch (err) {
       logger.warn('答题历史记录失败', { userId, error: (err as Error).message });
+    }
+
+    try {
+      await execute('competition', 
+        'MERGE INTO [user_competition_points] AS target ' +
+        'USING (SELECT @user_id AS external_user_id) AS source ' +
+        'ON target.[external_user_id] = source.[external_user_id] ' +
+        'WHEN MATCHED THEN ' +
+        'UPDATE SET [total_points] = target.[total_points] + @points, ' +
+                   '[games_played] = target.[games_played] + 1, ' +
+                   '[total_correct] = target.[total_correct] + @correct, ' +
+                   '[total_questions] = target.[total_questions] + @total, ' +
+                   '[updated_at] = GETDATE() ' +
+        'WHEN NOT MATCHED THEN ' +
+        'INSERT ([external_user_id], [total_points], [games_played], [total_correct], [total_questions], [current_level], [updated_at]) ' +
+        'VALUES (@user_id, @points, 1, @correct, @total, 1, GETDATE())',
+        { user_id: userId, points: totalPoints, correct: correctCount, total: questions.length }
+      );
+      logger.info('用户竞赛积分更新成功', { userId, points: totalPoints, correctCount, totalQuestions: questions.length });
+    } catch (err) {
+      logger.warn('用户竞赛积分更新失败', { userId, error: (err as Error).message });
     }
   } else {
     logger.info('管理员跳过积分记录');
@@ -182,44 +210,46 @@ router.get('/stats', authMiddleware, asyncHandler(async (req: any, res) => {
   if (!userId) { res.status(401).json({ success: false, error: { message: '未登录' } }); return; }
 
   if (isMockMode()) {
-    res.json({ success: true, data: { total_points: 850, current_level: '营造学徒', games_played: 12, accuracy: 78 } });
+    res.json({ success: true, data: { total_points: 850, current_level: '营造学徒', level: 3, games_played: 12, total_correct: 95, total_questions: 120, accuracy: 79 } });
     return;
   }
 
   try {
-    // 1. 从用户表获取真实积分和等级
-    const [userInfo] = await query('user', 'SELECT [points], [level] FROM dbo.atca_user WHERE [user_id] = @user_id', { user_id: userId });
-    const userPoints = (userInfo as any)?.points || 0;
-    const userLevel = (userInfo as any)?.level || 1;
-
-    // 2. 计算等级称号
     const levelMap: Record<number, string> = {
       1: '入门新手', 2: '初级学员', 3: '营造学徒', 4: '建筑博士',
       5: '营造宗师', 6: '古建大师', 7: '营造巨匠', 8: '建筑泰斗',
     };
-    const levelName = levelMap[userLevel] || '入门新手';
 
-    // 3. 从答题历史获取答题统计（表可能不存在）
-    let gamesPlayed = 0, accuracy = 0;
-    try {
-      const [history] = await query('competition', 'SELECT COUNT(*) as games, AVG(CASE WHEN [is_correct] > 0 THEN 100.0 ELSE 0 END) as accuracy FROM [user_answer_history] WHERE [external_user_id] = @user_id', { user_id: userId });
-      gamesPlayed = (history as any)?.games || 0;
-      accuracy = Math.round((history as any)?.accuracy || 0);
-    } catch { /* user_answer_history表可能不存在，静默忽略 */ }
+    let [competitionPoints] = await query('competition', 'SELECT [total_points], [current_level], [games_played], [total_correct], [total_questions] FROM [user_competition_points] WHERE [external_user_id] = @user_id', { user_id: userId });
+
+    if (!competitionPoints) {
+      competitionPoints = { total_points: 0, current_level: 1, games_played: 0, total_correct: 0, total_questions: 0 };
+    }
+
+    const totalPoints = (competitionPoints as any)?.total_points || 0;
+    const currentLevel = (competitionPoints as any)?.current_level || 1;
+    const gamesPlayed = (competitionPoints as any)?.games_played || 0;
+    const totalCorrect = (competitionPoints as any)?.total_correct || 0;
+    const totalQuestions = (competitionPoints as any)?.total_questions || 0;
+
+    const accuracy = totalQuestions > 0 ? Math.round((totalCorrect / totalQuestions) * 100) : 0;
+    const levelName = levelMap[currentLevel] || '入门新手';
 
     res.json({
       success: true,
       data: {
-        total_points: userPoints,
+        total_points: totalPoints,
         current_level: levelName,
-        level: userLevel,
+        level: currentLevel,
         games_played: gamesPlayed,
+        total_correct: totalCorrect,
+        total_questions: totalQuestions,
         accuracy: accuracy,
       }
     });
   } catch (err: any) {
     console.error('[Quiz Stats] Error:', err.message);
-    res.json({ success: true, data: { total_points: 0, current_level: '入门新手', level: 1, games_played: 0, accuracy: 0 } });
+    res.json({ success: true, data: { total_points: 0, current_level: '入门新手', level: 1, games_played: 0, total_correct: 0, total_questions: 0, accuracy: 0 } });
   }
 }));
 
