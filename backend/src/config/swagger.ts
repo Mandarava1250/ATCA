@@ -11,7 +11,7 @@ const swaggerOptions = {
     info: {
       title: '筑见山河 API',
       version: '1.0.0',
-      description: '中国古建筑文化传播平台 - 后端API文档',
+      description: '中国传统建筑成就网站 - 后端API文档',
       contact: {
         name: 'ATCA Development Team',
         email: 'dev@atca.com',

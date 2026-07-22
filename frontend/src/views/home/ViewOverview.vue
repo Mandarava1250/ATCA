@@ -23,7 +23,7 @@
         <section class="section-hero">
       <div class="hero-content">
         <h1 class="hero-title">筑见山河</h1>
-        <p class="hero-subtitle">中国古建筑文化传播平台</p>
+        <p class="hero-subtitle">中国传统建筑成就网站</p>
         <div class="hero-badge">项目总览</div>
       </div>
     </section>

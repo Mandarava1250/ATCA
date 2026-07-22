@@ -753,7 +753,6 @@ onUnmounted(() => {
 }
 .activity-title::before,
 .activity-title::after {
-  content: '\u2022';
   color: var(--gold-dim);
   margin: 0 var(--space-sm);
 }

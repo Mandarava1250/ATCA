@@ -1,6 +1,6 @@
 # 筑见山河 (ATCA)
 
-> **Ancient Traditional Chinese Architecture** - 中国古建筑文化传播平台
+> **Ancient Traditional Chinese Architecture** - 中国传统建筑成就网站
 
 <div align="center">  
 

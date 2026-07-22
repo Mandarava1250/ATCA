@@ -1,8 +1,8 @@
 export default {
   site: {
     name: '筑见山河',
-    subtitle: '中国古建筑文化传播平台',
-    fullTitle: '筑见山河 — 中国古建筑文化传播平台',
+    subtitle: '中国传统建筑成就网站',
+    fullTitle: '筑见山河 — 中国传统建筑成就网站',
   },
   nav: {
     menu: '导航菜单',
@@ -27,7 +27,7 @@ export default {
   home: {
     heroBadge: '国家级非物质文化遗产',
     heroTitle: '筑见山河',
-    heroSubtitle: '中国古建筑文化传播平台',
+    heroSubtitle: '中国传统建筑成就网站',
     heroDesc: '穿越千年时光，从先秦台基到明清宫殿。以数字技术复原传统营造技艺，感受榫卯之间的东方智慧。',
     enterExhibition: '进入展馆',
     workshopExperience: '3D工坊体验', 
@@ -36,7 +36,7 @@ export default {
     introTag: '展览简介',
     introTitle1: '以数字之笔',
     introTitle2: '，绘千年营造',
-    introP1: '中国古建筑文化传播平台，以三维数字化技术复原中国古建筑文化营造技艺。从佛光寺东大殿的唐代雄姿，到太和殿的皇家威仪，每一座建筑都是一部凝固的史书。',
+    introP1: '中国传统建筑成就网站，以三维数字化技术复原中国古建筑文化营造技艺。从佛光寺东大殿的唐代雄姿，到太和殿的皇家威仪，每一座建筑都是一部凝固的史书。',
     introP2: '在这里，您可以沉浸式游览古建详情，参与知识竞赛检验学识，亲手拼装传统构件，更可向AI助手咨询任何古建问题。',
     featureArch: '古建筑详情馆',
     featureArchDesc: '历史 · 结构 · 文化 · 匠人观点',
@@ -942,6 +942,6 @@ export default {
     dynasticArchitectures: '朝建筑',
     competitionModes: '竞赛模式',
     traditionalComponents: '传统构件',
-    copyright: '中国古建筑文化传播平台',
+    copyright: '中国传统建筑成就网站',
   },
 };
