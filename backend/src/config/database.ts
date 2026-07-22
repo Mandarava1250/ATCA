@@ -1,7 +1,5 @@
 // ============================================
 // 筑见山河 - 数据库配置与连接池管理
-// 支持动态发现SQL Server上的所有数据库
-// 连接失败时自动降级到 Mock 模式
 // ============================================
 
 import sql from 'mssql';
@@ -151,9 +149,9 @@ export async function discoverDatabases(): Promise<void> {
   if (autoDiscoveryDone || mockMode) {
     return;
   }
-  
+
   console.log('[DB] 开始自动发现SQL Server上的所有数据库...');
-  
+
   try {
     const baseConfig = getBaseConfig();
     const masterPool = new sql.ConnectionPool({
@@ -161,23 +159,24 @@ export async function discoverDatabases(): Promise<void> {
       connectionTimeout: globalConnectionTimeout,
       requestTimeout: globalRequestTimeout,
     });
-    
+
     await masterPool.connect();
     console.log('[DB] 已连接到master数据库，开始查询数据库列表...');
-    
+
     const result = await masterPool.request().query(
       "SELECT name FROM sys.databases WHERE name NOT IN ('master', 'tempdb', 'model', 'msdb') ORDER BY name"
     );
-    
+
     await masterPool.close();
-    
+
     const discoveredDbs = result.recordset.map((row: any) => row.name);
     console.log(`[DB] 发现 ${discoveredDbs.length} 个用户数据库: ${discoveredDbs.join(', ')}`);
-    
+
     let addedCount = 0;
     for (const dbName of discoveredDbs) {
       const normalizedName = dbName.toLowerCase();
-      
+
+      // 避免添加已配置的数据库（防止重复连接）
       if (!dbConfigs[normalizedName]) {
         dbConfigs[normalizedName] = {
           ...baseConfig,
@@ -190,15 +189,17 @@ export async function discoverDatabases(): Promise<void> {
         };
         addedCount++;
         console.log(`[DB] 已添加数据库连接: ${normalizedName} (${dbName})`);
+      } else {
+        console.log(`[DB] 数据库 ${normalizedName} 已配置，跳过自动发现`);
       }
     }
-    
+
     console.log(`[DB] 自动发现完成，新增 ${addedCount} 个数据库连接`);
     autoDiscoveryDone = true;
-    
+
   } catch (err: any) {
     console.error(`[DB] 自动发现数据库失败: ${err.message}`);
-    console.error('[DB] 将继续使用已配置的6个数据库');
+    console.error('[DB] 将继续使用已配置的8个数据库');
   }
 }
 
@@ -271,7 +272,7 @@ export async function getPool(dbName: string): Promise<sql.ConnectionPool> {
   if (!config) {
     throw new Error(`Database configuration not found for ${dbName}`);
   }
-  
+
   if (!config.database || !config.user) {
     throw new Error(`Database configuration incomplete for ${dbName}`);
   }
@@ -290,9 +291,9 @@ export async function getPool(dbName: string): Promise<sql.ConnectionPool> {
 // 启动时预连接所有数据库
 export async function preconnectAll(): Promise<void> {
   console.log('[DB] 开始预连接所有数据库...');
-  
+
   await discoverDatabases();
-  
+
   const dbNames = Object.keys(dbConfigs);
   const results = await Promise.allSettled(
     dbNames.map(async (name) => {
@@ -338,7 +339,7 @@ export async function query<T = any>(
     maxRetries: number = 2
 ): Promise<T[]> {
   const startTime = Date.now();
-  
+
   if (useCache && !mockMode) {
     const cachedData = queryCache.get(dbName, sqlString, params);
     if (cachedData !== null) {
@@ -387,7 +388,7 @@ export async function query<T = any>(
     } catch (err: any) {
       lastError = err;
       console.warn(`[DB] query ${dbName} 第${attempt}/${maxRetries}次失败: ${err.message}`);
-      
+
       // 如果是连接错误，尝试重新获取连接池
       if (attempt < maxRetries && (err.message?.includes('Connection') || err.message?.includes('connection'))) {
         console.warn(`[DB] ${dbName} 连接错误，将重新获取连接池...`);
@@ -444,7 +445,7 @@ export async function execute(
     } catch (err: any) {
       lastError = err;
       console.warn(`[DB] execute ${dbName} 第${attempt}/${maxRetries}次失败: ${err.message}`);
-      
+
       // 如果是连接错误，尝试重新获取连接池
       if (attempt < maxRetries && (err.message?.includes('Connection') || err.message?.includes('connection'))) {
         console.warn(`[DB] ${dbName} 连接错误，将重新获取连接池...`);
@@ -485,7 +486,6 @@ export async function closeAllPools(): Promise<void> {
 
 // ============================================
 // 数据库连接恢复机制
-// 定期检查失败的数据库连接，尝试自动恢复
 // ============================================
 
 let recoveryInterval: ReturnType<typeof setInterval> | null = null;
@@ -528,6 +528,10 @@ export function stopRecoveryService(): void {
   }
 }
 
+// ============================================
+// SQL 脚本初始化
+// ============================================
+
 import fs from 'fs';
 import path from 'path';
 
@@ -542,6 +546,126 @@ const sqlScripts: Record<string, string[]> = {
   sync: ['Sync.sql'],
 };
 
+function splitSqlBatches(sqlContent: string): string[] {
+  // 移除 UTF-8 BOM
+  sqlContent = sqlContent.replace(/^\uFEFF/, '');
+
+  const lines = sqlContent.split('\n');
+  const batches: string[] = [];
+  let currentBatch: string[] = [];
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+
+    // 匹配 GO 分隔符：单独一行，不区分大小写，后面可以有注释
+    if (/^GO\s*(?:--.*)?$/i.test(trimmed)) {
+      const batchText = currentBatch.join('\n').trim();
+      if (batchText.length > 0) {
+        batches.push(batchText);
+      }
+      currentBatch = [];
+    } else {
+      currentBatch.push(line);
+    }
+  }
+
+  // 处理最后一个 batch
+  const lastBatch = currentBatch.join('\n').trim();
+  if (lastBatch.length > 0) {
+    batches.push(lastBatch);
+  }
+
+  return batches;
+}
+
+async function executeBatch(
+  pool: sql.ConnectionPool,
+  batch: string,
+  skipErrors: number[]
+): Promise<{ success: boolean; skipped: boolean; error?: string }> {
+  if (!batch || !batch.trim()) {
+    return { success: true, skipped: true };
+  }
+
+  try {
+    // 使用 .batch() 而不是 .query()，更适合执行 DDL
+    await pool.request().batch(batch);
+    return { success: true, skipped: false };
+  } catch (err: any) {
+    const errorNumber = err.number ?? err.code ?? 0;
+    const message = err.message || err.toString();
+
+    // 检查是否为可忽略的错误
+    if (skipErrors.includes(errorNumber)) {
+      return { success: true, skipped: true, error: message.split('\n')[0] };
+    }
+
+    // 检查错误消息中是否包含可忽略的模式
+    const ignorablePatterns = [
+      /already\s+exists/i,
+      /already\s+an\s+object\s+named/i,
+      /could\s+not\s+create\s+constraint/i,
+      /invalid\s+(column|object)\s+name/i,
+    ];
+
+    if (ignorablePatterns.some(p => p.test(message))) {
+      return { success: true, skipped: true, error: message.split('\n')[0] };
+    }
+
+    return { success: false, skipped: false, error: message };
+  }
+}
+
+async function executeSqlScript(pool: sql.ConnectionPool, scriptPath: string): Promise<void> {
+  const sqlContent = fs.readFileSync(scriptPath, 'utf8');
+  const batches = splitSqlBatches(sqlContent);
+
+  console.log(`[DB] SQL脚本分割为 ${batches.length} 个batch执行`);
+
+  // 可忽略的错误码（移除 156！）
+  // 2714: 对象已存在
+  // 1913: 索引已存在
+  // 1750: 无法创建约束或索引
+  // 208: 对象名不存在（列不存在时）
+  // 547: 约束冲突
+  // 1505: 唯一索引冲突
+  // 2601: 重复键
+  // 2627: 主键冲突
+  const skipErrors = [2714, 1913, 1750, 208, 547, 1505, 2601, 2627];
+
+  let successCount = 0;
+  let skipCount = 0;
+  let failCount = 0;
+
+  for (let i = 0; i < batches.length; i++) {
+    const batch = batches[i];
+    const result = await executeBatch(pool, batch, skipErrors);
+
+    if (result.success && !result.skipped) {
+      successCount++;
+    } else if (result.skipped) {
+      skipCount++;
+      if (result.error) {
+        console.log(`[DB] 跳过（已存在/可忽略）: ${result.error.slice(0, 150)}`);
+      }
+    } else {
+      failCount++;
+      console.error(`[DB] Batch ${i + 1}/${batches.length} 执行失败: ${result.error}`);
+
+      // 如果是关键错误，记录详细信息但不中断
+      if (result.error?.includes('CREATE TRIGGER')) {
+        console.error(`[DB] 提示: CREATE TRIGGER 语法错误，请检查 SQL 文件中 CREATE TRIGGER 前是否有 GO 分隔符`);
+      }
+    }
+  }
+
+  if (failCount === 0) {
+    console.log(`[DB] 脚本执行完成 (${successCount} 成功, ${skipCount} 跳过)`);
+  } else {
+    console.log(`[DB] 脚本部分完成 (${successCount} 成功, ${skipCount} 跳过, ${failCount} 失败)`);
+  }
+}
+
 export async function initDatabase(dbName: keyof typeof dbConfigs): Promise<void> {
   if (mockMode) {
     console.log(`[DB] Mock模式下跳过数据库${dbName}的初始化`);
@@ -555,10 +679,10 @@ export async function initDatabase(dbName: keyof typeof dbConfigs): Promise<void
   }
 
   const dbScriptsDir = path.resolve(__dirname, './DB');
-  
+
   try {
     const pool = await getPool(dbName);
-    
+
     for (const scriptName of scripts) {
       const scriptPath = path.join(dbScriptsDir, scriptName);
       if (!fs.existsSync(scriptPath)) {
@@ -571,61 +695,26 @@ export async function initDatabase(dbName: keyof typeof dbConfigs): Promise<void
     }
   } catch (err: any) {
     console.error(`[DB] 数据库${dbName}初始化失败: ${err.message}`);
-    throw err;
-  }
-}
-
-/**
- * 执行 SQL 脚本文件（容错增强版）
- * @param pool - 数据库连接池
- * @param scriptPath - SQL脚本文件路径
- */
-async function executeSqlScript(pool: sql.ConnectionPool, scriptPath: string): Promise<void> {
-  const sqlContent = fs.readFileSync(scriptPath, 'utf8');
-  
-  // 使用正则分割 GO 语句，仅匹配行首的 GO（避免匹配注释或字符串中的 GO）
-  const batches = sqlContent.split(/^\s*GO\s*$/im).map(b => b.trim()).filter(b => b);
-  
-  // SQL Server 错误码列表：忽略已存在/重复执行的错误
-  // 2714: 对象已存在
-  // 1913: 对象名无效（删除不存在的对象）
-  // 1750: 无法创建约束或索引
-  // 208: 对象名不存在
-  // 547: 外键约束冲突
-  // 156: 语法错误（可能是注释或空行）
-  const skipErrors = [2714, 1913, 1750, 208, 547, 156];
-  
-  for (const batch of batches) {
-    try {
-      await pool.request().query(batch);
-    } catch (err: any) {
-      // 检查是否为可忽略的错误
-      if (skipErrors.includes(err.number)) {
-        console.log(`[DB] 跳过（已存在/可忽略）: ${err.message.slice(0, 150)}`);
-      } else {
-        // 非可忽略错误，抛出异常
-        throw err;
-      }
-    }
+    // 不抛出错误，让上层决定是否继续
   }
 }
 
 export async function initAllDatabases(): Promise<void> {
   console.log('[DB] 开始初始化所有数据库...');
   const dbNames = Object.keys(dbConfigs) as (keyof typeof dbConfigs)[];
-  
+
   for (const dbName of dbNames) {
     if (failedDbs.has(dbName)) {
       console.log(`[DB] 跳过连接失败的数据库${dbName}`);
       continue;
     }
-    
+
     try {
       await initDatabase(dbName);
     } catch (err: any) {
       console.warn(`[DB] 数据库${dbName}初始化失败，但继续启动: ${err.message}`);
     }
   }
-  
+
   console.log('[DB] 数据库初始化完成');
 }
