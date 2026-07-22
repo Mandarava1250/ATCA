@@ -208,6 +208,7 @@ import type { Locale } from 'vue-i18n';
 import MobileNavMenu from './MobileNavMenu.vue';
 import type { NavItem } from './MobileNavMenu.vue';
 import { useMemoryTrack } from '@/composables/useMemoryTrack';
+import { closeSync } from '@/utils/syncService';
 
 const memTrack = useMemoryTrack('CommonNavbar');
 
@@ -366,6 +367,7 @@ function toggleLang() {
 }
 
 async function logout() {
+  closeSync(); // 先断开 WebSocket 同步连接
   try { await authApi.logout(); } catch {}
   userStore.logout();
   closeMobileMenu();

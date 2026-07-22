@@ -388,13 +388,25 @@ async function doCheckinAfterSubmit() {
   if (!fromCheckin) return;
 
   sessionStorage.removeItem('quiz_from_checkin');
-  sessionStorage.setItem('from_quiz_play', 'true');
 
   const today = new Date().toISOString().split('T')[0];
   let localCheckin: any = {};
   try { localCheckin = JSON.parse(localStorage.getItem('atca_checkin') || '{}'); } catch { /* ignore */ }
 
   if (localCheckin.lastCheckin === today) return;
+
+  // 乐观更新：在 API 调用之前先写入 localStorage，确保返回锚块时立即显示"已打卡"
+  const optimisticCheckin = {
+    todayChecked: true,
+    streak: localCheckin.streak || 1,
+    lastCheckin: today,
+    pending: true, // pending 标志告诉 loadCheckin() 需要后端确认
+  };
+  localStorage.setItem('atca_checkin', JSON.stringify(optimisticCheckin));
+  localStorage.setItem('atca_checkin_sync_time', Date.now().toString());
+
+  // 设置 from_quiz_play 标志（在乐观写入之后），让 ViewQuiz 的 onMounted 可以检测到
+  sessionStorage.setItem('from_quiz_play', 'true');
 
   try {
     const deviceInfo = {
@@ -404,22 +416,24 @@ async function doCheckinAfterSubmit() {
 
     const res = await activityApi.checkin(deviceInfo);
     if (res.success) {
-      const newCheckin = {
+      const confirmedCheckin = {
         todayChecked: true,
         streak: res.streak_count || 1,
         lastCheckin: today,
         pointsEarned: res.points_earned || 0,
+        pending: false, // 后端确认完成
       };
-      localStorage.setItem('atca_checkin', JSON.stringify(newCheckin));
+      localStorage.setItem('atca_checkin', JSON.stringify(confirmedCheckin));
       localStorage.setItem('atca_checkin_sync_time', Date.now().toString());
-      window.dispatchEvent(new StorageEvent('storage', {
-        key: 'atca_checkin',
-        newValue: JSON.stringify(newCheckin),
-      }));
       logger.info('打卡成功', { result: res });
     } else if (res.already_checked) {
-      localCheckin.todayChecked = true;
-      localStorage.setItem('atca_checkin', JSON.stringify(localCheckin));
+      const confirmedCheckin = {
+        todayChecked: true,
+        streak: localCheckin.streak || 1,
+        lastCheckin: today,
+        pending: false,
+      };
+      localStorage.setItem('atca_checkin', JSON.stringify(confirmedCheckin));
       logger.info('今日已打卡，无需重复打卡');
     } else {
       logger.error('打卡失败', { error: res.message });
@@ -433,9 +447,7 @@ async function doCheckinAfterSubmit() {
       pendingCheckins.push(today);
       localStorage.setItem('atca_pending_checkins', JSON.stringify(pendingCheckins));
     }
-    localCheckin.todayChecked = true;
-    localCheckin.lastCheckin = today;
-    localStorage.setItem('atca_checkin', JSON.stringify(localCheckin));
+    // 保留乐观状态（pending: true），后台同步机制会重试
   }
 }
 

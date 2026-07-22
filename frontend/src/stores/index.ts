@@ -6,6 +6,7 @@ import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import type { User, AuthTokens, QuizSession, QuizResult } from '@shared/types';
 import { authApi } from '@/services/api';
+import { initSync, closeSync } from '@/utils/syncService';
 
 // 用户Store
 export const useUserStore = defineStore('user', () => {
@@ -33,10 +34,16 @@ export const useUserStore = defineStore('user', () => {
     if (tokenData) {
       localStorage.setItem('atca_access_token', tokenData.accessToken);
       localStorage.setItem('atca_refresh_token', tokenData.refreshToken);
+      // 登录后连接 WebSocket 同步客户端
+      initSync().catch(() => {
+        // WebSocket 连接非关键，失败不影响使用
+      });
     }
   }
 
   function logout() {
+    // 先断开 WebSocket 同步连接，再清除 token
+    closeSync();
     user.value = null;
     tokens.value = null;
     localStorage.removeItem('atca_access_token');

@@ -5,7 +5,7 @@
  */
 
 import sql from 'mssql';
-import { query, execute, isMockMode } from '../config/database';
+import { query, execute, transaction, isMockMode } from '../config/database';
 import { logger, ErrorType } from '../utils/logger';
 import { IService, ServiceState } from '../core';
 
@@ -1539,19 +1539,8 @@ class KnowledgeGraphService implements IService {
     }
 
     try {
-      const pool = await sql.connect(process.env.KNOWLEDGE_DB_CONFIG || '');
-      const transaction = new sql.Transaction(pool);
-      
-      await transaction.begin();
-
-      try {
-        const request = new sql.Request(transaction);
-        request.input('topicIds', sql.Int, topicIds);
-        
-        const result = await request.query(`
-          DELETE FROM dbo.kg_topics 
-          WHERE [topic_id] IN (${topicIds.map((_, i) => `@topicIds${i}`).join(', ')})
-        `);
+      const deletedCount = await transaction('knowledge', async (tx) => {
+        const request = new sql.Request(tx);
         
         for (let i = 0; i < topicIds.length; i++) {
           request.input(`topicIds${i}`, sql.Int, topicIds[i]);
@@ -1562,24 +1551,19 @@ class KnowledgeGraphService implements IService {
           WHERE [topic_id] IN (${topicIds.map((_, i) => `@topicIds${i}`).join(', ')})
         `);
 
-        const deletedCount = (deleteResult as any)?.rowsAffected[0] || 0;
-        
-        await transaction.commit();
+        return (deleteResult as any)?.rowsAffected[0] || 0;
+      });
 
-        await this.logAudit(
-          'BATCH_DELETE_TOPICS',
-          'system',
-          0,
-          'Topic',
-          topicIds.join(','),
-          `批量删除知识主题: ${deletedCount}条`
-        );
+      await this.logAudit(
+        'BATCH_DELETE_TOPICS',
+        'system',
+        0,
+        'Topic',
+        topicIds.join(','),
+        `批量删除知识主题: ${deletedCount}条`
+      );
 
-        return deletedCount;
-      } catch (error: any) {
-        await transaction.rollback();
-        throw error;
-      }
+      return deletedCount;
     } catch (error: any) {
       logger.error('批量删除知识主题失败', { 
         errorType: ErrorType.DATABASE_ERROR,

@@ -119,6 +119,7 @@ import { activityApi } from '@/services/api';
 import { useToast } from '@/composables/useToast';
 import { logMount, logUnmount, logListenerAdd, logListenerRemove } from '@/utils/memoryLifecycle';
 import { createLogger } from '@/utils/logger';
+import { getSyncService } from '@/utils/syncService';
 
 const logger = createLogger('DailyCheckin');
 
@@ -271,14 +272,7 @@ async function handleCheckin() {
       };
       localStorage.setItem('atca_checkin', JSON.stringify(newCheckin));
       localStorage.setItem('atca_checkin_sync_time', Date.now().toString());
-      
-      setTimeout(() => {
-        window.dispatchEvent(new StorageEvent('storage', {
-          key: 'atca_checkin',
-          newValue: JSON.stringify(newCheckin),
-        }));
-      }, 100);
-      
+
       if (res.points_earned) {
         success(`${t('checkin.success')} +${res.points_earned} ${t('checkin.points')}`);
       }
@@ -356,11 +350,37 @@ onMounted(async () => {
   await loadCalendar();
   window.addEventListener('storage', handleStorageSync);
   logListenerAdd('DailyCheckin', 'storage', 'window');
+
+  // 注册 WebSocket 同步事件监听
+  const syncService = getSyncService();
+  const handleSyncCheckinUpdate = (data: any) => {
+    const today = new Date().toISOString().split('T')[0];
+    if (data.payload?.checkin_date === today && !checkedToday.value) {
+      checkedToday.value = true;
+      loadStats();
+      loadCalendar();
+      logger?.info?.('通过 WebSocket 同步更新打卡状态');
+    }
+  };
+  syncService.on('checkin_update', handleSyncCheckinUpdate);
+  logListenerAdd('DailyCheckin', 'sync:checkin_update', 'syncService');
+
+  // 保存引用以便在 onUnmounted 中移除
+  (window as any).__dailyCheckinSyncHandler = handleSyncCheckinUpdate;
 });
 
 onUnmounted(() => {
   window.removeEventListener('storage', handleStorageSync);
   logListenerRemove('DailyCheckin', 'storage', 'window');
+
+  // 移除 WebSocket 同步事件监听
+  const syncService = getSyncService();
+  if ((window as any).__dailyCheckinSyncHandler) {
+    syncService.off('checkin_update', (window as any).__dailyCheckinSyncHandler);
+    delete (window as any).__dailyCheckinSyncHandler;
+    logListenerRemove('DailyCheckin', 'sync:checkin_update', 'syncService');
+  }
+
   logUnmount('DailyCheckin');
 });
 </script>

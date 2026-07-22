@@ -127,6 +127,7 @@ import Footer from '@/components/common/CommonFooter.vue';
 import PageBackground from '@/components/common/PageBackground.vue';
 import { quizApi, indexApi, activityApi } from '@/services/api';
 import { createLogger } from '@/utils/logger';
+import { getSyncService } from '@/utils/syncService';
 import { logMount, logUnmount, logTimerStart, logTimerStop, logListenerAdd, logListenerRemove } from '@/utils/memoryLifecycle';
 
 const logger = createLogger('ViewQuiz');
@@ -169,7 +170,14 @@ async function loadCheckin(force = false) {
       const cacheTime = parseInt(localStorage.getItem('atca_checkin_sync_time') || '0');
       const cacheAge = Date.now() - cacheTime;
 
-      if (!force && cacheAge < 30000 && cachedTodayChecked !== undefined) {
+      // 如果缓存是乐观更新（pending），立即使用缓存值，同时发起后台刷新
+      if (cached.pending === true) {
+        checkin.value.todayChecked = cachedTodayChecked;
+        checkin.value.streak = cached.streak || 0;
+        checkin.value.lastCheckin = cached.lastCheckin || '';
+        // 不返回，继续执行后台刷新以确认状态
+        logger?.info?.('使用乐观打卡状态，后台刷新确认', { cached });
+      } else if (!force && cacheAge < 5000 && cachedTodayChecked !== undefined) {
         checkin.value.todayChecked = cachedTodayChecked;
         checkin.value.streak = cached.streak || 0;
         checkin.value.lastCheckin = cached.lastCheckin || '';
@@ -329,15 +337,63 @@ onMounted(async () => {
   logMount('ViewQuiz');
   window.addEventListener('storage', handleStorageSync);
   logListenerAdd('ViewQuiz', 'storage', 'window');
-  
+
+  // 从答题页面返回时，先立即从 localStorage 读取乐观状态，再异步刷新
   const fromQuizPlay = sessionStorage.getItem('from_quiz_play');
   if (fromQuizPlay === 'true') {
     sessionStorage.removeItem('from_quiz_play');
-    logger?.info?.('从答题页面返回，强制刷新打卡状态');
-    await loadCheckin(true);
+    logger?.info?.('从答题页面返回，立即显示本地缓存状态，后台刷新确认');
+    // 先读取本地缓存设置响应式状态（不阻塞 UI）
+    const saved = localStorage.getItem('atca_checkin');
+    if (saved) {
+      try {
+        const cached = JSON.parse(saved);
+        if (cached.todayChecked) {
+          checkin.value.todayChecked = true;
+          checkin.value.streak = cached.streak || checkin.value.streak;
+          checkin.value.lastCheckin = cached.lastCheckin || '';
+          if (countdownTimer) {
+            clearInterval(countdownTimer);
+            countdownTimer = null;
+          }
+        }
+      } catch { /* ignore */ }
+    }
+    // 后台异步刷新，确保状态与后端一致
+    loadCheckin(false);
+  } else {
+    await loadCheckin(false);
   }
-  
+
   await refreshData();
+
+  // 注册 WebSocket 同步事件监听
+  const syncService = getSyncService();
+  const handleSyncCheckinUpdate = (data: any) => {
+    const today = new Date().toISOString().split('T')[0];
+    if (data.payload?.checkin_date === today) {
+      checkin.value.todayChecked = true;
+      checkin.value.streak = data.payload.streak_count || checkin.value.streak;
+      checkin.value.lastCheckin = today;
+      localStorage.setItem('atca_checkin', JSON.stringify({
+        todayChecked: true,
+        streak: checkin.value.streak,
+        lastCheckin: today,
+        pending: false,
+      }));
+      localStorage.setItem('atca_checkin_sync_time', Date.now().toString());
+      if (countdownTimer) {
+        clearInterval(countdownTimer);
+        countdownTimer = null;
+      }
+      logger?.info?.('通过 WebSocket 同步更新打卡状态', { checked: true, streak: checkin.value.streak });
+    }
+  };
+  syncService.on('checkin_update', handleSyncCheckinUpdate);
+  logListenerAdd('ViewQuiz', 'sync:checkin_update', 'syncService');
+
+  // 保存引用以便在 onUnmounted 中移除
+  (window as any).__viewQuizSyncHandler = handleSyncCheckinUpdate;
 });
 
 onBeforeRouteUpdate(async () => {
@@ -351,6 +407,15 @@ onUnmounted(() => {
   }
   window.removeEventListener('storage', handleStorageSync);
   logListenerRemove('ViewQuiz', 'storage', 'window');
+
+  // 移除 WebSocket 同步事件监听
+  const syncService = getSyncService();
+  if ((window as any).__viewQuizSyncHandler) {
+    syncService.off('checkin_update', (window as any).__viewQuizSyncHandler);
+    delete (window as any).__viewQuizSyncHandler;
+    logListenerRemove('ViewQuiz', 'sync:checkin_update', 'syncService');
+  }
+
   logUnmount('ViewQuiz');
 });
 </script>

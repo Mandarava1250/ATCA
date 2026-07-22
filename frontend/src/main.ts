@@ -6,6 +6,7 @@ import App from './App.vue';
 import './styles/global.css';
 import { useUserStore } from '@/stores';
 import { scheduleCheckinSync } from '@/utils/checkinSync';
+import { initSync } from '@/utils/syncService';
 
 const app = createApp(App);
 app.use(createPinia());
@@ -18,6 +19,10 @@ userStore.loadFromStorage();
 if (userStore.tokens?.accessToken) {
   userStore.me().catch(() => {
     userStore.logout();
+  });
+  // 初始化 WebSocket 同步客户端（非关键，失败不影响使用）
+  initSync().catch(() => {
+    // WebSocket 连接失败时降级为 localStorage 同步
   });
 }
 

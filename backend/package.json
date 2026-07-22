@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "tsx watch src/main.ts",
     "build": "tsc --listEmittedFiles --diagnostics",
+    "postbuild": "xcopy src\\config\\DB\\*.sql dist\\src\\config\\DB\\ /Y 2>nul || true",
     "build:clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\" && tsc --listEmittedFiles --diagnostics",
     "build:verbose": "tsc --listEmittedFiles --extendedDiagnostics",
     "start": "node dist/src/main.js",

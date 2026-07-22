@@ -39,20 +39,6 @@ export async function syncPendingCheckins(): Promise<{ success: boolean; syncedC
     } else {
       localStorage.setItem('atca_pending_checkins', JSON.stringify(remaining));
     }
-
-    const todayStr = new Date().toISOString().split('T')[0];
-    const syncedDates = pending.filter((d: string) => !errors.some(e => e.date === d));
-    const todayWasSynced = syncedDates.includes(todayStr);
-
-    window.dispatchEvent(new StorageEvent('storage', {
-      key: 'atca_checkin',
-      newValue: JSON.stringify({
-        todayChecked: todayWasSynced,
-        lastCheckin: syncedDates[syncedDates.length - 1] || todayStr,
-        calendarUpdated: true,
-        syncedDates,
-      }),
-    }));
   }
 
   return {
