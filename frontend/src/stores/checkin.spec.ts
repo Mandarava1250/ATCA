@@ -134,7 +134,7 @@ describe('Checkin Store', () => {
       });
       vi.mocked(activityApi.getCheckinStats).mockResolvedValue({
         success: true,
-        data: { max_streak: 5, last_checkin_date: '2024-01-15' },
+        data: { total_checkins: 20, max_streak: 5, total_points: 100, last_checkin_date: '2024-01-15', weekly_checkins: 5, monthly_checkins: 15 },
       });
 
       await store.loadCheckin();
@@ -157,7 +157,7 @@ describe('Checkin Store', () => {
       });
       vi.mocked(activityApi.getCheckinStats).mockResolvedValue({
         success: true,
-        data: { max_streak: 4 },
+        data: { total_checkins: 19, max_streak: 4, total_points: 95, last_checkin_date: '2024-01-14', weekly_checkins: 4, monthly_checkins: 14 },
       });
 
       await store.loadCheckin();
@@ -187,6 +187,7 @@ describe('Checkin Store', () => {
       const store = useCheckinStore();
       vi.mocked(activityApi.checkin).mockResolvedValue({
         success: true,
+        message: 'Checkin successful',
         streak_count: 5,
         points_earned: 10,
       });
@@ -206,11 +207,12 @@ describe('Checkin Store', () => {
       const store = useCheckinStore();
       vi.mocked(activityApi.checkin).mockResolvedValue({
         success: false,
+        message: 'Already checked in today',
         already_checked: true,
       });
       vi.mocked(activityApi.getCheckinStats).mockResolvedValue({
         success: true,
-        data: { max_streak: 5 },
+        data: { total_checkins: 20, max_streak: 5, total_points: 100, last_checkin_date: '2024-01-15', weekly_checkins: 5, monthly_checkins: 15 },
       });
 
       const result = await store.performCheckin();
