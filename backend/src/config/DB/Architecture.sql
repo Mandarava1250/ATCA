@@ -568,11 +568,8 @@ GO
 -- ============================================
 -- 21. 删除相关建筑级联触发器
 -- ============================================
-IF OBJECT_ID('dbo.trg_delete_related_architectures', 'TR') IS NOT NULL
-    DROP TRIGGER dbo.trg_delete_related_architectures;
 GO
-
-CREATE TRIGGER dbo.trg_delete_related_architectures
+CREATE OR ALTER TRIGGER dbo.trg_delete_related_architectures
 ON dbo.ancient_architecture
 INSTEAD OF DELETE
 AS
@@ -591,11 +588,8 @@ GO
 -- ============================================
 -- 22. 更新时间触发器
 -- ============================================
-IF OBJECT_ID('dbo.trg_update_timestamp', 'TR') IS NOT NULL
-    DROP TRIGGER dbo.trg_update_timestamp;
 GO
-
-CREATE TRIGGER dbo.trg_update_timestamp
+CREATE OR ALTER TRIGGER dbo.trg_update_timestamp
 ON dbo.ancient_architecture
 AFTER UPDATE
 AS
@@ -611,11 +605,8 @@ GO
 -- ============================================
 -- 23. 翻译更新时间触发器
 -- ============================================
-IF OBJECT_ID('tr_translations_updated_at', 'TR') IS NOT NULL
-    DROP TRIGGER tr_translations_updated_at;
 GO
-
-CREATE TRIGGER tr_translations_updated_at
+CREATE OR ALTER TRIGGER tr_translations_updated_at
 ON dbo.translations
 AFTER UPDATE
 AS
@@ -631,11 +622,8 @@ GO
 -- ============================================
 -- 24. 热门建筑视图
 -- ============================================
-IF OBJECT_ID('dbo.vw_popular_architectures', 'V') IS NOT NULL
-    DROP VIEW dbo.vw_popular_architectures;
 GO
-
-CREATE VIEW dbo.vw_popular_architectures AS
+CREATE OR ALTER VIEW dbo.vw_popular_architectures AS
 SELECT
     a.architecture_id AS id,
     a.name,
@@ -696,9 +684,8 @@ GO
 -- ============================================
 
 -- 获取建筑列表
-IF OBJECT_ID('dbo.sp_architecture_get_list', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_architecture_get_list;
 GO
-CREATE PROCEDURE dbo.sp_architecture_get_list
+CREATE OR ALTER PROCEDURE dbo.sp_architecture_get_list
     @type NVARCHAR(50) = NULL,
     @dynasty NVARCHAR(50) = NULL,
     @location NVARCHAR(100) = NULL,
@@ -720,9 +707,8 @@ END
 GO
 
 -- 获取建筑详情
-IF OBJECT_ID('dbo.sp_architecture_get_detail', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_architecture_get_detail;
 GO
-CREATE PROCEDURE dbo.sp_architecture_get_detail
+CREATE OR ALTER PROCEDURE dbo.sp_architecture_get_detail
     @architecture_id INT
 AS
 BEGIN
@@ -732,9 +718,8 @@ END
 GO
 
 -- 添加建筑
-IF OBJECT_ID('dbo.sp_architecture_add', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_architecture_add;
 GO
-CREATE PROCEDURE dbo.sp_architecture_add
+CREATE OR ALTER PROCEDURE dbo.sp_architecture_add
     @name NVARCHAR(100),
     @chinese_name NVARCHAR(100) = NULL,
     @location NVARCHAR(100) = NULL,
@@ -774,9 +759,8 @@ END
 GO
 
 -- 更新建筑
-IF OBJECT_ID('dbo.sp_architecture_update', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_architecture_update;
 GO
-CREATE PROCEDURE dbo.sp_architecture_update
+CREATE OR ALTER PROCEDURE dbo.sp_architecture_update
     @architecture_id INT,
     @name NVARCHAR(100) = NULL,
     @chinese_name NVARCHAR(100) = NULL,
@@ -829,9 +813,8 @@ END
 GO
 
 -- 删除建筑
-IF OBJECT_ID('dbo.sp_architecture_delete', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_architecture_delete;
 GO
-CREATE PROCEDURE dbo.sp_architecture_delete
+CREATE OR ALTER PROCEDURE dbo.sp_architecture_delete
     @architecture_id INT
 AS
 BEGIN
@@ -842,9 +825,8 @@ END
 GO
 
 -- 搜索建筑
-IF OBJECT_ID('dbo.sp_architecture_search', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_architecture_search;
 GO
-CREATE PROCEDURE dbo.sp_architecture_search
+CREATE OR ALTER PROCEDURE dbo.sp_architecture_search
     @keyword NVARCHAR(200),
     @page INT = 1,
     @page_size INT = 20
@@ -863,9 +845,8 @@ END
 GO
 
 -- 记录浏览
-IF OBJECT_ID('dbo.sp_architecture_log_view', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_architecture_log_view;
 GO
-CREATE PROCEDURE dbo.sp_architecture_log_view
+CREATE OR ALTER PROCEDURE dbo.sp_architecture_log_view
     @architecture_id INT,
     @user_id INT = NULL,
     @ip_address NVARCHAR(45) = NULL,
@@ -890,9 +871,8 @@ END
 GO
 
 -- 获取热门建筑
-IF OBJECT_ID('dbo.sp_architecture_get_popular', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_architecture_get_popular;
 GO
-CREATE PROCEDURE dbo.sp_architecture_get_popular
+CREATE OR ALTER PROCEDURE dbo.sp_architecture_get_popular
     @limit INT = 10
 AS
 BEGIN
@@ -902,9 +882,8 @@ END
 GO
 
 -- 更新热门搜索词
-IF OBJECT_ID('dbo.sp_architecture_update_search_term', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_architecture_update_search_term;
 GO
-CREATE PROCEDURE dbo.sp_architecture_update_search_term
+CREATE OR ALTER PROCEDURE dbo.sp_architecture_update_search_term
     @term NVARCHAR(100),
     @category NVARCHAR(20) = 'general'
 AS
@@ -924,9 +903,8 @@ END
 GO
 
 -- 获取热门搜索词
-IF OBJECT_ID('dbo.sp_architecture_get_search_terms', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_architecture_get_search_terms;
 GO
-CREATE PROCEDURE dbo.sp_architecture_get_search_terms
+CREATE OR ALTER PROCEDURE dbo.sp_architecture_get_search_terms
     @limit INT = 10,
     @category NVARCHAR(20) = NULL
 AS
@@ -940,9 +918,8 @@ END
 GO
 
 -- 获取建筑统计
-IF OBJECT_ID('dbo.sp_architecture_get_stats', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_architecture_get_stats;
 GO
-CREATE PROCEDURE dbo.sp_architecture_get_stats
+CREATE OR ALTER PROCEDURE dbo.sp_architecture_get_stats
     @architecture_id INT
 AS
 BEGIN
@@ -956,9 +933,8 @@ GO
 -- ============================================
 
 -- 获取实体翻译
-IF OBJECT_ID('dbo.sp_get_translation', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_get_translation;
 GO
-CREATE PROCEDURE dbo.sp_get_translation
+CREATE OR ALTER PROCEDURE dbo.sp_get_translation
     @entity_type NVARCHAR(50),
     @entity_id INT,
     @language_code NVARCHAR(10) = 'en'
@@ -974,9 +950,8 @@ END
 GO
 
 -- 获取实体所有翻译
-IF OBJECT_ID('dbo.sp_translation_get_by_entity', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_translation_get_by_entity;
 GO
-CREATE PROCEDURE dbo.sp_translation_get_by_entity
+CREATE OR ALTER PROCEDURE dbo.sp_translation_get_by_entity
     @entity_type NVARCHAR(50),
     @entity_id INT
 AS
@@ -992,9 +967,8 @@ END
 GO
 
 -- 批量获取翻译（用于列表页）
-IF OBJECT_ID('dbo.sp_get_translations_batch', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_get_translations_batch;
 GO
-CREATE PROCEDURE dbo.sp_get_translations_batch
+CREATE OR ALTER PROCEDURE dbo.sp_get_translations_batch
     @entity_type NVARCHAR(50),
     @entity_ids NVARCHAR(MAX),
     @language_code NVARCHAR(10) = 'en'
@@ -1014,9 +988,8 @@ END
 GO
 
 -- 批量获取翻译
-IF OBJECT_ID('dbo.sp_translation_batch_get', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_translation_batch_get;
 GO
-CREATE PROCEDURE dbo.sp_translation_batch_get
+CREATE OR ALTER PROCEDURE dbo.sp_translation_batch_get
     @entity_type NVARCHAR(50),
     @language_code NVARCHAR(10) = 'en'
 AS
@@ -1030,9 +1003,8 @@ END
 GO
 
 -- 保存/更新翻译
-IF OBJECT_ID('dbo.sp_upsert_translation', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_upsert_translation;
 GO
-CREATE PROCEDURE dbo.sp_upsert_translation
+CREATE OR ALTER PROCEDURE dbo.sp_upsert_translation
     @entity_type NVARCHAR(50),
     @entity_id INT,
     @field_name NVARCHAR(50),
@@ -1068,9 +1040,8 @@ END
 GO
 
 -- 添加/更新翻译（带版本控制）
-IF OBJECT_ID('dbo.sp_translation_upsert', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_translation_upsert;
 GO
-CREATE PROCEDURE dbo.sp_translation_upsert
+CREATE OR ALTER PROCEDURE dbo.sp_translation_upsert
     @entity_type NVARCHAR(50),
     @entity_id INT,
     @field_name NVARCHAR(50),
@@ -1118,9 +1089,8 @@ END
 GO
 
 -- 获取支持的语言列表
-IF OBJECT_ID('dbo.sp_get_languages', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_get_languages;
 GO
-CREATE PROCEDURE dbo.sp_get_languages
+CREATE OR ALTER PROCEDURE dbo.sp_get_languages
     @active_only BIT = 1
 AS
 BEGIN
@@ -1133,9 +1103,8 @@ END
 GO
 
 -- 获取翻译统计
-IF OBJECT_ID('dbo.sp_get_translation_stats', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_get_translation_stats;
 GO
-CREATE PROCEDURE dbo.sp_get_translation_stats
+CREATE OR ALTER PROCEDURE dbo.sp_get_translation_stats
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -1154,9 +1123,8 @@ END
 GO
 
 -- 获取翻译统计（扩展）
-IF OBJECT_ID('dbo.sp_translation_stats', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_translation_stats;
 GO
-CREATE PROCEDURE dbo.sp_translation_stats
+CREATE OR ALTER PROCEDURE dbo.sp_translation_stats
     @entity_type NVARCHAR(50) = NULL,
     @language_code NVARCHAR(10) = NULL
 AS
@@ -1180,9 +1148,8 @@ END
 GO
 
 -- 搜索翻译（支持关键词搜索）
-IF OBJECT_ID('dbo.sp_search_translations', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_search_translations;
 GO
-CREATE PROCEDURE dbo.sp_search_translations
+CREATE OR ALTER PROCEDURE dbo.sp_search_translations
     @search_text NVARCHAR(100) = NULL,
     @entity_type NVARCHAR(50) = NULL,
     @language_code NVARCHAR(10) = NULL,
@@ -1217,9 +1184,8 @@ END
 GO
 
 -- 搜索翻译
-IF OBJECT_ID('dbo.sp_translation_search', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_translation_search;
 GO
-CREATE PROCEDURE dbo.sp_translation_search
+CREATE OR ALTER PROCEDURE dbo.sp_translation_search
     @keyword NVARCHAR(200),
     @language_code NVARCHAR(10) = NULL,
     @review_status NVARCHAR(20) = NULL,
@@ -1245,9 +1211,8 @@ END
 GO
 
 -- 删除翻译
-IF OBJECT_ID('dbo.sp_delete_translation', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_delete_translation;
 GO
-CREATE PROCEDURE dbo.sp_delete_translation
+CREATE OR ALTER PROCEDURE dbo.sp_delete_translation
     @translation_id INT
 AS
 BEGIN
@@ -1259,9 +1224,8 @@ END
 GO
 
 -- 删除翻译（级联删除版本和审核记录）
-IF OBJECT_ID('dbo.sp_translation_delete', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_translation_delete;
 GO
-CREATE PROCEDURE dbo.sp_translation_delete
+CREATE OR ALTER PROCEDURE dbo.sp_translation_delete
     @translation_id INT
 AS
 BEGIN
@@ -1272,9 +1236,8 @@ END
 GO
 
 -- 删除实体的所有翻译
-IF OBJECT_ID('dbo.sp_translation_delete_by_entity', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_translation_delete_by_entity;
 GO
-CREATE PROCEDURE dbo.sp_translation_delete_by_entity
+CREATE OR ALTER PROCEDURE dbo.sp_translation_delete_by_entity
     @entity_type NVARCHAR(50),
     @entity_id INT
 AS
@@ -1287,9 +1250,8 @@ END
 GO
 
 -- 批量删除翻译
-IF OBJECT_ID('dbo.sp_batch_delete_translations', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_batch_delete_translations;
 GO
-CREATE PROCEDURE dbo.sp_batch_delete_translations
+CREATE OR ALTER PROCEDURE dbo.sp_batch_delete_translations
     @translation_ids NVARCHAR(MAX)
 AS
 BEGIN
@@ -1305,9 +1267,8 @@ END
 GO
 
 -- 提交翻译审核
-IF OBJECT_ID('dbo.sp_submit_translation_review', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_submit_translation_review;
 GO
-CREATE PROCEDURE dbo.sp_submit_translation_review
+CREATE OR ALTER PROCEDURE dbo.sp_submit_translation_review
     @translation_id INT,
     @reviewer_id INT,
     @review_status NVARCHAR(20),
@@ -1338,9 +1299,8 @@ END
 GO
 
 -- 审核翻译
-IF OBJECT_ID('dbo.sp_translation_review', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_translation_review;
 GO
-CREATE PROCEDURE dbo.sp_translation_review
+CREATE OR ALTER PROCEDURE dbo.sp_translation_review
     @translation_id INT,
     @reviewer_id INT,
     @review_status NVARCHAR(20),
@@ -1360,9 +1320,8 @@ END
 GO
 
 -- 查询待审核翻译列表
-IF OBJECT_ID('dbo.sp_get_pending_reviews', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_get_pending_reviews;
 GO
-CREATE PROCEDURE dbo.sp_get_pending_reviews
+CREATE OR ALTER PROCEDURE dbo.sp_get_pending_reviews
     @entity_type NVARCHAR(50) = NULL,
     @language_code NVARCHAR(10) = NULL,
     @page INT = 1,
@@ -1399,9 +1358,8 @@ END
 GO
 
 -- 获取翻译历史版本
-IF OBJECT_ID('dbo.sp_get_translation_versions', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_get_translation_versions;
 GO
-CREATE PROCEDURE dbo.sp_get_translation_versions
+CREATE OR ALTER PROCEDURE dbo.sp_get_translation_versions
     @translation_id INT
 AS
 BEGIN
@@ -1415,9 +1373,8 @@ END
 GO
 
 -- 获取翻译历史版本（扩展）
-IF OBJECT_ID('dbo.sp_translation_get_versions', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_translation_get_versions;
 GO
-CREATE PROCEDURE dbo.sp_translation_get_versions
+CREATE OR ALTER PROCEDURE dbo.sp_translation_get_versions
     @translation_id INT,
     @page INT = 1,
     @page_size INT = 10
@@ -1436,9 +1393,8 @@ END
 GO
 
 -- 恢复翻译版本
-IF OBJECT_ID('dbo.sp_translation_restore_version', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_translation_restore_version;
 GO
-CREATE PROCEDURE dbo.sp_translation_restore_version
+CREATE OR ALTER PROCEDURE dbo.sp_translation_restore_version
     @translation_id INT,
     @version_number INT
 AS
@@ -1460,9 +1416,8 @@ END
 GO
 
 -- 创建翻译版本
-IF OBJECT_ID('dbo.sp_create_translation_version', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_create_translation_version;
 GO
-CREATE PROCEDURE dbo.sp_create_translation_version
+CREATE OR ALTER PROCEDURE dbo.sp_create_translation_version
     @translation_id INT,
     @translated_text NVARCHAR(MAX),
     @edited_by INT = NULL,
@@ -1488,9 +1443,8 @@ END
 GO
 
 -- 添加翻译记忆
-IF OBJECT_ID('dbo.sp_translation_memory_add', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_translation_memory_add;
 GO
-CREATE PROCEDURE dbo.sp_translation_memory_add
+CREATE OR ALTER PROCEDURE dbo.sp_translation_memory_add
     @source_text NVARCHAR(MAX),
     @target_text NVARCHAR(MAX),
     @source_language NVARCHAR(10),
@@ -1518,9 +1472,8 @@ END
 GO
 
 -- 查询翻译记忆
-IF OBJECT_ID('dbo.sp_translation_memory_search', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_translation_memory_search;
 GO
-CREATE PROCEDURE dbo.sp_translation_memory_search
+CREATE OR ALTER PROCEDURE dbo.sp_translation_memory_search
     @source_text NVARCHAR(MAX),
     @source_language NVARCHAR(10),
     @target_language NVARCHAR(10),
@@ -1536,10 +1489,8 @@ BEGIN
 END
 GO
 
--- 翻译记忆查询（哈希版）
-IF OBJECT_ID('dbo.sp_lookup_translation_memory', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_lookup_translation_memory;
 GO
-CREATE PROCEDURE dbo.sp_lookup_translation_memory
+CREATE OR ALTER PROCEDURE dbo.sp_lookup_translation_memory
     @source_text NVARCHAR(MAX),
     @target_language NVARCHAR(10)
 AS
@@ -1552,7 +1503,7 @@ BEGIN
     SELECT 
         m.[memory_id],
         m.[source_text],
-        m.[translated_text],
+        m.[target_text],
         m.[quality_score],
         m.[usage_count]
     FROM dbo.translation_memory m
@@ -1562,14 +1513,12 @@ BEGIN
 END
 GO
 
--- 保存翻译记忆（哈希版）
-IF OBJECT_ID('dbo.sp_upsert_translation_memory', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_upsert_translation_memory;
 GO
-CREATE PROCEDURE dbo.sp_upsert_translation_memory
+CREATE OR ALTER PROCEDURE dbo.sp_upsert_translation_memory
     @source_text NVARCHAR(MAX),
     @source_language NVARCHAR(10),
     @target_language NVARCHAR(10),
-    @translated_text NVARCHAR(MAX),
+    @target_text NVARCHAR(MAX),
     @quality_score INT = 80,
     @context NVARCHAR(200) = NULL
 AS
@@ -1586,6 +1535,7 @@ BEGIN
     BEGIN
         UPDATE dbo.translation_memory
         SET 
+            [target_text] = @target_text,
             [usage_count] = [usage_count] + 1,
             [last_used_at] = GETDATE(),
             [quality_score] = CASE WHEN @quality_score > [quality_score] THEN @quality_score ELSE [quality_score] END
@@ -1595,20 +1545,18 @@ BEGIN
     BEGIN
         INSERT INTO dbo.translation_memory (
             [source_text_hash], [source_text], [source_language], [target_language], 
-            [translated_text], [quality_score], [context]
+            [target_text], [quality_score], [context]
         )
         VALUES (
             @hash, @source_text, @source_language, @target_language, 
-            @translated_text, @quality_score, @context
+            @target_text, @quality_score, @context
         );
     END
 END
 GO
 
--- 批量操作翻译
-IF OBJECT_ID('dbo.sp_translation_batch_update', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_translation_batch_update;
 GO
-CREATE PROCEDURE dbo.sp_translation_batch_update
+CREATE OR ALTER PROCEDURE dbo.sp_translation_batch_update
     @entity_type NVARCHAR(50),
     @language_code NVARCHAR(10),
     @review_status NVARCHAR(20),
@@ -1721,9 +1669,8 @@ END
 GO
 
 -- 注册设备
-IF OBJECT_ID('dbo.sp_sync_register_device', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_sync_register_device;
 GO
-CREATE PROCEDURE dbo.sp_sync_register_device
+CREATE OR ALTER PROCEDURE dbo.sp_sync_register_device
     @device_id NVARCHAR(64),
     @device_name NVARCHAR(100),
     @device_type NVARCHAR(50),
@@ -1747,9 +1694,8 @@ END
 GO
 
 -- 记录同步日志
-IF OBJECT_ID('dbo.sp_sync_log_add', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_sync_log_add;
 GO
-CREATE PROCEDURE dbo.sp_sync_log_add
+CREATE OR ALTER PROCEDURE dbo.sp_sync_log_add
     @sync_id NVARCHAR(64),
     @user_id INT,
     @device_id NVARCHAR(64),
@@ -1774,9 +1720,8 @@ END
 GO
 
 -- 记录同步冲突
-IF OBJECT_ID('dbo.sp_sync_conflict_add', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_sync_conflict_add;
 GO
-CREATE PROCEDURE dbo.sp_sync_conflict_add
+CREATE OR ALTER PROCEDURE dbo.sp_sync_conflict_add
     @sync_id NVARCHAR(64),
     @entity_type NVARCHAR(50),
     @entity_id INT,
@@ -1800,9 +1745,8 @@ END
 GO
 
 -- 解决冲突
-IF OBJECT_ID('dbo.sp_sync_conflict_resolve', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_sync_conflict_resolve;
 GO
-CREATE PROCEDURE dbo.sp_sync_conflict_resolve
+CREATE OR ALTER PROCEDURE dbo.sp_sync_conflict_resolve
     @conflict_id INT,
     @resolved_by INT,
     @resolution_action NVARCHAR(50)
@@ -1816,9 +1760,8 @@ END
 GO
 
 -- 获取用户待解决冲突
-IF OBJECT_ID('dbo.sp_sync_get_user_conflicts', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_sync_get_user_conflicts;
 GO
-CREATE PROCEDURE dbo.sp_sync_get_user_conflicts
+CREATE OR ALTER PROCEDURE dbo.sp_sync_get_user_conflicts
     @user_id INT,
     @limit INT = 50
 AS
@@ -1833,9 +1776,8 @@ END
 GO
 
 -- 更新同步统计
-IF OBJECT_ID('dbo.sp_sync_stats_update', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_sync_stats_update;
 GO
-CREATE PROCEDURE dbo.sp_sync_stats_update
+CREATE OR ALTER PROCEDURE dbo.sp_sync_stats_update
     @user_id INT,
     @device_id NVARCHAR(64) = NULL,
     @data_uploaded_bytes BIGINT = 0,
@@ -1876,9 +1818,8 @@ END
 GO
 
 -- 更新设备最后同步时间
-IF OBJECT_ID('dbo.sp_sync_update_device_last_sync', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_sync_update_device_last_sync;
 GO
-CREATE PROCEDURE dbo.sp_sync_update_device_last_sync
+CREATE OR ALTER PROCEDURE dbo.sp_sync_update_device_last_sync
     @device_id NVARCHAR(64),
     @sync_status NVARCHAR(20) = 'success'
 AS
@@ -1973,9 +1914,8 @@ IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'idx_kg_verifications_topi
 GO
 
 -- 根据关键词查询知识
-IF OBJECT_ID('dbo.sp_kg_query', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_kg_query;
 GO
-CREATE PROCEDURE dbo.sp_kg_query
+CREATE OR ALTER PROCEDURE dbo.sp_kg_query
     @keywords NVARCHAR(MAX),
     @language NVARCHAR(10) = 'zh',
     @max_results INT = 5
@@ -2001,9 +1941,8 @@ END
 GO
 
 -- 记录验证结果
-IF OBJECT_ID('dbo.sp_kg_log_verification', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_kg_log_verification;
 GO
-CREATE PROCEDURE dbo.sp_kg_log_verification
+CREATE OR ALTER PROCEDURE dbo.sp_kg_log_verification
     @question NVARCHAR(MAX),
     @ai_answer NVARCHAR(MAX),
     @ai_provider NVARCHAR(50),
@@ -2019,9 +1958,8 @@ END
 GO
 
 -- 查询实体的直接邻居（关系查询）
-IF OBJECT_ID('dbo.sp_kg_get_neighbors', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_kg_get_neighbors;
 GO
-CREATE PROCEDURE dbo.sp_kg_get_neighbors
+CREATE OR ALTER PROCEDURE dbo.sp_kg_get_neighbors
     @topic_id INT,
     @relation_type NVARCHAR(50) = NULL
 AS
@@ -2044,9 +1982,8 @@ END
 GO
 
 -- 根据主题名称查询主题ID
-IF OBJECT_ID('dbo.sp_kg_find_topic', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_kg_find_topic;
 GO
-CREATE PROCEDURE dbo.sp_kg_find_topic
+CREATE OR ALTER PROCEDURE dbo.sp_kg_find_topic
     @topic_name NVARCHAR(200)
 AS
 BEGIN
@@ -2057,9 +1994,8 @@ END
 GO
 
 -- 查询所有实体（支持分页和过滤）
-IF OBJECT_ID('dbo.sp_kg_get_topics', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_kg_get_topics;
 GO
-CREATE PROCEDURE dbo.sp_kg_get_topics
+CREATE OR ALTER PROCEDURE dbo.sp_kg_get_topics
     @category NVARCHAR(50) = NULL,
     @page INT = 1,
     @page_size INT = 20

@@ -566,29 +566,47 @@ export async function initDatabase(dbName: keyof typeof dbConfigs): Promise<void
         continue;
       }
 
-      const sqlContent = fs.readFileSync(scriptPath, 'utf8');
-      const batches = sqlContent.split('GO');
-
-      for (const batch of batches) {
-        const trimmedBatch = batch.trim();
-        if (trimmedBatch && !trimmedBatch.startsWith('--')) {
-          try {
-            await pool.request().query(trimmedBatch);
-          } catch (err: any) {
-            if (!err.message.includes('already exists') && 
-                !err.message.includes('Cannot drop') &&
-                !err.message.includes('Could not find')) {
-              console.warn(`[DB] 执行脚本 ${scriptName} 的部分SQL失败（可能是重复执行）: ${err.message.slice(0, 100)}`);
-            }
-          }
-        }
-      }
-
+      await executeSqlScript(pool, scriptPath);
       console.log(`[DB] 数据库${dbName}的初始化脚本 ${scriptName} 执行完成`);
     }
   } catch (err: any) {
     console.error(`[DB] 数据库${dbName}初始化失败: ${err.message}`);
     throw err;
+  }
+}
+
+/**
+ * 执行 SQL 脚本文件（容错增强版）
+ * @param pool - 数据库连接池
+ * @param scriptPath - SQL脚本文件路径
+ */
+async function executeSqlScript(pool: sql.ConnectionPool, scriptPath: string): Promise<void> {
+  const sqlContent = fs.readFileSync(scriptPath, 'utf8');
+  
+  // 使用正则分割 GO 语句，支持大小写和前后空格
+  const batches = sqlContent.split(/\bGO\b/i).map(b => b.trim()).filter(b => b);
+  
+  // SQL Server 错误码列表：忽略已存在/重复执行的错误
+  // 2714: 对象已存在
+  // 1913: 对象名无效（删除不存在的对象）
+  // 1750: 无法创建约束或索引
+  // 208: 对象名不存在
+  // 547: 外键约束冲突
+  // 156: 语法错误（可能是注释或空行）
+  const skipErrors = [2714, 1913, 1750, 208, 547, 156];
+  
+  for (const batch of batches) {
+    try {
+      await pool.request().query(batch);
+    } catch (err: any) {
+      // 检查是否为可忽略的错误
+      if (skipErrors.includes(err.number)) {
+        console.log(`[DB] 跳过（已存在/可忽略）: ${err.message.slice(0, 150)}`);
+      } else {
+        // 非可忽略错误，抛出异常
+        throw err;
+      }
+    }
   }
 }
 

@@ -358,7 +358,10 @@ app.use(`${apiPrefix}/knowledge-enhanced`, knowledgeEnhancedTrainingRouter);
 app.use(`${apiPrefix}/sync`, syncRouter);
 
 // 5. 前端静态文件服务（生产环境）— 放在API路由之后
-const frontendDistPath = path.resolve(__dirname, '../../frontend/dist');
+// 正确路径：backend 和 frontend 同级
+const frontendDistPath = path.join(__dirname, '..', '..', 'frontend', 'dist');
+console.log(`[Static] 前端dist目录路径: ${frontendDistPath}`);
+
 if (require('fs').existsSync(frontendDistPath)) {
   app.use(express.static(frontendDistPath));
   

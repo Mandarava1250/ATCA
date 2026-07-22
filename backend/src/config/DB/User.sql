@@ -147,11 +147,8 @@ GO
 -- ============================================
 -- 6. 更新时间触发器
 -- ============================================
-IF OBJECT_ID('tr_users_updated_at', 'TR') IS NOT NULL
-    DROP TRIGGER tr_users_updated_at;
 GO
-
-CREATE TRIGGER tr_users_updated_at
+CREATE OR ALTER TRIGGER tr_users_updated_at
 ON dbo.users
 AFTER UPDATE
 AS
@@ -164,11 +161,8 @@ BEGIN
 END
 GO
 
-IF OBJECT_ID('tr_user_settings_updated_at', 'TR') IS NOT NULL
-    DROP TRIGGER tr_user_settings_updated_at;
 GO
-
-CREATE TRIGGER tr_user_settings_updated_at
+CREATE OR ALTER TRIGGER tr_user_settings_updated_at
 ON dbo.user_settings
 AFTER UPDATE
 AS
@@ -186,9 +180,8 @@ GO
 -- ============================================
 
 -- 用户注册
-IF OBJECT_ID('dbo.sp_user_register', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_user_register;
 GO
-CREATE PROCEDURE dbo.sp_user_register
+CREATE OR ALTER PROCEDURE dbo.sp_user_register
     @username VARCHAR(50),
     @email VARCHAR(100),
     @password VARCHAR(255),
@@ -203,9 +196,8 @@ END
 GO
 
 -- 用户登录
-IF OBJECT_ID('dbo.sp_user_login', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_user_login;
 GO
-CREATE PROCEDURE dbo.sp_user_login
+CREATE OR ALTER PROCEDURE dbo.sp_user_login
     @username VARCHAR(50),
     @password VARCHAR(255)
 AS
@@ -218,9 +210,8 @@ END
 GO
 
 -- 更新用户信息
-IF OBJECT_ID('dbo.sp_user_update', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_user_update;
 GO
-CREATE PROCEDURE dbo.sp_user_update
+CREATE OR ALTER PROCEDURE dbo.sp_user_update
     @user_id INT,
     @nickname VARCHAR(50) = NULL,
     @avatar VARCHAR(255) = NULL,
@@ -237,9 +228,8 @@ END
 GO
 
 -- 更新用户积分
-IF OBJECT_ID('dbo.sp_user_update_points', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_user_update_points;
 GO
-CREATE PROCEDURE dbo.sp_user_update_points
+CREATE OR ALTER PROCEDURE dbo.sp_user_update_points
     @user_id INT,
     @amount INT,
     @transaction_type VARCHAR(50),
@@ -269,9 +259,8 @@ END
 GO
 
 -- 添加收藏
-IF OBJECT_ID('dbo.sp_user_add_favorite', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_user_add_favorite;
 GO
-CREATE PROCEDURE dbo.sp_user_add_favorite
+CREATE OR ALTER PROCEDURE dbo.sp_user_add_favorite
     @user_id INT,
     @item_id INT,
     @item_type VARCHAR(50)
@@ -287,9 +276,8 @@ END
 GO
 
 -- 删除收藏
-IF OBJECT_ID('dbo.sp_user_remove_favorite', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_user_remove_favorite;
 GO
-CREATE PROCEDURE dbo.sp_user_remove_favorite
+CREATE OR ALTER PROCEDURE dbo.sp_user_remove_favorite
     @user_id INT,
     @item_id INT,
     @item_type VARCHAR(50)
@@ -302,9 +290,8 @@ END
 GO
 
 -- 获取用户收藏列表
-IF OBJECT_ID('dbo.sp_user_get_favorites', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_user_get_favorites;
 GO
-CREATE PROCEDURE dbo.sp_user_get_favorites
+CREATE OR ALTER PROCEDURE dbo.sp_user_get_favorites
     @user_id INT,
     @item_type VARCHAR(50) = NULL
 AS
@@ -318,9 +305,8 @@ END
 GO
 
 -- 获取用户设置
-IF OBJECT_ID('dbo.sp_user_get_settings', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_user_get_settings;
 GO
-CREATE PROCEDURE dbo.sp_user_get_settings
+CREATE OR ALTER PROCEDURE dbo.sp_user_get_settings
     @user_id INT
 AS
 BEGIN
@@ -333,9 +319,8 @@ END
 GO
 
 -- 更新用户设置
-IF OBJECT_ID('dbo.sp_user_update_settings', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_user_update_settings;
 GO
-CREATE PROCEDURE dbo.sp_user_update_settings
+CREATE OR ALTER PROCEDURE dbo.sp_user_update_settings
     @user_id INT,
     @language VARCHAR(10) = NULL,
     @theme VARCHAR(20) = NULL,
@@ -365,9 +350,8 @@ END
 GO
 
 -- 获取用户积分交易记录
-IF OBJECT_ID('dbo.sp_user_get_point_transactions', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_user_get_point_transactions;
 GO
-CREATE PROCEDURE dbo.sp_user_get_point_transactions
+CREATE OR ALTER PROCEDURE dbo.sp_user_get_point_transactions
     @user_id INT,
     @page INT = 1,
     @page_size INT = 20
@@ -385,9 +369,8 @@ END
 GO
 
 -- 获取用户统计信息
-IF OBJECT_ID('dbo.sp_user_get_stats', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_user_get_stats;
 GO
-CREATE PROCEDURE dbo.sp_user_get_stats
+CREATE OR ALTER PROCEDURE dbo.sp_user_get_stats
     @user_id INT
 AS
 BEGIN
@@ -403,9 +386,8 @@ END
 GO
 
 -- 获取用户列表
-IF OBJECT_ID('dbo.sp_user_get_list', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_user_get_list;
 GO
-CREATE PROCEDURE dbo.sp_user_get_list
+CREATE OR ALTER PROCEDURE dbo.sp_user_get_list
     @role VARCHAR(10) = NULL,
     @is_active BIT = NULL,
     @page INT = 1,
@@ -424,9 +406,8 @@ END
 GO
 
 -- 更新用户角色
-IF OBJECT_ID('dbo.sp_user_update_role', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_user_update_role;
 GO
-CREATE PROCEDURE dbo.sp_user_update_role
+CREATE OR ALTER PROCEDURE dbo.sp_user_update_role
     @user_id INT,
     @role VARCHAR(10)
 AS
@@ -439,9 +420,8 @@ END
 GO
 
 -- 锁定/解锁用户
-IF OBJECT_ID('dbo.sp_user_toggle_active', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_user_toggle_active;
 GO
-CREATE PROCEDURE dbo.sp_user_toggle_active
+CREATE OR ALTER PROCEDURE dbo.sp_user_toggle_active
     @user_id INT,
     @is_active BIT
 AS
@@ -454,9 +434,8 @@ END
 GO
 
 -- 记录登录尝试
-IF OBJECT_ID('dbo.sp_user_log_login_attempt', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_user_log_login_attempt;
 GO
-CREATE PROCEDURE dbo.sp_user_log_login_attempt
+CREATE OR ALTER PROCEDURE dbo.sp_user_log_login_attempt
     @username VARCHAR(50),
     @success BIT
 AS

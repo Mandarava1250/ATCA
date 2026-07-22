@@ -124,11 +124,8 @@ GO
 -- ============================================
 -- 6. 更新时间触发器
 -- ============================================
-IF OBJECT_ID('tr_user_sync_status_updated_at', 'TR') IS NOT NULL
-    DROP TRIGGER tr_user_sync_status_updated_at;
 GO
-
-CREATE TRIGGER tr_user_sync_status_updated_at
+CREATE OR ALTER TRIGGER tr_user_sync_status_updated_at
 ON dbo.user_sync_status
 AFTER UPDATE
 AS
@@ -146,9 +143,8 @@ GO
 -- ============================================
 
 -- 注册同步设备
-IF OBJECT_ID('dbo.sp_sync_register_device', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_sync_register_device;
 GO
-CREATE PROCEDURE dbo.sp_sync_register_device
+CREATE OR ALTER PROCEDURE dbo.sp_sync_register_device
     @device_id NVARCHAR(64),
     @user_id INT,
     @device_type NVARCHAR(20),
@@ -173,15 +169,14 @@ BEGIN
         INSERT INTO dbo.sync_devices ([device_id], [user_id], [device_type], [device_name],
             [device_model], [os_type], [os_version], [app_version])
         VALUES (@device_id, @user_id, @device_type, @device_name,
-            @device_model, @os_type, @os_version, @app_version);
+            [device_model], @os_type, @os_version, @app_version);
     END
 END
 GO
 
 -- 获取用户设备列表
-IF OBJECT_ID('dbo.sp_sync_get_user_devices', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_sync_get_user_devices;
 GO
-CREATE PROCEDURE dbo.sp_sync_get_user_devices
+CREATE OR ALTER PROCEDURE dbo.sp_sync_get_user_devices
     @user_id INT
 AS
 BEGIN
@@ -195,9 +190,8 @@ END
 GO
 
 -- 记录同步操作
-IF OBJECT_ID('dbo.sp_sync_log_operation', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_sync_log_operation;
 GO
-CREATE PROCEDURE dbo.sp_sync_log_operation
+CREATE OR ALTER PROCEDURE dbo.sp_sync_log_operation
     @user_id INT,
     @device_id NVARCHAR(64),
     @operation_type NVARCHAR(20),
@@ -222,9 +216,8 @@ END
 GO
 
 -- 获取待同步操作
-IF OBJECT_ID('dbo.sp_sync_get_pending_operations', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_sync_get_pending_operations;
 GO
-CREATE PROCEDURE dbo.sp_sync_get_pending_operations
+CREATE OR ALTER PROCEDURE dbo.sp_sync_get_pending_operations
     @user_id INT,
     @device_id NVARCHAR(64),
     @sync_version INT = 0
@@ -239,9 +232,8 @@ END
 GO
 
 -- 标记操作已同步
-IF OBJECT_ID('dbo.sp_sync_mark_synced', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_sync_mark_synced;
 GO
-CREATE PROCEDURE dbo.sp_sync_mark_synced
+CREATE OR ALTER PROCEDURE dbo.sp_sync_mark_synced
     @operation_id BIGINT,
     @device_id NVARCHAR(64) = NULL
 AS
@@ -261,9 +253,8 @@ END
 GO
 
 -- 记录同步冲突
-IF OBJECT_ID('dbo.sp_sync_log_conflict', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_sync_log_conflict;
 GO
-CREATE PROCEDURE dbo.sp_sync_log_conflict
+CREATE OR ALTER PROCEDURE dbo.sp_sync_log_conflict
     @user_id INT,
     @entity_type NVARCHAR(50),
     @entity_id INT,
@@ -285,9 +276,8 @@ END
 GO
 
 -- 获取用户冲突列表
-IF OBJECT_ID('dbo.sp_sync_get_user_conflicts', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_sync_get_user_conflicts;
 GO
-CREATE PROCEDURE dbo.sp_sync_get_user_conflicts
+CREATE OR ALTER PROCEDURE dbo.sp_sync_get_user_conflicts
     @user_id INT,
     @resolved BIT = 0
 AS
@@ -303,9 +293,8 @@ END
 GO
 
 -- 解决冲突
-IF OBJECT_ID('dbo.sp_sync_resolve_conflict', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_sync_resolve_conflict;
 GO
-CREATE PROCEDURE dbo.sp_sync_resolve_conflict
+CREATE OR ALTER PROCEDURE dbo.sp_sync_resolve_conflict
     @conflict_id INT,
     @resolved_by INT,
     @resolved_choice NVARCHAR(20)
@@ -319,9 +308,8 @@ END
 GO
 
 -- 获取用户同步状态
-IF OBJECT_ID('dbo.sp_sync_get_user_status', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_sync_get_user_status;
 GO
-CREATE PROCEDURE dbo.sp_sync_get_user_status
+CREATE OR ALTER PROCEDURE dbo.sp_sync_get_user_status
     @user_id INT
 AS
 BEGIN
@@ -334,9 +322,8 @@ END
 GO
 
 -- 更新用户同步状态
-IF OBJECT_ID('dbo.sp_sync_update_user_status', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_sync_update_user_status;
 GO
-CREATE PROCEDURE dbo.sp_sync_update_user_status
+CREATE OR ALTER PROCEDURE dbo.sp_sync_update_user_status
     @user_id INT,
     @sync_type NVARCHAR(20)
 AS
@@ -359,9 +346,8 @@ END
 GO
 
 -- 获取同步统计
-IF OBJECT_ID('dbo.sp_sync_get_stats', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_sync_get_stats;
 GO
-CREATE PROCEDURE dbo.sp_sync_get_stats
+CREATE OR ALTER PROCEDURE dbo.sp_sync_get_stats
     @user_id INT = NULL
 AS
 BEGIN
@@ -377,9 +363,8 @@ END
 GO
 
 -- 停用设备
-IF OBJECT_ID('dbo.sp_sync_deactivate_device', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_sync_deactivate_device;
 GO
-CREATE PROCEDURE dbo.sp_sync_deactivate_device
+CREATE OR ALTER PROCEDURE dbo.sp_sync_deactivate_device
     @device_id NVARCHAR(64)
 AS
 BEGIN
@@ -391,9 +376,8 @@ END
 GO
 
 -- 清理过期同步日志
-IF OBJECT_ID('dbo.sp_sync_cleanup_logs', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_sync_cleanup_logs;
 GO
-CREATE PROCEDURE dbo.sp_sync_cleanup_logs
+CREATE OR ALTER PROCEDURE dbo.sp_sync_cleanup_logs
     @days_to_keep INT = 30
 AS
 BEGIN
@@ -445,9 +429,8 @@ GO
 -- ============================================
 
 -- 记录打卡同步数据
-IF OBJECT_ID('dbo.sp_sync_record_checkin', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_sync_record_checkin;
 GO
-CREATE PROCEDURE dbo.sp_sync_record_checkin
+CREATE OR ALTER PROCEDURE dbo.sp_sync_record_checkin
     @user_id INT,
     @checkin_id BIGINT,
     @checkin_date DATE,
@@ -497,9 +480,8 @@ END
 GO
 
 -- 获取用户打卡同步记录
-IF OBJECT_ID('dbo.sp_sync_get_user_checkins', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_sync_get_user_checkins;
 GO
-CREATE PROCEDURE dbo.sp_sync_get_user_checkins
+CREATE OR ALTER PROCEDURE dbo.sp_sync_get_user_checkins
     @user_id INT,
     @page INT = 1,
     @limit INT = 30,
@@ -531,9 +513,8 @@ END
 GO
 
 -- 获取用户待同步打卡记录
-IF OBJECT_ID('dbo.sp_sync_get_pending_checkins', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_sync_get_pending_checkins;
 GO
-CREATE PROCEDURE dbo.sp_sync_get_pending_checkins
+CREATE OR ALTER PROCEDURE dbo.sp_sync_get_pending_checkins
     @user_id INT
 AS
 BEGIN
@@ -555,9 +536,8 @@ END
 GO
 
 -- 标记打卡已同步到设备
-IF OBJECT_ID('dbo.sp_sync_mark_checkin_synced', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_sync_mark_checkin_synced;
 GO
-CREATE PROCEDURE dbo.sp_sync_mark_checkin_synced
+CREATE OR ALTER PROCEDURE dbo.sp_sync_mark_checkin_synced
     @user_id INT,
     @checkin_date DATE,
     @device_id NVARCHAR(64)
@@ -577,9 +557,8 @@ END
 GO
 
 -- 批量标记打卡已同步
-IF OBJECT_ID('dbo.sp_sync_mark_checkins_synced', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_sync_mark_checkins_synced;
 GO
-CREATE PROCEDURE dbo.sp_sync_mark_checkins_synced
+CREATE OR ALTER PROCEDURE dbo.sp_sync_mark_checkins_synced
     @user_id INT,
     @device_id NVARCHAR(64)
 AS
@@ -601,9 +580,8 @@ END
 GO
 
 -- 获取用户打卡同步统计
-IF OBJECT_ID('dbo.sp_sync_get_checkin_stats', 'P') IS NOT NULL DROP PROCEDURE dbo.sp_sync_get_checkin_stats;
 GO
-CREATE PROCEDURE dbo.sp_sync_get_checkin_stats
+CREATE OR ALTER PROCEDURE dbo.sp_sync_get_checkin_stats
     @user_id INT
 AS
 BEGIN
@@ -623,11 +601,8 @@ GO
 -- ============================================
 -- 11. 更新时间触发器
 -- ============================================
-IF OBJECT_ID('tr_user_checkin_sync_updated_at', 'TR') IS NOT NULL
-    DROP TRIGGER tr_user_checkin_sync_updated_at;
 GO
-
-CREATE TRIGGER tr_user_checkin_sync_updated_at
+CREATE OR ALTER TRIGGER tr_user_checkin_sync_updated_at
 ON dbo.user_checkin_sync
 AFTER UPDATE
 AS
