@@ -1,5 +1,5 @@
 // ============================================
-// 华夏营造 - 3D工坊模块 (支持 Mock 降级)
+// 筑见山河 - 3D工坊模块 (支持 Mock 降级)
 // ============================================
 
 import { Router } from 'express';
@@ -55,8 +55,8 @@ const modelUpload = multer({
 const idParamSchema = z.object({ id: z.string().regex(/^\d+$/) });
 const saveModelSchema = z.object({
   modelName: z.string().min(1).max(255),
-  modelData: z.string().max(50 * 1024 * 1024).optional(), // 最大50MB
-  thumbnailUrl: z.string().max(500 * 1024).optional(), // 最大500KB（base64缩略图）
+  modelData: z.string().max(50 * 1024 * 1024).optional(),
+  thumbnailUrl: z.string().max(1 * 1024 * 1024).optional(),
   isPublic: z.boolean().optional().default(false),
 });
 
@@ -146,39 +146,47 @@ router.post('/', authMiddleware, validateBody(saveModelSchema), asyncHandler(asy
   let thumbnailUrl: string = req.body.thumbnailUrl || '';
   const userId = req.user!.userId;
 
-  logger.info('保存用户模型', { userId, modelName, isPublic, hasModelData: !!modelData });
+  logger.info('保存用户模型', { userId, modelName, isPublic, hasModelData: !!modelData, thumbnailLength: thumbnailUrl?.length });
 
   if (isMockMode()) {
     logger.info('Mock模式-模型保存成功');
     res.status(201).json({ success: true, data: { modelId: 1, modelName, userId, isPublic }, message: '模型保存成功（Mock）' }); return;
   }
 
-  // thumbnail_url 支持 base64 缩略图，最大500KB
-  if (thumbnailUrl && thumbnailUrl.length > 500 * 1024) {
+  if (thumbnailUrl && thumbnailUrl.length > 1 * 1024 * 1024) {
     logger.warn('缩略图数据过长，进行截断', { originalLength: thumbnailUrl.length });
-    thumbnailUrl = thumbnailUrl.substring(0, 500 * 1024);
+    thumbnailUrl = thumbnailUrl.substring(0, 1 * 1024 * 1024);
   }
 
   let modelId: number;
 
   try {
-    // 使用事务确保数据一致性
+    logger.debug('开始数据库事务', { userId, modelName });
+    
     modelId = await transaction('media3d', async (tx) => {
-      // 1. 插入用户模型记录
-      const insertResult = await tx.request()
+      const request = tx.request();
+      request
         .input('userId', sql.Int, userId)
-        .input('modelName', sql.NVarChar(sql.MAX), modelName)
+        .input('modelName', sql.NVarChar(255), modelName)
         .input('modelData', sql.NVarChar(sql.MAX), modelData || null)
         .input('thumbnailUrl', sql.NVarChar(sql.MAX), thumbnailUrl || null)
-        .input('isPublic', sql.Bit, isPublic ? 1 : 0)
-        .query(`INSERT INTO dbo.user_models ([user_id], [model_name], [model_data], [thumbnail_url], [is_public]) VALUES (@userId, @modelName, @modelData, @thumbnailUrl, @isPublic); SELECT SCOPE_IDENTITY() AS model_id;`);
+        .input('isPublic', sql.Bit, isPublic ? 1 : 0);
 
-      return (insertResult.recordset[0] as any).model_id as number;
+      logger.debug('执行SQL插入', { userId, modelName, hasThumbnail: !!thumbnailUrl });
+      
+      const insertResult = await request.query(
+        `INSERT INTO dbo.user_models ([user_id], [model_name], [model_data], [thumbnail_url], [is_public]) 
+         VALUES (@userId, @modelName, @modelData, @thumbnailUrl, @isPublic); 
+         SELECT SCOPE_IDENTITY() AS model_id;`
+      );
+
+      const id = (insertResult.recordset[0] as any).model_id as number;
+      logger.debug('SQL插入成功', { modelId: id });
+      return id;
     });
 
-    logger.info('模型保存成功', { modelId, userId });
+    logger.info('模型保存成功', { modelId, userId, modelName });
 
-    // 如果设为公开，同步到building_shares（跨库操作，使用单独事务）
     if (isPublic) {
       try {
         await transaction('architecture', async (tx) => {
@@ -197,13 +205,21 @@ router.post('/', authMiddleware, validateBody(saveModelSchema), asyncHandler(asy
         logger.info('模型同步到building_shares成功', { modelId });
       } catch (shareErr: any) {
         logger.warn('[Model3d] 同步到building_shares失败:', shareErr.message);
-        // 记录日志但不中断主流程
       }
     }
 
     res.status(201).json({ success: true, data: { modelId, modelName, userId, isPublic }, message: '模型保存成功' });
   } catch (error: any) {
-    logger.error('[Model3d] 模型保存失败:', error.message);
+    logger.error('[Model3d] 模型保存失败:', { 
+      message: error.message, 
+      stack: error.stack,
+      userId,
+      modelName,
+      modelDataLength: modelData?.length,
+      thumbnailLength: thumbnailUrl?.length,
+      isPublic,
+      errorNumber: error.number,
+    });
     res.status(500).json({ success: false, error: { code: 'MODEL_SAVE_FAILED', message: '模型保存失败，请稍后重试' } });
   }
 }));

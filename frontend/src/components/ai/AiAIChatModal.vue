@@ -661,7 +661,7 @@ async function sendMessageInternal(text: string) {
           messages.value.push({
             id: `kg_${Date.now()}`,
             role: 'assistant',
-            content: `本回答基于华夏营造知识库（${knowledgeEntryCount.value}条知识）进行增强。`,
+            content: `本回答基于筑见山河知识库（${knowledgeEntryCount.value}条知识）进行增强。`,
             timestamp: Date.now(),
           });
           await scrollToBottom();
@@ -1274,7 +1274,7 @@ onMounted(async () => {
     messages.value.push({
       id: 'welcome',
       role: 'assistant',
-      content: '你好！我是华夏营造的智能导览员。我连接了项目专属的古建筑知识库（涵盖结构、朝代、著名建筑等），可以为你提供准确的专业解答。请问有什么可以帮你的？',
+      content: '你好！我是筑见山河的智能导览员。我连接了项目专属的古建筑知识库（涵盖结构、朝代、著名建筑等），可以为你提供准确的专业解答。请问有什么可以帮你的？',
       timestamp: Date.now(),
     });
   }

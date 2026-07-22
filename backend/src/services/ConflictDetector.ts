@@ -1,5 +1,5 @@
 /**
- * 华夏营造 - 冲突检测服务
+ * 筑见山河 - 冲突检测服务
  * 负责检测AI回答与知识库之间的冲突
  */
 
@@ -159,7 +159,7 @@ export class ConflictDetector {
       severity,
       detectedDifference: `AI回答："${text.substring(0, 50)}..."`,
       knowledgeSource: {
-        chapter: '华夏营造知识库',
+        chapter: '筑见山河知识库',
         paragraph: `条目ID: ${match.entry.id}`,
         content: match.entry.content
       },

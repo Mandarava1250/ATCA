@@ -1,5 +1,5 @@
 // ============================================
-// 华夏营造 - 传统构件定义 (ArchitectureComponents)
+// 筑见山河 - 传统构件定义 (ArchitectureComponents)
 // 支持：几何形状、榫卯连接点(localPosition+localDirection)、旋转约束
 // ============================================
 

@@ -63,7 +63,7 @@ async function callAIProvider(ai: any, message: string): Promise<string> {
     model = defaults.models?.[0] || 'qwen-turbo';
   }
   
-  const systemPrompt = ai.system_prompt || '你是华夏营造的AI助手，精通中国古代建筑文化。请用专业但易懂的方式回答用户的问题。';
+  const systemPrompt = ai.system_prompt || '你是筑见山河的AI助手，精通中国古代建筑文化。请用专业但易懂的方式回答用户的问题。';
   const temperatureRaw = ai.temperature != null ? Number(ai.temperature) : NaN;
   // 只在NaN时使用默认值0.7，保留用户明确设置的0值（0表示完全确定性输出）
   const temperature = isNaN(temperatureRaw) ? 0.7 : Math.min(Math.max(temperatureRaw, 0), 2);
@@ -78,7 +78,7 @@ async function callAIProvider(ai: any, message: string): Promise<string> {
     const isNetworkError = err.code === 'ECONNREFUSED' || err.code === 'ENOTFOUND' || err.code === 'ETIMEDOUT' || err.code === 'ECONNRESET';
     console.error(`[AI ${provider}] 请求失败:`, errMsg, 'code:', err.code);
     if (isNetworkError) {
-      return `【离线模式】当前无法连接到${provider} AI服务。\n\n【华夏营造知识库】\n\n中国古建筑是世界上最悠久、最独特的建筑体系之一，具有以下核心特征：\n\n1. **木结构体系**：以榫卯连接为主要方式，不用一钉一铆，抗震性能优良\n2. **斗拱技术**：由斗、拱、昂组成的构件，承托檐部重量\n3. **模数制度**：宋代"材分制"和清代"斗口制"实现了标准化设计与施工\n4. **屋顶等级**：庑殿顶＞歇山顶＞悬山顶＞硬山顶\n\n请稍后重试，或检查网络连接。`;
+      return `【离线模式】当前无法连接到${provider} AI服务。\n\n【筑见山河知识库】\n\n中国古建筑是世界上最悠久、最独特的建筑体系之一，具有以下核心特征：\n\n1. **木结构体系**：以榫卯连接为主要方式，不用一钉一铆，抗震性能优良\n2. **斗拱技术**：由斗、拱、昂组成的构件，承托檐部重量\n3. **模数制度**：宋代"材分制"和清代"斗口制"实现了标准化设计与施工\n4. **屋顶等级**：庑殿顶＞歇山顶＞悬山顶＞硬山顶\n\n请稍后重试，或检查网络连接。`;
     }
     throw err;
   }
@@ -276,7 +276,7 @@ async function _doCallAIProvider(provider: string, apiUrl: string, model: string
       
       // 构建消息数组，确保内容不为空
       const messages = [
-        { role: 'system', content: systemPrompt || '你是华夏营造的AI助手，精通中国古代建筑文化。' },
+        { role: 'system', content: systemPrompt || '你是筑见山河的AI助手，精通中国古代建筑文化。' },
         { role: 'user', content: message || '' },
       ];
       
@@ -563,7 +563,7 @@ router.post('/chat-stream', authMiddleware, asyncHandler(async (req: any, res) =
     const defaults = PROVIDER_DEFAULTS[provider] || PROVIDER_DEFAULTS.custom;
     const apiUrl = ai.api_endpoint || defaults.endpoint;
     const model = ai.model || ai.version || defaults.models[0] || 'gpt-4o';
-    const systemPrompt = ai.system_prompt || '你是华夏营造的AI助手，精通中国古代建筑文化。';
+    const systemPrompt = ai.system_prompt || '你是筑见山河的AI助手，精通中国古代建筑文化。';
     const apiKey = ai.api_key;
 
     if (!apiKey) {
@@ -1507,7 +1507,7 @@ router.get('/ai-configs', asyncHandler(async (_req, res) => {
     res.json({
       success: true,
       data: [
-        { ai_id: 1, name: '华夏营造AI', provider: 'qwan', model: 'qwen-turbo', is_active: true, is_default: true },
+        { ai_id: 1, name: '筑见山河AI', provider: 'qwan', model: 'qwen-turbo', is_active: true, is_default: true },
         { ai_id: 2, name: '智能顾问', provider: 'kimi', model: 'moonshot-v1-8k', is_active: true, is_default: false },
       ]
     });

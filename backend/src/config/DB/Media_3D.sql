@@ -17,7 +17,7 @@ IF OBJECT_ID('dbo.user_models', 'U') IS NULL
             [user_id] INT NOT NULL,
             [model_name] NVARCHAR(255) NOT NULL,
             [model_data] NVARCHAR(MAX) NULL,
-            [thumbnail_url] NVARCHAR(500) NULL,
+            [thumbnail_url] NVARCHAR(MAX) NULL,
             [is_public] BIT DEFAULT 0,
             [download_count] INT DEFAULT 0,
             [created_at] DATETIME2 DEFAULT GETDATE(),
@@ -25,6 +25,12 @@ IF OBJECT_ID('dbo.user_models', 'U') IS NULL
             [is_featured] BIT NOT NULL DEFAULT 0
         );
     END
+GO
+
+IF EXISTS (SELECT * FROM sys.columns WHERE name = 'thumbnail_url' AND object_id = OBJECT_ID('dbo.user_models') AND max_length = 1000)
+BEGIN
+    ALTER TABLE dbo.user_models ALTER COLUMN [thumbnail_url] NVARCHAR(MAX) NULL;
+END
 GO
 
 IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'idx_user_models_user_id' AND object_id = OBJECT_ID('dbo.user_models'))

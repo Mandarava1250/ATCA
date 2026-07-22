@@ -1,5 +1,5 @@
 /**
- * 华夏营造 - 知识增强模型训练服务
+ * 筑见山河 - 知识增强模型训练服务
  * 提供基于知识图谱的模型训练和推理能力
  * 支持知识注入推理、微调数据生成、训练状态管理
  * 实现 IService 接口以纳入统一服务注册体系
@@ -509,7 +509,7 @@ class KnowledgeEnhancedTrainingService implements IService {
       return `抱歉，关于"${query}"我没有找到详细信息。`;
     }
 
-    let response = `根据华夏营造知识图谱，关于"${query}"的详细信息如下：\n\n`;
+    let response = `根据筑见山河知识图谱，关于"${query}"的详细信息如下：\n\n`;
     response += `【${topic.topic_name}】\n`;
     response += `${topic.content_zh}\n\n`;
 
@@ -527,7 +527,7 @@ class KnowledgeEnhancedTrainingService implements IService {
       }
     }
 
-    response += `\n---\n📖 数据来源：华夏营造知识图谱（置信度：${(topic.confidence * 100).toFixed(0)}%）`;
+    response += `\n---\n📖 数据来源：筑见山河知识图谱（置信度：${(topic.confidence * 100).toFixed(0)}%）`;
 
     return response;
   }

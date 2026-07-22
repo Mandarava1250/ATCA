@@ -1,8 +1,8 @@
 export default {
   site: {
-    name: '华夏营造',
+    name: '筑见山河',
     subtitle: '中国古建筑文化传播平台',
-    fullTitle: '华夏营造 — 中国古建筑文化传播平台',
+    fullTitle: '筑见山河 — 中国古建筑文化传播平台',
   },
   nav: {
     menu: '导航菜单',
@@ -26,7 +26,7 @@ export default {
   },
   home: {
     heroBadge: '国家级非物质文化遗产',
-    heroTitle: '华夏营造',
+    heroTitle: '筑见山河',
     heroSubtitle: '中国古建筑文化传播平台',
     heroDesc: '穿越千年时光，从先秦台基到明清宫殿。以数字技术复原传统营造技艺，感受榫卯之间的东方智慧。',
     enterExhibition: '进入展馆',
@@ -80,7 +80,7 @@ export default {
     heroTitle1: '循着时光脉络，',
     heroTitle2: '于山川形胜之间，',
     heroTitle3: '观建筑之美，探历史之韵，感东方之魂。',
-    descP1: '华夏营造，肇自上古，历千载而不衰；木构文明，薪火相传，经百代而弥新。',
+    descP1: '筑见山河，肇自上古，历千载而不衰；木构文明，薪火相传，经百代而弥新。',
     descP2: '秦汉以雄浑立骨，唐宋以风雅传神，明清以精巧成韵。一榫一卯，藏天地之理；一檐一瓦，载山河之气。',
     descP3: '斗拱承穹宇，飞檐揽风月；循天人合一之道，融山水自然之趣。东方营造哲思，终成举世无双的文明瑰宝。',
     descP4: '今以数字为舟，以文脉为帆，汇六处古建风华，邀您共赴一场不负山河的千年之约。',
@@ -325,7 +325,7 @@ export default {
     hint: '按 Enter 发送，Shift+Enter 换行',
     discussionMode: '讨论模式',
     discussionLabel: '多AI讨论：',
-    welcomeMsg: '你好！我是华夏营造的智能导览员。我可以帮你解答关于中国古代建筑的历史、结构、文化等方面的问题。请问有什么可以帮你的？',
+    welcomeMsg: '你好！我是筑见山河的智能导览员。我可以帮你解答关于中国古代建筑的历史、结构、文化等方面的问题。请问有什么可以帮你的？',
     default: '默认',
     errorMsg: '抱歉，服务暂时不可用，请稍后再试。',
     queueStatus: '排队中... 前面还有 {position} 个请求',
@@ -926,7 +926,7 @@ export default {
     browseArch: '浏览古建筑',
   },
   footer: {
-    brandTitle: '华夏营造',
+    brandTitle: '筑见山河',
     brandSubtitle: '中国古代建筑文化传承平台',
     description: '传承千年营造智慧，以数字技术复原古建之美。通过三维互动与人工智能，让每一座古建重生于数字世界。',
     features: '功 能',

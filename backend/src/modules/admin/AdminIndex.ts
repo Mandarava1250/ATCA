@@ -1053,7 +1053,7 @@ router.post('/ai-configs/:id/test', asyncHandler(async (req: any, res) => {
     const ai = config as any;
     const provider = ai.provider || 'custom';
     const model = ai.model || ai.version || 'gpt-4o';
-    const systemPrompt = ai.system_prompt || '你是华夏营造的AI助手，精通中国古代建筑文化。';
+    const systemPrompt = ai.system_prompt || '你是筑见山河的AI助手，精通中国古代建筑文化。';
     const apiUrl = ai.api_endpoint || 'https://api.openai.com/v1/chat/completions';
 
     // 未配置密钥时返回模拟响应

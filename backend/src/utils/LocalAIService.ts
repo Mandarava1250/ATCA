@@ -1,5 +1,5 @@
 /**
- * 华夏营造 - 本地AI模型服务（RAG架构）
+ * 筑见山河 - 本地AI模型服务（RAG架构）
  * 在后端运行，提供知识库增强的AI推理能力
  * 增强版：支持偏离分析、推理过程日志记录
  * 实现 IService 接口以纳入统一服务注册体系
@@ -436,7 +436,7 @@ class LocalAIService implements IService {
     }
     
     const topKnowledge = knowledge[0];
-    let response = `根据华夏营造知识库，关于"${query}"的信息如下：\n\n`;
+    let response = `根据筑见山河知识库，关于"${query}"的信息如下：\n\n`;
     response += `【${topKnowledge.topic}】\n`;
     response += `${topKnowledge.content}\n\n`;
     
@@ -569,7 +569,7 @@ class LocalAIService implements IService {
       severity,
       detectedDifference: `AI回答："${text.substring(0, 50)}..."`,
       knowledgeSource: {
-        chapter: '华夏营造知识库',
+        chapter: '筑见山河知识库',
         paragraph: `条目ID: ${match.entry.id}`,
         content: match.entry.content
       },
@@ -714,7 +714,7 @@ class LocalAIService implements IService {
     }
     
     // 8. 生成参考依据
-    const reference = '基于华夏营造知识库进行评估';
+    const reference = '基于筑见山河知识库进行评估';
     
     const duration = Date.now() - startTime;
     
@@ -930,7 +930,7 @@ class LocalAIService implements IService {
                   id: entity.id,
                   name: entity.name,
                   content: `${attrName}：${attrValue}`,
-                  source: '华夏营造知识图谱'
+                  source: '筑见山河知识图谱'
                 },
                 analysis: `检测到实体属性冲突：句子中描述"${entity.name}的${attrName}为${statedValue}"，与知识图谱中记录的"${attrValue}"不一致`,
                 correctionSuggestion: `建议修正为：${entity.name}的${attrName}应为"${attrValue}"`,
@@ -990,7 +990,7 @@ class LocalAIService implements IService {
                 id: `${entity.id}_${relation.targetId}`,
                 name: `${entity.name}-${relation.targetName}关系`,
                 content: `关系类型：${relation.type}（置信度：${(relation.confidence * 100).toFixed(0)}%）`,
-                source: '华夏营造知识图谱'
+                source: '筑见山河知识图谱'
               },
               analysis: `检测到关系描述冲突：句子中描述${entity.name}与${relation.targetName}的关系为"${statedRelation}"，知识图谱中记录的关系类型为"${relation.type}"`,
               correctionSuggestion: `建议修正为：${entity.name}${relation.type}${relation.targetName}`,
@@ -1038,7 +1038,7 @@ class LocalAIService implements IService {
             id: rule.id,
             name: rule.name,
             content: rule.description,
-            source: '华夏营造领域规则库'
+            source: '筑见山河领域规则库'
           },
           analysis: `检测到违反领域规则【${rule.name}】：${rule.description}。句子中的描述与此规则不符。`,
           correctionSuggestion: `根据规则【${rule.name}】，${rule.consequences.join('；')}`,

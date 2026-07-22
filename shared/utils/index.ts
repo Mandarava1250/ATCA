@@ -1,5 +1,5 @@
 // ============================================
-// 华夏营造 - 共享工具函数
+// 筑见山河 - 共享工具函数
 // ============================================
 
 export function formatDate(date: string | Date | null, format: string = 'YYYY-MM-DD HH:mm'): string {

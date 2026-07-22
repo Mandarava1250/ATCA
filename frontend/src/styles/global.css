@@ -486,7 +486,7 @@ img{max-width:100%;height:auto;display:block}
 @keyframes modalFadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes modalSlideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 
-/* ===== 华夏营造 - 古典画卷式过渡动画 ===== */
+/* ===== 筑见山河 - 古典画卷式过渡动画 ===== */
 
 /* 通用页面切换动画 - 水墨展开 */
 .page-enter-active,

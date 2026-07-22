@@ -1,5 +1,5 @@
 // ============================================
-// 华夏营造 - Mock API服务
+// 筑见山河 - Mock API服务
 // 支持前端独立开发，无需后端服务
 // ============================================
 
@@ -1492,12 +1492,12 @@ export const mockKnowledgeApi = {
 };
 
 const mockKgTopics = [
-  { topic_id: 1, topic_key: 'tailiang', topic_name: '抬梁式结构', category: 'structure', content_zh: '抬梁式是中国古建筑最主要的木结构形式...', content_en: 'Tailiang is the primary structural form...', source: '华夏营造知识库', confidence: 0.98, verified: true, created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-01T00:00:00Z' },
-  { topic_id: 2, topic_key: 'chuandou', topic_name: '穿斗式结构', category: 'structure', content_zh: '穿斗式是南方常见木结构形式...', content_en: 'Chuandou style is common in southern China...', source: '华夏营造知识库', confidence: 0.98, verified: true, created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-01T00:00:00Z' },
-  { topic_id: 3, topic_key: 'wudian', topic_name: '庑殿顶', category: 'structure', content_zh: '庑殿顶是中国古建筑最高等级的屋顶形制...', content_en: 'Wudian roof is the highest-ranking roof style...', source: '华夏营造知识库', confidence: 0.99, verified: true, created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-01T00:00:00Z' },
-  { topic_id: 5, topic_key: 'dougong', topic_name: '斗拱', category: 'component', content_zh: '斗拱是中国古建筑特有的结构构件...', content_en: 'Dougong is a unique structural component...', source: '华夏营造知识库', confidence: 0.99, verified: true, created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-01T00:00:00Z' },
-  { topic_id: 8, topic_key: 'foguangsi', topic_name: '佛光寺东大殿', category: 'famous', content_zh: '佛光寺东大殿是中国现存最早的木构建筑...', content_en: 'Foguang Temple East Hall is the earliest existing wooden structure...', source: '华夏营造知识库', confidence: 0.99, verified: true, created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-01T00:00:00Z' },
-  { topic_id: 10, topic_key: 'yingxian', topic_name: '应县木塔', category: 'famous', content_zh: '应县木塔是世界现存最高最古的木塔...', content_en: 'Yingxian Wooden Pagoda is the tallest and oldest existing wooden pagoda...', source: '华夏营造知识库', confidence: 0.99, verified: true, created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-01T00:00:00Z' },
+  { topic_id: 1, topic_key: 'tailiang', topic_name: '抬梁式结构', category: 'structure', content_zh: '抬梁式是中国古建筑最主要的木结构形式...', content_en: 'Tailiang is the primary structural form...', source: '筑见山河知识库', confidence: 0.98, verified: true, created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-01T00:00:00Z' },
+  { topic_id: 2, topic_key: 'chuandou', topic_name: '穿斗式结构', category: 'structure', content_zh: '穿斗式是南方常见木结构形式...', content_en: 'Chuandou style is common in southern China...', source: '筑见山河知识库', confidence: 0.98, verified: true, created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-01T00:00:00Z' },
+  { topic_id: 3, topic_key: 'wudian', topic_name: '庑殿顶', category: 'structure', content_zh: '庑殿顶是中国古建筑最高等级的屋顶形制...', content_en: 'Wudian roof is the highest-ranking roof style...', source: '筑见山河知识库', confidence: 0.99, verified: true, created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-01T00:00:00Z' },
+  { topic_id: 5, topic_key: 'dougong', topic_name: '斗拱', category: 'component', content_zh: '斗拱是中国古建筑特有的结构构件...', content_en: 'Dougong is a unique structural component...', source: '筑见山河知识库', confidence: 0.99, verified: true, created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-01T00:00:00Z' },
+  { topic_id: 8, topic_key: 'foguangsi', topic_name: '佛光寺东大殿', category: 'famous', content_zh: '佛光寺东大殿是中国现存最早的木构建筑...', content_en: 'Foguang Temple East Hall is the earliest existing wooden structure...', source: '筑见山河知识库', confidence: 0.99, verified: true, created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-01T00:00:00Z' },
+  { topic_id: 10, topic_key: 'yingxian', topic_name: '应县木塔', category: 'famous', content_zh: '应县木塔是世界现存最高最古的木塔...', content_en: 'Yingxian Wooden Pagoda is the tallest and oldest existing wooden pagoda...', source: '筑见山河知识库', confidence: 0.99, verified: true, created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-01T00:00:00Z' },
 ];
 
 export const mockKnowledgeGraphApi = {
@@ -1608,7 +1608,7 @@ export const mockKnowledgeEnhancedApi = {
     return {
       success: true,
       data: {
-        response: `根据华夏营造知识图谱，关于"${data.query}"的详细信息如下：\n\n【古建筑知识】\n中国古建筑以木构架为主要结构方式，具有独特的建筑美学特征。\n\n📚 相关知识（知识注入深度：${injectionDepth}）：\n1. 斗拱（建筑结构）\n   - 关系：related_to\n   - 说明：斗拱是中国传统建筑中的重要构件\n\n2. 抬梁式结构（建筑结构）\n   - 关系：related_to\n   - 说明：抬梁式结构是中国古建筑的主要结构形式之一\n\n---\n📖 数据来源：华夏营造知识图谱（置信度：95%）`,
+        response: `根据筑见山河知识图谱，关于"${data.query}"的详细信息如下：\n\n【古建筑知识】\n中国古建筑以木构架为主要结构方式，具有独特的建筑美学特征。\n\n📚 相关知识（知识注入深度：${injectionDepth}）：\n1. 斗拱（建筑结构）\n   - 关系：related_to\n   - 说明：斗拱是中国传统建筑中的重要构件\n\n2. 抬梁式结构（建筑结构）\n   - 关系：related_to\n   - 说明：抬梁式结构是中国古建筑的主要结构形式之一\n\n---\n📖 数据来源：筑见山河知识图谱（置信度：95%）`,
         confidence: 0.9,
         knowledgeSources: [
           { topicId: 1, topicName: '古建筑', category: 'architecture', relevance: 1 },

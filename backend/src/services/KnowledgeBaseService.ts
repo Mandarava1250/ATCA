@@ -1,5 +1,5 @@
 /**
- * 华夏营造 - 知识库服务
+ * 筑见山河 - 知识库服务
  * 管理古建筑知识库数据
  * 实现 IService 接口以纳入统一服务注册体系
  */
@@ -34,7 +34,7 @@ const DEFAULT_KNOWLEDGE: Omit<KnowledgeTopic, 'topic_id' | 'created_at' | 'updat
     category: '木结构',
     content: '抬梁式（叠梁式）是中国古建筑最主要的木结构形式。特点：柱上承梁，梁上抬梁，逐层缩短，最上层立脊瓜柱承脊檩。适用于宫殿、庙宇等大型建筑。代表：北京故宫太和殿。',
     content_en: 'Tailiang-style is the most important wooden structure form in traditional Chinese architecture.',
-    source: '华夏营造知识库',
+    source: '筑见山河知识库',
     confidence: 0.98,
     verified: true,
     keywords: '抬梁,抬梁式,叠梁,梁柱,梁架,tailiang,beam'
@@ -45,7 +45,7 @@ const DEFAULT_KNOWLEDGE: Omit<KnowledgeTopic, 'topic_id' | 'created_at' | 'updat
     category: '木结构',
     content: '穿斗式（立贴式）是南方常见木结构形式。特点：柱距较密，柱头直接承檩，以穿枋连接各柱形成框架。用料省、整体性强，适用于民居等中小型建筑。',
     content_en: 'Chuandou-style is a common wooden structure form in southern China.',
-    source: '华夏营造知识库',
+    source: '筑见山河知识库',
     confidence: 0.98,
     verified: true,
     keywords: '穿斗,穿斗式,穿枋,立贴,chuandou'
@@ -56,7 +56,7 @@ const DEFAULT_KNOWLEDGE: Omit<KnowledgeTopic, 'topic_id' | 'created_at' | 'updat
     category: '屋顶形制',
     content: '庑殿顶（四阿顶）是中国古建筑最高等级的屋顶形制，有一条正脊和四条垂脊，四面斜坡。用于皇宫、庙宇主殿。重檐庑殿顶为最高等级，如太和殿。',
     content_en: 'Hipped roof (Wudian) is the highest-ranking roof form in traditional Chinese architecture.',
-    source: '华夏营造知识库',
+    source: '筑见山河知识库',
     confidence: 0.99,
     verified: true,
     keywords: '庑殿,庑殿顶,四阿顶,五脊顶,hipped,wudian'
@@ -67,7 +67,7 @@ const DEFAULT_KNOWLEDGE: Omit<KnowledgeTopic, 'topic_id' | 'created_at' | 'updat
     category: '屋顶形制',
     content: '歇山顶（九脊顶）等级仅次于庑殿顶，由正脊、垂脊、戗脊组成，上半部为悬山或硬山式，下半部为四面坡。常用于宫殿次要建筑和庙宇。',
     content_en: 'Gable-and-hipped roof is second only to the hipped roof in rank.',
-    source: '华夏营造知识库',
+    source: '筑见山河知识库',
     confidence: 0.98,
     verified: true,
     keywords: '歇山,歇山顶,九脊顶,xieshan,gable'
@@ -78,7 +78,7 @@ const DEFAULT_KNOWLEDGE: Omit<KnowledgeTopic, 'topic_id' | 'created_at' | 'updat
     category: '构件',
     content: '斗拱是中国古建筑特有的结构构件，位于柱头与梁架之间，由斗、拱、昂等构件组成。功能：承托屋檐重量、传递荷载、增加出檐深度。清代称"斗科"。斗口为模数单位。',
     content_en: 'Dougong are unique structural components in traditional Chinese architecture.',
-    source: '华夏营造知识库',
+    source: '筑见山河知识库',
     confidence: 0.99,
     verified: true,
     keywords: '斗拱,铺作,斗栱,斗科,栌斗,华拱,昂,斗口,dougong,bracket'
@@ -89,7 +89,7 @@ const DEFAULT_KNOWLEDGE: Omit<KnowledgeTopic, 'topic_id' | 'created_at' | 'updat
     category: '连接方式',
     content: '榫卯是中国古代木构件的连接方式，通过凹凸结合实现连接，不用一钉一铆。类型包括燕尾榫、槽口榫、粽角榫等。体现以柔克刚的营造智慧。',
     content_en: 'Sunmao are traditional Chinese wooden joinery techniques.',
-    source: '华夏营造知识库',
+    source: '筑见山河知识库',
     confidence: 0.97,
     verified: true,
     keywords: '榫卯,榫头,卯眼,凹凸结合,燕尾榫,槽口榫,sunmao,mortise'
@@ -100,7 +100,7 @@ const DEFAULT_KNOWLEDGE: Omit<KnowledgeTopic, 'topic_id' | 'created_at' | 'updat
     category: '模数制度',
     content: '材分制是宋《营造法式》确立的模数制度。"材"为基本模数，按拱高分为八等。所有构件尺寸均以材的倍数确定，实现了标准化设计与施工。',
     content_en: 'Cai Fen System is the modular system established in Song Dynasty.',
-    source: '华夏营造知识库',
+    source: '筑见山河知识库',
     confidence: 0.98,
     verified: true,
     keywords: '材,材分制,材分,宋式,营造法式,cai fen,song style'
@@ -111,7 +111,7 @@ const DEFAULT_KNOWLEDGE: Omit<KnowledgeTopic, 'topic_id' | 'created_at' | 'updat
     category: '模数制度',
     content: '斗口制是清《工程做法》确立的模数制度。以坐斗斗口宽度为基本模数，分为十一等。柱径、梁高、檩径等均以斗口倍数计算。',
     content_en: 'Doukou System is the modular system established in Qing Dynasty.',
-    source: '华夏营造知识库',
+    source: '筑见山河知识库',
     confidence: 0.98,
     verified: true,
     keywords: '斗口,斗口制,清式,工程做法,doukou,qing style'
@@ -122,7 +122,7 @@ const DEFAULT_KNOWLEDGE: Omit<KnowledgeTopic, 'topic_id' | 'created_at' | 'updat
     category: '装饰',
     content: '古建筑彩画等级：和玺彩画（最高，用于皇宫，以龙凤为主要题材）、旋子彩画（次之，用于庙宇）、苏式彩画（最次，用于园林，以山水人物为题材）。',
     content_en: 'Ancient Chinese architectural painting has strict hierarchical system.',
-    source: '华夏营造知识库',
+    source: '筑见山河知识库',
     confidence: 0.95,
     verified: true,
     keywords: '彩画,和玺,旋子,苏式,龙凤,山水人物'
@@ -133,7 +133,7 @@ const DEFAULT_KNOWLEDGE: Omit<KnowledgeTopic, 'topic_id' | 'created_at' | 'updat
     category: '基座',
     content: '古建筑台基高度有严格等级规定：皇宫太和殿台基最高（三层须弥座），民居台基最低。须弥座为最高等级台基，源于佛教须弥山造型。',
     content_en: 'Ancient Chinese building platforms have strict hierarchical regulations.',
-    source: '华夏营造知识库',
+    source: '筑见山河知识库',
     confidence: 0.96,
     verified: true,
     keywords: '台基,基座,须弥座,台阶,三层台基'
@@ -263,7 +263,7 @@ class KnowledgeBaseService implements IService {
           category: topic.category,
           content: topic.content,
           content_en: topic.content_en || null,
-          source: topic.source || '华夏营造知识库',
+          source: topic.source || '筑见山河知识库',
           confidence: topic.confidence,
           verified: topic.verified ? 1 : 0,
           keywords: topic.keywords || ''

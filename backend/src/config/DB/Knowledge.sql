@@ -1,5 +1,5 @@
 -- ============================================
--- 华夏营造 - 知识图谱模块数据库
+-- 筑见山河 - 知识图谱模块数据库
 -- 管理AI知识库、关键词和知识关系，防止AI幻觉
 -- ============================================
 
@@ -333,31 +333,31 @@ INSERT INTO dbo.kg_topics ([topic_id], [topic_key], [topic_name], [category], [c
 (1, 'tailiang', '抬梁式结构', 'structure',
 '抬梁式（叠梁式）是中国古建筑最主要的木结构形式。特点：柱上承梁，梁上抬梁，逐层缩短，最上层立脊瓜柱承脊檩。适用于宫殿、庙宇等大型建筑。代表：北京故宫太和殿。',
 'Tailiang (post-and-beam) is the primary structural form of traditional Chinese architecture. Characteristics: beams supported by columns, with each successive beam shorter, culminating in a ridge post supporting the ridge purlin. Used for palaces, temples, and large-scale buildings. Representative: Hall of Supreme Harmony in the Forbidden City.',
-'《华夏营造知识库》', 0.98, 1);
+'《筑见山河知识库》', 0.98, 1);
 
 INSERT INTO dbo.kg_topics ([topic_id], [topic_key], [topic_name], [category], [content_zh], [content_en], [source], [confidence], [verified]) VALUES
 (2, 'chuandou', '穿斗式结构', 'structure',
 '穿斗式（立贴式）是南方常见木结构形式。特点：柱距较密，柱头直接承檩，以穿枋连接各柱形成框架。用料省、整体性强，适用于民居等中小型建筑。',
 'Chuandou (column-and-tie) style is common in southern China. Characteristics: closely spaced columns directly supporting purlins, connected by tie beams to form a frame. Economical in material, strong integrity, suitable for residential and small-scale buildings.',
-'《华夏营造知识库》', 0.98, 1);
+'《筑见山河知识库》', 0.98, 1);
 
 INSERT INTO dbo.kg_topics ([topic_id], [topic_key], [topic_name], [category], [content_zh], [content_en], [source], [confidence], [verified]) VALUES
 (3, 'wudian', '庑殿顶', 'structure',
 '庑殿顶（四阿顶）是中国古建筑最高等级的屋顶形制，有一条正脊和四条垂脊，四面斜坡。用于皇宫、庙宇主殿。重檐庑殿顶为最高等级，如太和殿。',
 'Wudian (hip) roof is the highest-ranking roof style in Chinese architecture, with one main ridge and four descending ridges forming four slopes. Used for imperial palaces and main temple halls. Double-eave wudian is the highest rank.',
-'《华夏营造知识库》', 0.99, 1);
+'《筑见山河知识库》', 0.99, 1);
 
 INSERT INTO dbo.kg_topics ([topic_id], [topic_key], [topic_name], [category], [content_zh], [content_en], [source], [confidence], [verified]) VALUES
 (4, 'xieshan', '歇山顶', 'structure',
 '歇山顶（九脊顶）等级仅次于庑殿顶，由正脊、垂脊、戗脊组成，上半部为悬山或硬山式，下半部为四面坡。常用于宫殿次要建筑和庙宇。',
 'Xieshan (hip-and-gable) roof ranks second to wudian, composed of main ridge, descending ridges, and hip ridges, with an upper gable section and lower hipped section. Commonly used for secondary palace buildings and temples.',
-'《华夏营造知识库》', 0.98, 1);
+'《筑见山河知识库》', 0.98, 1);
 
 INSERT INTO dbo.kg_topics ([topic_id], [topic_key], [topic_name], [category], [content_zh], [content_en], [source], [confidence], [verified]) VALUES
 (5, 'dougong', '斗拱（铺作）', 'component',
 '斗拱是中国古建筑特有的结构构件，位于柱头与梁架之间，由斗、拱、昂等构件组成。功能：承托屋檐重量、传递荷载、增加出檐深度。清代称斗科。斗口为模数单位。',
 'Dougong (bracket sets) is a unique structural component of Chinese architecture, located between columns and beams, composed of blocks, arms, and levers. Functions: supporting eaves, transferring loads, increasing overhang depth.',
-'《华夏营造知识库》', 0.99, 1);
+'《筑见山河知识库》', 0.99, 1);
 
 INSERT INTO dbo.kg_topics ([topic_id], [topic_key], [topic_name], [category], [content_zh], [content_en], [source], [confidence], [verified]) VALUES
 (6, 'caifen', '材分制', 'philosophy',
@@ -369,25 +369,25 @@ INSERT INTO dbo.kg_topics ([topic_id], [topic_key], [topic_name], [category], [c
 (7, 'tang_architecture', '唐代建筑特征', 'period',
 '唐代建筑特征：气魄宏伟、斗拱硕大（柱高约50%）、屋面坡度平缓、出檐深远、直棱窗、梭柱。现存唐构：五台山佛光寺东大殿（857年，最早木构）、南禅寺大殿。',
 'Tang Dynasty architecture features: grand scale, large bracket sets (about 50% of column height), gentle roof slope, deep overhangs, straight lattice windows, and spindle-shaped columns. Existing examples: Foguang Temple East Hall (857 AD).',
-'《华夏营造知识库》', 0.99, 1);
+'《筑见山河知识库》', 0.99, 1);
 
 INSERT INTO dbo.kg_topics ([topic_id], [topic_key], [topic_name], [category], [content_zh], [content_en], [source], [confidence], [verified]) VALUES
 (8, 'foguangsi', '佛光寺东大殿', 'famous',
 '佛光寺东大殿（857年）位于山西五台山，是中国现存最早的木构建筑。面阔七间，进深八架椽，单檐庑殿顶。殿内有唐代彩塑、壁画和题记。梁思成、林徽因于1937年发现。',
 'Foguang Temple East Hall (857 AD) at Mount Wutai, Shanxi, is the earliest existing wooden structure in China. Seven bays wide, eight rafters deep, single-eave wudian roof. Contains Tang Dynasty sculptures, murals, and inscriptions.',
-'《华夏营造知识库》', 0.99, 1);
+'《筑见山河知识库》', 0.99, 1);
 
 INSERT INTO dbo.kg_topics ([topic_id], [topic_key], [topic_name], [category], [content_zh], [content_en], [source], [confidence], [verified]) VALUES
 (9, 'sunmao', '榫卯结构', 'component',
 '榫卯是中国古建筑木构件连接方式，不用钉子。常见类型：燕尾榫（抗拉）、馒头榫（承压）、箍头榫（转角连接）、透榫（穿通固定）。体现了以柔克刚的哲学。',
 'Mortise and tenon is the joining method for wooden components in Chinese architecture, without nails. Common types: dovetail (tension-resistant), round tenon (compression), scarf joint (corner connection), through tenon (penetrating fixation).',
-'《华夏营造知识库》', 0.98, 1);
+'《筑见山河知识库》', 0.98, 1);
 
 INSERT INTO dbo.kg_topics ([topic_id], [topic_key], [topic_name], [category], [content_zh], [content_en], [source], [confidence], [verified]) VALUES
 (10, 'yingxian', '应县木塔', 'famous',
 '佛宫寺释迦塔（应县木塔）位于山西应县，建于辽清宁二年（1056年），是世界现存最高最古的木塔。高67.31米，平面八角形，外观五层六檐，内部九层。纯木结构，无钉无铆。',
 'Yingxian Wooden Pagoda (1056 AD) in Shanxi is the tallest and oldest existing wooden pagoda in the world. 67.31 meters high, octagonal plan, five exterior stories with six eaves, nine interior levels. Pure wooden structure without nails.',
-'《华夏营造知识库》', 0.99, 1);
+'《筑见山河知识库》', 0.99, 1);
 
 SET IDENTITY_INSERT dbo.kg_topics OFF;
 GO

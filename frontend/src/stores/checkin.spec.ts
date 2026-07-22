@@ -21,7 +21,6 @@ vi.mock('@/utils/syncService', () => ({
 }));
 
 vi.mock('@/utils/checkinSync', () => ({
-  scheduleCheckinSync: vi.fn(() => () => {}),
   syncPendingCheckins: vi.fn(() => Promise.resolve({ success: true, syncedCount: 0, errors: [] })),
 }));
 
@@ -391,6 +390,231 @@ describe('Checkin Store', () => {
 
       const history = JSON.parse(localStorage.getItem('checkin_history') || '[]');
       expect(history).toHaveLength(365);
+    });
+  describe('multi-device concurrent check-in', () => {
+    it('should prevent concurrent check-in requests', async () => {
+      vi.useFakeTimers();
+      const store = useCheckinStore();
+
+      // 模拟慢速 API 响应（500ms 延迟）
+      vi.mocked(activityApi.checkin).mockImplementation(() => {
+        return new Promise(resolve => {
+          setTimeout(() => {
+            resolve({ success: true, message: 'Checkin successful', streak_count: 5, points_earned: 10, already_checked: false });
+          }, 500);
+        });
+      });
+
+      // 同时发起两个打卡请求
+      const promise1 = store.performCheckin({ device_type: 'desktop' });
+      const promise2 = store.performCheckin({ device_type: 'mobile' });
+
+      // 第二个请求应该被拒绝（并发防护）
+      const result2 = await promise2;
+      expect(result2.success).toBe(false);
+      expect(result2.message).toBe('打卡请求正在进行中');
+
+      // 推进时间完成第一个请求
+      await vi.advanceTimersByTimeAsync(500);
+      const result1 = await promise1;
+      expect(result1.success).toBe(true);
+
+      vi.useRealTimers();
+    });
+
+    it('should handle checkin from two different devices sequentially', async () => {
+      const store = useCheckinStore();
+
+      // 设备A打卡
+      vi.mocked(activityApi.checkin).mockResolvedValueOnce({
+        success: true, message: 'Checkin A', streak_count: 3, points_earned: 20, already_checked: false,
+      });
+
+      const resultA = await store.performCheckin({ device_type: 'desktop' });
+      expect(resultA.success).toBe(true);
+      expect(resultA.streak).toBe(3);
+      expect(store.todayChecked).toBe(true);
+
+      // 设备B确认已打卡
+      store.todayChecked = true;
+      store.confirmed = true;
+      vi.mocked(activityApi.checkin).mockResolvedValueOnce({
+        success: false, message: 'Already checked in', already_checked: true,
+      });
+      vi.mocked(activityApi.getCheckinStats).mockResolvedValueOnce({
+        success: true, data: { total_checkins: 10, max_streak: 3, total_points: 100, last_checkin_date: new Date().toISOString().split('T')[0], weekly_checkins: 3, monthly_checkins: 10 },
+      });
+
+      // 设备B尝试打卡应返回已打卡
+      const resultB = await store.performCheckin({ device_type: 'mobile' });
+      expect(resultB.success).toBe(true);
+      expect(resultB.already_checked).toBe(true);
+    });
+  });
+
+  describe('network error recovery', () => {
+    it('should cache pending checkin on network error and sync later', async () => {
+      const store = useCheckinStore();
+
+      // 模拟网络错误
+      vi.mocked(activityApi.checkin).mockRejectedValueOnce(new Error('Network error'));
+
+      const result = await store.performCheckin({ device_type: 'desktop' });
+
+      // 网络错误时，乐观更新保持，但加入 pending 队列
+      expect(result.success).toBe(false);
+      expect(result.message).toBe('网络异常，已缓存待同步');
+      expect(store.todayChecked).toBe(true); // 乐观更新保持
+      expect(store.confirmed).toBe(false);   // 未确认
+      expect(store.pendingCheckins).toContain(store.today); // 加入待同步队列
+
+      // 模拟网络恢复，同步 pending 记录
+      vi.mocked(activityApi.checkin).mockResolvedValueOnce({
+        success: true, message: 'Sync successful', streak_count: 5, points_earned: 10, already_checked: false,
+      });
+
+      await store.syncPending();
+
+      expect(store.pendingCheckins).not.toContain(store.today);
+      expect(store.confirmed).toBe(true);
+    });
+
+    it('should handle multiple offline checkins and sync in batch', async () => {
+      const store = useCheckinStore();
+
+      // 模拟离线打卡（连续3天）
+      const dates = ['2024-01-13', '2024-01-14', '2024-01-15'];
+      for (const date of dates) {
+        // 模拟网络错误
+        vi.mocked(activityApi.checkin).mockRejectedValueOnce(new Error('Offline'));
+        vi.mocked(activityApi.checkin).mockRejectedValueOnce(new Error('Offline'));
+        vi.mocked(activityApi.checkin).mockRejectedValueOnce(new Error('Offline'));
+
+        // 手动设置 pending 队列
+        store.pendingCheckins.push(date);
+      }
+      expect(store.pendingCheckins.length).toBe(3);
+
+      // 网络恢复，批量同步
+      for (const date of ['2024-01-13', '2024-01-14', '2024-01-15']) {
+        vi.mocked(activityApi.checkin).mockResolvedValueOnce({
+          success: true, message: `Sync ${date}`, streak_count: 1, points_earned: 10, already_checked: false,
+        });
+      }
+
+      await store.syncPending();
+
+      expect(store.pendingCheckins.length).toBe(0);
+    });
+  });
+
+  describe('cross-device sync', () => {
+    it('should update state when receiving WebSocket sync for today', () => {
+      const store = useCheckinStore();
+      const today = new Date().toISOString().split('T')[0];
+
+      store.handleSyncUpdate({
+        payload: {
+          checkin_date: today,
+          streak_count: 10,
+          points_earned: 100,
+          device_type: 'mobile',
+        },
+      });
+
+      expect(store.todayChecked).toBe(true);
+      expect(store.streak).toBe(10);
+      expect(store.lastCheckin).toBe(today);
+      expect(store.confirmed).toBe(true);
+      expect(store.pending).toBe(false);
+    });
+
+    it('should ignore sync update for non-today dates', () => {
+      const store = useCheckinStore();
+      store.todayChecked = false;
+      store.streak = 5;
+
+      store.handleSyncUpdate({
+        payload: {
+          checkin_date: '2024-01-10',
+          streak_count: 10,
+          points_earned: 100,
+        },
+      });
+
+      // 非今天日期不应更新状态
+      expect(store.todayChecked).toBe(false);
+      expect(store.streak).toBe(5);
+    });
+
+    it('should handle sync from multiple devices on same day', () => {
+      const store = useCheckinStore();
+      const today = new Date().toISOString().split('T')[0];
+
+      // 设备A打卡
+      store.handleSyncUpdate({
+        payload: { checkin_date: today, streak_count: 3, points_earned: 20, device_type: 'desktop' },
+      });
+      expect(store.streak).toBe(3);
+
+      // 设备B更新（更长的连续天数）
+      store.handleSyncUpdate({
+        payload: { checkin_date: today, streak_count: 5, points_earned: 30, device_type: 'mobile' },
+      });
+      expect(store.streak).toBe(5); // 应该更新为更大的值
+    });
+  });
+
+  describe('conflict resolution', () => {
+    it('should keep local state when backend not synced and retry', async () => {
+      const store = useCheckinStore();
+
+      // 本地已打卡（乐观更新），但后端未同步
+      store.todayChecked = true;
+      store.confirmed = false;
+      localStorage.setItem('atca_checkin_sync_time', '0');
+
+      vi.mocked(activityApi.checkTodayCheckin).mockResolvedValue({
+        success: true, data: { checked_today: false },
+      });
+      vi.mocked(activityApi.getCheckinStats).mockResolvedValue({
+        success: true, data: { total_checkins: 19, max_streak: 4, total_points: 95, last_checkin_date: '2024-01-14', weekly_checkins: 4, monthly_checkins: 14 },
+      });
+
+      // 使用 fake timers
+      vi.useFakeTimers();
+
+      await store.loadCheckin(true);
+
+      // 应该保留本地状态（因为 confirmed = false）
+      expect(store.todayChecked).toBe(true);
+      expect(store.confirmed).toBe(false);
+
+      vi.useRealTimers();
+    });
+  });
+
+  describe('WebSocket reconnection', () => {
+    it('should re-register sync listener after reconnection', () => {
+      const store = useCheckinStore();
+      const mockSyncService = {
+        isReady: vi.fn(() => true),
+        syncCheckin: vi.fn(() => Promise.resolve()),
+        on: vi.fn(),
+        off: vi.fn(),
+      };
+
+      // 首次注册
+      store.initSyncListener();
+      expect(mockSyncService.on).toHaveBeenCalledWith('checkin_update', expect.any(Function));
+
+      // 移除监听
+      store.removeSyncListener();
+      expect(mockSyncService.off).toHaveBeenCalledWith('checkin_update', expect.any(Function));
+
+      // 重新注册
+      store.initSyncListener();
+      expect(mockSyncService.on).toHaveBeenCalledTimes(2);
     });
   });
 });

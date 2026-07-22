@@ -60,7 +60,7 @@ style: |
 
 <!-- _class: title -->
 
-# 华夏营造技术演示
+# 筑见山河技术演示
 
 ## 本地模型与3D工坊技术架构
 
@@ -910,7 +910,7 @@ gantt
 
 ## Thank You
 
-**华夏营造 - 让古建筑文化触手可及**
+**筑见山河 - 让古建筑文化触手可及**
 
 ATCA - Ancient Traditional Chinese Architecture
 

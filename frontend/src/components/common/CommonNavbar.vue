@@ -248,8 +248,8 @@ const mobileNavItems = computed<NavItem[]>(() => [
 const currentLang = computed(() => locale.value);
 
 const siteName = computed(() => {
-  try { return t('site.name') || '华夏营造'; } 
-  catch { return '华夏营造'; }
+  try { return t('site.name') || '筑见山河'; } 
+  catch { return '筑见山河'; }
 });
 
 const siteSubtitle = computed(() => {

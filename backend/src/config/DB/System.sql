@@ -1,5 +1,5 @@
 -- ============================================
--- 华夏营造 - 系统配置模块数据库
+-- 筑见山河 - 系统配置模块数据库
 -- 管理AI服务配置、系统参数和全局设置
 -- ============================================
 
@@ -121,10 +121,10 @@ GO
 MERGE INTO dbo.ai_config AS target
 USING (
     VALUES
-    (1, N'通用AI助手', 'openai', NULL, NULL, NULL, 'gpt-4o', 'https://api.openai.com/v1/chat/completions', 'gpt-4o', N'你是华夏营造的AI助手，精通中国古代建筑文化。请用专业但易懂的方式回答用户的问题。', N'通用型AI助手，适合解答古建筑知识', 1, 1, 0.70, 2048, 3, 20, 60),
+    (1, N'通用AI助手', 'openai', NULL, NULL, NULL, 'gpt-4o', 'https://api.openai.com/v1/chat/completions', 'gpt-4o', N'你是筑见山河的AI助手，精通中国古代建筑文化。请用专业但易懂的方式回答用户的问题。', N'通用型AI助手，适合解答古建筑知识', 1, 1, 0.70, 2048, 3, 20, 60),
     (2, N'建筑技术专家', 'openai', NULL, NULL, NULL, 'gpt-4o', 'https://api.openai.com/v1/chat/completions', 'gpt-4o', N'你是一位古建筑技术专家，专注于斗拱、榫卯、营造法式等技术细节。请从技术角度详细解答问题。', N'专注建筑技术细节的专家', 1, 0, 0.50, 2048, 3, 20, 60),
     (3, N'历史学者', 'openai', NULL, NULL, NULL, 'gpt-4o', 'https://api.openai.com/v1/chat/completions', 'gpt-4o', N'你是一位研究中国古代建筑史的学者，精通各朝代建筑风格和演变。请从历史角度解答问题。', N'专注历史文化的学者', 1, 0, 0.60, 2048, 3, 20, 60),
-    (4, N'讯飞星火Lite', 'spark', NULL, NULL, NULL, 'lite', 'wss://spark-api.xf-yun.com/v1.1/chat', 'lite', N'你是华夏营造的AI助手，精通中国古代建筑文化。请用专业但易懂的方式回答用户的问题。', N'讯飞星火Spark Lite（WebSocket协议）支持自选版本: lite/generalv3/pro-128k/generalv3.5/max-32k/4.0Ultra', 1, 0, 0.50, 2048, 3, 20, 60)
+    (4, N'讯飞星火Lite', 'spark', NULL, NULL, NULL, 'lite', 'wss://spark-api.xf-yun.com/v1.1/chat', 'lite', N'你是筑见山河的AI助手，精通中国古代建筑文化。请用专业但易懂的方式回答用户的问题。', N'讯飞星火Spark Lite（WebSocket协议）支持自选版本: lite/generalv3/pro-128k/generalv3.5/max-32k/4.0Ultra', 1, 0, 0.50, 2048, 3, 20, 60)
 ) AS source ([ai_id], [name], [provider], [app_id], [api_key], [api_secret], [version], [api_endpoint], [model], [system_prompt], [description], [is_active], [is_default], [temperature], [max_tokens], [max_concurrent], [max_queue_size], [queue_timeout])
 ON target.[ai_id] = source.[ai_id]
 WHEN MATCHED THEN
@@ -157,7 +157,7 @@ GO
 MERGE INTO dbo.system_settings AS target
 USING (
     VALUES
-    ('site_name', N'华夏营造', N'网站名称', 'string', 1),
+    ('site_name', N'筑见山河', N'网站名称', 'string', 1),
     ('site_description', N'探索中国古代建筑文化的数字平台', N'网站描述', 'string', 1),
     ('default_language', 'zh-CN', N'默认语言', 'string', 1),
     ('max_upload_size_mb', '50', N'最大上传文件大小(MB)', 'number', 1),

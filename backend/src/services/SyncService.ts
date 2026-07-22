@@ -1,5 +1,5 @@
 // ============================================
-// 华夏营造 - 多端数据同步服务
+// 筑见山河 - 多端数据同步服务
 // 基于 Socket.io 实现实时数据同步
 // ============================================
 
@@ -174,6 +174,14 @@ function handleConnection(socket: Socket) {
       onlineDevices: Array.from(session.devices.keys()),
       lastSyncTime: Date.now(),
       stats: syncStats,
+    });
+  });
+
+  // 心跳检测
+  socket.on('sync:ping', (data: { timestamp: number }) => {
+    socket.emit('sync:pong', {
+      timestamp: data.timestamp,
+      serverTime: Date.now(),
     });
   });
 

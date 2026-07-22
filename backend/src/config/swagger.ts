@@ -1,5 +1,5 @@
 // ============================================
-// 华夏营造 - Swagger/OpenAPI 配置
+// 筑见山河 - Swagger/OpenAPI 配置
 // ============================================
 
 import swaggerJsdoc from 'swagger-jsdoc';
@@ -9,7 +9,7 @@ const swaggerOptions = {
   definition: {
     openapi: '3.0.0',
     info: {
-      title: '华夏营造 API',
+      title: '筑见山河 API',
       version: '1.0.0',
       description: '中国古建筑文化传播平台 - 后端API文档',
       contact: {

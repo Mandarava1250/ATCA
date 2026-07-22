@@ -1,5 +1,5 @@
 /**
- * 华夏营造 - 知识图谱分析服务
+ * 筑见山河 - 知识图谱分析服务
  * 负责基于知识图谱进行系统性冲突分析
  */
 
@@ -182,7 +182,7 @@ export class KnowledgeGraphAnalyzer {
                   id: entity.id,
                   name: entity.name,
                   content: `${attrName}：${attrValue}`,
-                  source: '华夏营造知识图谱'
+                  source: '筑见山河知识图谱'
                 },
                 analysis: `检测到实体属性冲突：句子中描述"${entity.name}的${attrName}为${statedValue}"，与知识图谱中记录的"${attrValue}"不一致`,
                 correctionSuggestion: `建议修正为：${entity.name}的${attrName}应为"${attrValue}"`,
@@ -232,7 +232,7 @@ export class KnowledgeGraphAnalyzer {
                 id: `${entity.id}_${relation.targetId}`,
                 name: `${entity.name}-${relation.targetName}关系`,
                 content: `关系类型：${relation.type}（置信度：${(relation.confidence * 100).toFixed(0)}%）`,
-                source: '华夏营造知识图谱'
+                source: '筑见山河知识图谱'
               },
               analysis: `检测到关系描述冲突：句子中描述${entity.name}与${relation.targetName}的关系为"${statedRelation}"，知识图谱中记录的关系类型为"${relation.type}"`,
               correctionSuggestion: `建议修正为：${entity.name}${relation.type}${relation.targetName}`,
@@ -272,7 +272,7 @@ export class KnowledgeGraphAnalyzer {
                 id: rule.id,
                 name: rule.name,
                 content: rule.description,
-                source: '华夏营造领域规则库'
+                source: '筑见山河领域规则库'
               },
               analysis: `检测到领域规则违反：句子满足条件"${rule.conditions.join('; ')}"但未满足预期结果"${rule.consequences.join('; ')}"`,
               correctionSuggestion: `建议参考领域规则"${rule.name}"进行修正`,

@@ -5,6 +5,18 @@ interface SyncError {
   message: string;
 }
 
+// 指数退避配置
+const BACKOFF_CONFIG = {
+  initialDelay: 1000,    // 1秒
+  maxDelay: 30000,       // 30秒
+  factor: 2,             // 倍增因子
+  maxRetries: 5,         // 最大重试次数
+};
+
+/**
+ * 带指数退避的同步 pending 打卡
+ * 每次重试间隔递增：1s → 2s → 4s → 8s → 16s → 30s(max)
+ */
 export async function syncPendingCheckins(): Promise<{ success: boolean; syncedCount: number; errors: string[] }> {
   const pending = JSON.parse(localStorage.getItem('atca_pending_checkins') || '[]');
   if (!Array.isArray(pending) || pending.length === 0) {
@@ -15,20 +27,38 @@ export async function syncPendingCheckins(): Promise<{ success: boolean; syncedC
   let syncedCount = 0;
 
   for (const date of pending) {
-    try {
-      const res = await activityApi.checkin({
-        device_type: getDeviceType(),
-        device_info: navigator.userAgent.substring(0, 200),
-        checkin_date: date,
-      });
+    let retryCount = 0;
+    let success = false;
 
-      if (res.success || res.already_checked) {
-        syncedCount++;
-      } else {
-        errors.push({ date, message: `日期 ${date} 同步失败` });
+    while (!success && retryCount <= BACKOFF_CONFIG.maxRetries) {
+      try {
+        const res = await activityApi.checkin({
+          device_type: getDeviceType(),
+          device_info: navigator.userAgent.substring(0, 200),
+          checkin_date: date,
+        });
+
+        if (res.success || res.already_checked) {
+          syncedCount++;
+          success = true;
+        } else {
+          // 服务器返回错误，重试
+          retryCount++;
+          if (retryCount > BACKOFF_CONFIG.maxRetries) {
+            errors.push({ date, message: `日期 ${date} 同步失败: ${res.message}` });
+          } else {
+            await wait(calculateBackoff(retryCount));
+          }
+        }
+      } catch (e: any) {
+        // 网络异常，重试
+        retryCount++;
+        if (retryCount > BACKOFF_CONFIG.maxRetries) {
+          errors.push({ date, message: `日期 ${date} 同步异常: ${e.message}` });
+        } else {
+          await wait(calculateBackoff(retryCount));
+        }
       }
-    } catch (e: any) {
-      errors.push({ date, message: `日期 ${date} 同步异常: ${e.message}` });
     }
   }
 
@@ -46,6 +76,18 @@ export async function syncPendingCheckins(): Promise<{ success: boolean; syncedC
     syncedCount,
     errors: errors.map(e => e.message),
   };
+}
+
+/**
+ * 计算指数退避延迟
+ */
+function calculateBackoff(retryCount: number): number {
+  const delay = BACKOFF_CONFIG.initialDelay * Math.pow(BACKOFF_CONFIG.factor, retryCount - 1);
+  return Math.min(delay, BACKOFF_CONFIG.maxDelay);
+}
+
+function wait(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 export function getDeviceType(): string {

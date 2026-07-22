@@ -1,5 +1,5 @@
 // ============================================
-// 华夏营造 - 高并发性能测试套件
+// 筑见山河 - 高并发性能测试套件
 // 模拟100+并发用户，测试系统性能表现
 // 支持结构化日志输出和HTML报告生成
 // ============================================
@@ -405,7 +405,7 @@ function generateHTMLReport(results: TestResults): string {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>华夏营造 - 性能测试报告 - ${results.testType}</title>
+    <title>筑见山河 - 性能测试报告 - ${results.testType}</title>
     <style>
         * {
             margin: 0;
@@ -554,7 +554,7 @@ function generateHTMLReport(results: TestResults): string {
 <body>
     <div class="container">
         <div class="header">
-            <h1>🏛️ 华夏营造 - 性能测试报告</h1>
+            <h1>🏛️ 筑见山河 - 性能测试报告</h1>
             <p>测试类型: ${results.testType} | 测试时间: ${new Date(results.timestamp).toLocaleString('zh-CN')}</p>
             <p style="margin-top: 15px;">
                 <span class="status-badge ${passed ? 'status-pass' : 'status-fail'}">
@@ -723,7 +723,7 @@ function generateHTMLReport(results: TestResults): string {
         </div>
 
         <div class="footer">
-            <p>🏛️ 华夏营造 - 中国古代建筑文化传承平台</p>
+            <p>🏛️ 筑见山河 - 中国古代建筑文化传承平台</p>
             <p>性能测试报告生成时间: ${new Date().toLocaleString('zh-CN')}</p>
             <p style="margin-top: 10px; font-size: 0.9em;">
                 评估标准: 平均响应 < 2s | P99 < 5s | 成功率 ≥ 95%
@@ -1162,7 +1162,7 @@ export async function main() {
 
   console.log('\n');
   console.log('╔═══════════════════════════════════════════════════════════════╗');
-  console.log('║     华夏营造 - 高并发性能测试                                  ║');
+  console.log('║     筑见山河 - 高并发性能测试                                  ║');
   console.log('║     模拟真实用户行为，评估系统性能                              ║');
   console.log('╚═══════════════════════════════════════════════════════════════╝\n');
 

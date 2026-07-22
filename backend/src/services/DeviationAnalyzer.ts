@@ -1,5 +1,5 @@
 /**
- * 华夏营造 - 偏离分析服务
+ * 筑见山河 - 偏离分析服务
  * 负责分析AI回答与知识库的偏离程度
  */
 
@@ -131,7 +131,7 @@ export class DeviationAnalyzer {
       correctionDirection = suggestedCorrections.slice(0, 2).join('；');
     }
 
-    const reference = '基于华夏营造知识库进行评估';
+    const reference = '基于筑见山河知识库进行评估';
     const duration = Date.now() - startTime;
 
     logger.aiReasoning(AIReasoningStep.RESPONSE_GENERATION, '偏离分析-结果生成', {

@@ -1,5 +1,5 @@
 // ============================================
-// 华夏营造 - 路由配置
+// 筑见山河 - 路由配置
 // ============================================
 
 import { createRouter, createWebHistory } from 'vue-router';
@@ -12,7 +12,7 @@ const router = createRouter({
       path: '/',
       name: 'Splash',
       component: () => import('@/views/home/ViewSplash.vue'),
-      meta: { title: '华夏营造' },
+      meta: { title: '筑见山河' },
     },
     {
       path: '/home',
@@ -172,7 +172,7 @@ router.beforeEach((to, _from, next) => {
   // 设置页面标题
   if (to.meta.title) {
     const title = to.meta.title as string;
-    document.title = `${title} - 华夏营造`;
+    document.title = `${title} - 筑见山河`;
   }
 
   // 需要管理员权限

@@ -1,5 +1,5 @@
 /**
- * 华夏营造 - 知识增强训练模块 API
+ * 筑见山河 - 知识增强训练模块 API
  * 提供知识注入推理、训练任务管理、训练样本生成等功能
  */
 
@@ -28,7 +28,7 @@ router.post('/inference', validateBody(z.object({
 
   if (isMockMode()) {
     const mockResult = {
-      response: `根据华夏营造知识图谱，关于"${query}"的详细信息如下：
+      response: `根据筑见山河知识图谱，关于"${query}"的详细信息如下：
 
 【古建筑知识】
 中国古建筑以木构架为主要结构方式，具有独特的建筑美学特征。
@@ -43,7 +43,7 @@ router.post('/inference', validateBody(z.object({
    - 说明：抬梁式结构是中国古建筑的主要结构形式之一
 
 ---
-📖 数据来源：华夏营造知识图谱（置信度：95%）`,
+📖 数据来源：筑见山河知识图谱（置信度：95%）`,
       confidence: 0.9,
       knowledgeSources: [
         { topicId: 1, topicName: '古建筑', category: 'architecture', relevance: 1 },

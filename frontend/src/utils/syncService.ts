@@ -1,5 +1,5 @@
 // ============================================
-// 华夏营造 - 多端数据同步客户端 SDK
+// 筑见山河 - 多端数据同步客户端 SDK
 // 基于 Socket.io 实现跨设备实时数据同步
 // ============================================
 
@@ -45,6 +45,11 @@ export class SyncService {
   private callbacks: Map<string, Set<SyncCallback>> = new Map();
   private pendingMessages: SyncMessage[] = [];
   private syncLatency: number = 0;
+  private healthCheckInterval: ReturnType<typeof setInterval> | null = null;
+  private lastPingTime: number = 0;
+  private lastPongTime: number = 0;
+  private isHealthy: boolean = false;
+  private pingTimeout: ReturnType<typeof setTimeout> | null = null;
 
   constructor(config: Partial<SyncConfig> = {}) {
     this.config = { ...defaultConfig, ...config };
@@ -90,9 +95,11 @@ export class SyncService {
       // 连接成功
       this.socket.on('connect', () => {
         this.isConnected = true;
+        this.isHealthy = true;
         this.reconnectAttempts = 0;
         console.log('[SyncSDK] 已连接到同步服务');
         this.flushPendingMessages();
+        this.startHealthCheck();
         resolve(true);
       });
 
@@ -149,6 +156,18 @@ export class SyncService {
         this.emit('ack', { ...data, latency: this.syncLatency });
       });
 
+      // 心跳响应
+      this.socket.on('sync:pong', (data: any) => {
+        this.lastPongTime = Date.now();
+        this.isHealthy = true;
+        this.syncLatency = this.lastPongTime - (data?.timestamp || this.lastPingTime);
+        if (this.pingTimeout) {
+          clearTimeout(this.pingTimeout);
+          this.pingTimeout = null;
+        }
+        this.emit('health_change', { healthy: true, latency: this.syncLatency });
+      });
+
       // 连接错误
       this.socket.on('connect_error', (err: Error) => {
         this.isConnected = false;
@@ -173,9 +192,11 @@ export class SyncService {
    */
   disconnect(): void {
     if (this.socket) {
+      this.stopHealthCheck();
       this.socket.disconnect();
       this.socket = null;
       this.isConnected = false;
+      this.isHealthy = false;
       console.log('[SyncSDK] 已断开同步服务');
     }
   }
@@ -341,6 +362,56 @@ export class SyncService {
    */
   getLatency(): number {
     return this.syncLatency;
+  }
+
+  /**
+   * 启动健康检查（每30秒ping一次）
+   */
+  startHealthCheck(): void {
+    if (this.healthCheckInterval) return;
+    this.healthCheckInterval = setInterval(() => this.ping(), 30000);
+  }
+
+  /**
+   * 停止健康检查
+   */
+  stopHealthCheck(): void {
+    if (this.healthCheckInterval) {
+      clearInterval(this.healthCheckInterval);
+      this.healthCheckInterval = null;
+    }
+    if (this.pingTimeout) {
+      clearTimeout(this.pingTimeout);
+      this.pingTimeout = null;
+    }
+  }
+
+  /**
+   * 发送心跳ping
+   */
+  private ping(): void {
+    if (!this.socket || !this.isConnected) return;
+    this.lastPingTime = Date.now();
+    this.socket.emit('sync:ping', { timestamp: this.lastPingTime });
+
+    // 10秒内无响应则标记为不健康
+    this.pingTimeout = setTimeout(() => {
+      this.isHealthy = false;
+      console.warn('[SyncSDK] 心跳超时，连接可能已断开');
+    }, 10000);
+  }
+
+  /**
+   * 获取健康状态
+   */
+  getHealthStatus(): { connected: boolean; healthy: boolean; latency: number; lastPing: number; lastPong: number } {
+    return {
+      connected: this.isConnected,
+      healthy: this.isHealthy,
+      latency: this.syncLatency,
+      lastPing: this.lastPingTime,
+      lastPong: this.lastPongTime,
+    };
   }
 }
 

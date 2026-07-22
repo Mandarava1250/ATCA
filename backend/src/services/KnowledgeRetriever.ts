@@ -1,5 +1,5 @@
 /**
- * 华夏营造 - 知识检索服务
+ * 筑见山河 - 知识检索服务
  * 负责从知识库中检索相关知识条目
  */
 
@@ -120,7 +120,7 @@ export class KnowledgeRetriever {
     }
 
     const topKnowledge = knowledge[0];
-    let response = `根据华夏营造知识库，关于"${query}"的信息如下：\n\n`;
+    let response = `根据筑见山河知识库，关于"${query}"的信息如下：\n\n`;
     response += `【${topKnowledge.topic}】\n`;
     response += `${topKnowledge.content}\n\n`;
 

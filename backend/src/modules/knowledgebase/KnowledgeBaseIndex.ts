@@ -1,5 +1,5 @@
 /**
- * 华夏营造 - 知识库管理API
+ * 筑见山河 - 知识库管理API
  */
 
 import { Router } from 'express';

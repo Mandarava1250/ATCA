@@ -1,7 +1,7 @@
 {
   "name": "atca-backend",
   "version": "1.0.0",
-  "description": "华夏营造 - 中国古建筑文化传播平台后端",
+  "description": "筑见山河 - 中国古建筑文化传播平台后端",
   "main": "dist/src/main.js",
   "scripts": {
     "dev": "tsx watch src/main.ts",

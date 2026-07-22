@@ -1,5 +1,5 @@
 -- ============================================================
--- 华夏营造 (ATCA) - 全量数据库初始化脚本
+-- 筑见山河 (ATCA) - 全量数据库初始化脚本
 -- 文件: InitializedSQL.sql
 -- 说明: 只需执行本文件即可正确初始化所有数据库
 -- 包含: ATCA_User, Architecture, Media_3D, Knowledge,
@@ -3092,25 +3092,25 @@ DELETE FROM dbo.kg_topics;
 GO
 SET IDENTITY_INSERT dbo.kg_topics ON;
 INSERT INTO dbo.kg_topics ([topic_id], [topic_key], [topic_name], [category], [content_zh], [content_en], [source], [confidence], [verified]) VALUES
-(1, 'tailiang', '抬梁式结构', 'structure', N'抬梁式（叠梁式）是中国古建筑最主要的木结构形式。特点：柱上承梁，梁上抬梁，逐层缩短，最上层立脊瓜柱承脊檩。适用于宫殿、庙宇等大型建筑。代表：北京故宫太和殿。', N'Tailiang (post-and-beam) is the primary structural form of traditional Chinese architecture.', N'《华夏营造知识库》', 0.98, 1);
+(1, 'tailiang', '抬梁式结构', 'structure', N'抬梁式（叠梁式）是中国古建筑最主要的木结构形式。特点：柱上承梁，梁上抬梁，逐层缩短，最上层立脊瓜柱承脊檩。适用于宫殿、庙宇等大型建筑。代表：北京故宫太和殿。', N'Tailiang (post-and-beam) is the primary structural form of traditional Chinese architecture.', N'《筑见山河知识库》', 0.98, 1);
 INSERT INTO dbo.kg_topics ([topic_id], [topic_key], [topic_name], [category], [content_zh], [content_en], [source], [confidence], [verified]) VALUES
-(2, 'chuandou', '穿斗式结构', 'structure', N'穿斗式（立贴式）是南方常见木结构形式。特点：柱距较密，柱头直接承檩，以穿枋连接各柱形成框架。', N'Chuandou (column-and-tie) style is common in southern China.', N'《华夏营造知识库》', 0.98, 1);
+(2, 'chuandou', '穿斗式结构', 'structure', N'穿斗式（立贴式）是南方常见木结构形式。特点：柱距较密，柱头直接承檩，以穿枋连接各柱形成框架。', N'Chuandou (column-and-tie) style is common in southern China.', N'《筑见山河知识库》', 0.98, 1);
 INSERT INTO dbo.kg_topics ([topic_id], [topic_key], [topic_name], [category], [content_zh], [content_en], [source], [confidence], [verified]) VALUES
-(3, 'wudian', '庑殿顶', 'structure', N'庑殿顶（四阿顶）是中国古建筑最高等级的屋顶形制。', N'Wudian (hip) roof is the highest-ranking roof style.', N'《华夏营造知识库》', 0.99, 1);
+(3, 'wudian', '庑殿顶', 'structure', N'庑殿顶（四阿顶）是中国古建筑最高等级的屋顶形制。', N'Wudian (hip) roof is the highest-ranking roof style.', N'《筑见山河知识库》', 0.99, 1);
 INSERT INTO dbo.kg_topics ([topic_id], [topic_key], [topic_name], [category], [content_zh], [content_en], [source], [confidence], [verified]) VALUES
-(4, 'xieshan', '歇山顶', 'structure', N'歇山顶（九脊顶）等级仅次于庑殿顶。', N'Xieshan (hip-and-gable) roof ranks second to wudian.', N'《华夏营造知识库》', 0.98, 1);
+(4, 'xieshan', '歇山顶', 'structure', N'歇山顶（九脊顶）等级仅次于庑殿顶。', N'Xieshan (hip-and-gable) roof ranks second to wudian.', N'《筑见山河知识库》', 0.98, 1);
 INSERT INTO dbo.kg_topics ([topic_id], [topic_key], [topic_name], [category], [content_zh], [content_en], [source], [confidence], [verified]) VALUES
-(5, 'dougong', '斗拱（铺作）', 'component', N'斗拱是中国古建筑特有的结构构件。', N'Dougong (bracket sets) is a unique structural component.', N'《华夏营造知识库》', 0.99, 1);
+(5, 'dougong', '斗拱（铺作）', 'component', N'斗拱是中国古建筑特有的结构构件。', N'Dougong (bracket sets) is a unique structural component.', N'《筑见山河知识库》', 0.99, 1);
 INSERT INTO dbo.kg_topics ([topic_id], [topic_key], [topic_name], [category], [content_zh], [content_en], [source], [confidence], [verified]) VALUES
 (6, 'caifen', '材分制', 'philosophy', N'材分制是宋《营造法式》确立的模数制度。', N'The Cai-fen modular system was established in Song Dynasty.', N'《营造法式》', 0.98, 1);
 INSERT INTO dbo.kg_topics ([topic_id], [topic_key], [topic_name], [category], [content_zh], [content_en], [source], [confidence], [verified]) VALUES
-(7, 'tang_architecture', '唐代建筑特征', 'period', N'唐代建筑特征：气魄宏伟、斗拱硕大、屋面坡度平缓。', N'Tang Dynasty architecture features: grand scale, large bracket sets.', N'《华夏营造知识库》', 0.99, 1);
+(7, 'tang_architecture', '唐代建筑特征', 'period', N'唐代建筑特征：气魄宏伟、斗拱硕大、屋面坡度平缓。', N'Tang Dynasty architecture features: grand scale, large bracket sets.', N'《筑见山河知识库》', 0.99, 1);
 INSERT INTO dbo.kg_topics ([topic_id], [topic_key], [topic_name], [category], [content_zh], [content_en], [source], [confidence], [verified]) VALUES
-(8, 'foguangsi', '佛光寺东大殿', 'famous', N'佛光寺东大殿（857年）位于山西五台山，是中国现存最早的木构建筑。', N'Foguang Temple East Hall (857 AD) is the earliest existing wooden structure.', N'《华夏营造知识库》', 0.99, 1);
+(8, 'foguangsi', '佛光寺东大殿', 'famous', N'佛光寺东大殿（857年）位于山西五台山，是中国现存最早的木构建筑。', N'Foguang Temple East Hall (857 AD) is the earliest existing wooden structure.', N'《筑见山河知识库》', 0.99, 1);
 INSERT INTO dbo.kg_topics ([topic_id], [topic_key], [topic_name], [category], [content_zh], [content_en], [source], [confidence], [verified]) VALUES
-(9, 'sunmao', '榫卯结构', 'component', N'榫卯是中国古建筑木构件连接方式，不用钉子。', N'Mortise and tenon is the joining method without nails.', N'《华夏营造知识库》', 0.98, 1);
+(9, 'sunmao', '榫卯结构', 'component', N'榫卯是中国古建筑木构件连接方式，不用钉子。', N'Mortise and tenon is the joining method without nails.', N'《筑见山河知识库》', 0.98, 1);
 INSERT INTO dbo.kg_topics ([topic_id], [topic_key], [topic_name], [category], [content_zh], [content_en], [source], [confidence], [verified]) VALUES
-(10, 'yingxian', '应县木塔', 'famous', N'佛宫寺释迦塔（应县木塔）建于辽清宁二年（1056年），是世界现存最高最古的木塔。', N'Yingxian Wooden Pagoda (1056 AD) is the tallest existing wooden pagoda.', N'《华夏营造知识库》', 0.99, 1);
+(10, 'yingxian', '应县木塔', 'famous', N'佛宫寺释迦塔（应县木塔）建于辽清宁二年（1056年），是世界现存最高最古的木塔。', N'Yingxian Wooden Pagoda (1056 AD) is the tallest existing wooden pagoda.', N'《筑见山河知识库》', 0.99, 1);
 SET IDENTITY_INSERT dbo.kg_topics OFF;
 GO
 INSERT INTO dbo.kg_keywords ([topic_id], [keyword], [weight], [language]) VALUES
@@ -3260,10 +3260,10 @@ GO
 MERGE INTO dbo.ai_config AS target
 USING (
     VALUES
-    (1, N'通用AI助手', 'openai', NULL, NULL, NULL, 'gpt-4o', 'https://api.openai.com/v1/chat/completions', 'gpt-4o', N'你是华夏营造的AI助手，精通中国古代建筑文化。请用专业但易懂的方式回答用户的问题。', N'通用型AI助手，适合解答古建筑知识', 1, 1, 0.70, 2048, 3, 20, 60),
+    (1, N'通用AI助手', 'openai', NULL, NULL, NULL, 'gpt-4o', 'https://api.openai.com/v1/chat/completions', 'gpt-4o', N'你是筑见山河的AI助手，精通中国古代建筑文化。请用专业但易懂的方式回答用户的问题。', N'通用型AI助手，适合解答古建筑知识', 1, 1, 0.70, 2048, 3, 20, 60),
     (2, N'建筑技术专家', 'openai', NULL, NULL, NULL, 'gpt-4o', 'https://api.openai.com/v1/chat/completions', 'gpt-4o', N'你是一位古建筑技术专家，专注于斗拱、榫卯、营造法式等技术细节。请从技术角度详细解答问题。', N'专注建筑技术细节的专家', 1, 0, 0.50, 2048, 3, 20, 60),
     (3, N'历史学者', 'openai', NULL, NULL, NULL, 'gpt-4o', 'https://api.openai.com/v1/chat/completions', 'gpt-4o', N'你是一位研究中国古代建筑史的学者，精通各朝代建筑风格和演变。请从历史角度解答问题。', N'专注历史文化的学者', 1, 0, 0.60, 2048, 3, 20, 60),
-    (4, N'讯飞星火Lite', 'spark', NULL, NULL, NULL, 'lite', 'wss://spark-api.xf-yun.com/v1.1/chat', 'lite', N'你是华夏营造的AI助手，精通中国古代建筑文化。请用专业但易懂的方式回答用户的问题。', N'讯飞星火Spark Lite（WebSocket协议）支持自选版本: lite/generalv3/pro-128k/generalv3.5/max-32k/4.0Ultra', 1, 0, 0.50, 2048, 3, 20, 60)
+    (4, N'讯飞星火Lite', 'spark', NULL, NULL, NULL, 'lite', 'wss://spark-api.xf-yun.com/v1.1/chat', 'lite', N'你是筑见山河的AI助手，精通中国古代建筑文化。请用专业但易懂的方式回答用户的问题。', N'讯飞星火Spark Lite（WebSocket协议）支持自选版本: lite/generalv3/pro-128k/generalv3.5/max-32k/4.0Ultra', 1, 0, 0.50, 2048, 3, 20, 60)
 ) AS source ([ai_id], [name], [provider], [app_id], [api_key], [api_secret], [version], [api_endpoint], [model], [system_prompt], [description], [is_active], [is_default], [temperature], [max_tokens], [max_concurrent], [max_queue_size], [queue_timeout])
 ON target.[ai_id] = source.[ai_id]
 WHEN MATCHED THEN
@@ -3296,7 +3296,7 @@ GO
 MERGE INTO dbo.system_settings AS target
 USING (
     VALUES
-    ('site_name', N'华夏营造', N'网站名称', 'string', 1),
+    ('site_name', N'筑见山河', N'网站名称', 'string', 1),
     ('site_description', N'探索中国古代建筑文化的数字平台', N'网站描述', 'string', 1),
     ('default_language', 'zh-CN', N'默认语言', 'string', 1),
     ('max_upload_size_mb', '50', N'最大上传文件大小(MB)', 'number', 1),
@@ -5608,5 +5608,5 @@ GO
 -- 全部数据库初始化完成！
 -- ============================================================
 PRINT '========================================';
-PRINT ' 华夏营造 全部10个数据库初始化完成！';
+PRINT ' 筑见山河 全部10个数据库初始化完成！';
 PRINT '========================================';

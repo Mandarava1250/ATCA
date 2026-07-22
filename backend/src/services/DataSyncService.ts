@@ -1,5 +1,5 @@
 // ============================================
-// 华夏营造 - 数据同步核心服务
+// 筑见山河 - 数据同步核心服务
 // 实现Competition数据库与Sync数据库的协同工作
 // 支持数据校验、冲突解决、日志记录和实时同步
 // ============================================
@@ -1114,9 +1114,15 @@ export class DataSyncService {
     let failed_count = 0;
 
     try {
+      // 使用 lastSyncTime 过滤，只同步上次同步之后新增的记录
       const pendingCheckins = await query('sync',
-        'EXEC sp_sync_get_pending_checkins @user_id = @uid',
-        { uid: user_id }
+        `SELECT [sync_record_id], [checkin_date], [streak_count], [points_earned], [created_at]
+         FROM dbo.user_checkin_sync
+         WHERE [user_id] = @uid
+           AND [sync_status] = 'pending'
+           AND [created_at] > @lastSync
+         ORDER BY [checkin_date] ASC`,
+        { uid: user_id, lastSync: lastSyncTime }
       );
 
       if (pendingCheckins.length > 0) {
@@ -1130,7 +1136,7 @@ export class DataSyncService {
 
       return {
         success: true,
-        message: '增量同步完成',
+        message: `增量同步完成: ${synced_count} 条`,
         sync_id: `sync_${Date.now()}`,
         conflict_count: 0,
         synced_count,

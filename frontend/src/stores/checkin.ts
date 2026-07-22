@@ -2,7 +2,7 @@ import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import { activityApi } from '@/services/api';
 import { getSyncService } from '@/utils/syncService';
-import { scheduleCheckinSync, syncPendingCheckins } from '@/utils/checkinSync';
+import { syncPendingCheckins } from '@/utils/checkinSync';
 import { createLogger } from '@/utils/logger';
 
 const logger = createLogger('CheckinStore');
@@ -40,6 +40,8 @@ export const useCheckinStore = defineStore('checkin', () => {
   const pendingCheckins = ref<string[]>([]);
   const syncTimerRef = ref<() => void | null>(null);
   const listeners = ref<Set<(state: CheckinState) => void>>(new Set());
+  const checkinInProgress = ref(false);  // 并发防护：防止重复打卡请求
+  const retryCount = ref(0);             // 重试计数器：用于指数退避
 
   const today = computed(() => new Date().toISOString().split('T')[0]);
 
@@ -154,6 +156,7 @@ export const useCheckinStore = defineStore('checkin', () => {
 
       pending.value = false;
       syncStatus.value = 'synced';
+      retryCount.value = 0; // 重置重试计数器
       saveToStorage();
       notifyListeners();
 
@@ -168,12 +171,31 @@ export const useCheckinStore = defineStore('checkin', () => {
   }
 
   function scheduleRetry() {
+    retryCount.value++;
+    // 指数退避：1s → 3s → 9s → 27s → 60s(max)
+    const delay = Math.min(1000 * Math.pow(3, retryCount.value - 1), 60000);
+    const maxRetries = 4;
+
+    if (retryCount.value > maxRetries) {
+      logger.warn('重试次数已达上限，停止自动重试', { retryCount: retryCount.value });
+      syncStatus.value = 'error';
+      syncError.value = '同步失败，请手动刷新';
+      return;
+    }
+
+    logger.info(`计划在 ${Math.round(delay / 1000)} 秒后重试 (第 ${retryCount.value} 次)`);
     setTimeout(() => {
       loadCheckin(true);
-    }, 3000);
+    }, delay);
   }
 
   async function performCheckin(deviceInfo?: { device_type?: string; device_info?: string }) {
+    // 并发防护：如果已有打卡请求正在进行，忽略后续请求
+    if (checkinInProgress.value) {
+      logger.warn('打卡请求正在进行中，忽略重复请求');
+      return { success: false, already_checked: false, message: '打卡请求正在进行中' };
+    }
+
     if (todayChecked.value && confirmed.value) {
       logger.info('今日已打卡，无需重复打卡');
       return { success: true, already_checked: true };
@@ -183,6 +205,7 @@ export const useCheckinStore = defineStore('checkin', () => {
     pending.value = true;
     confirmed.value = false;
     syncStatus.value = 'syncing';
+    checkinInProgress.value = true;
 
     const optimisticStreak = todayChecked.value ? streak.value : streak.value + 1;
 
@@ -257,6 +280,7 @@ export const useCheckinStore = defineStore('checkin', () => {
       return { success: false, already_checked: false, message: '网络异常，已缓存待同步' };
     } finally {
       loading.value = false;
+      checkinInProgress.value = false;
     }
   }
 
@@ -337,18 +361,13 @@ export const useCheckinStore = defineStore('checkin', () => {
   function initSyncListener() {
     const syncService = getSyncService();
     syncService.on('checkin_update', handleSyncUpdate);
-
-    syncTimerRef.value = scheduleCheckinSync();
+    logger.info('签到WebSocket同步监听器已注册');
   }
 
   function removeSyncListener() {
     const syncService = getSyncService();
     syncService.off('checkin_update', handleSyncUpdate);
-
-    if (syncTimerRef.value) {
-      syncTimerRef.value();
-      syncTimerRef.value = null;
-    }
+    logger.info('签到WebSocket同步监听器已移除');
   }
 
   function getCheckinHistory(): CheckinRecord[] {
@@ -390,6 +409,8 @@ export const useCheckinStore = defineStore('checkin', () => {
     syncError,
     syncStatus,
     pendingCheckins,
+    checkinInProgress,
+    retryCount,
     today,
     stateSnapshot,
     loadFromStorage,
