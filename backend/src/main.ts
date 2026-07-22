@@ -17,7 +17,7 @@ dotenv.config({ path: '.env.db' });
 import { config } from './config/app';
 import { swaggerSpec } from './config/swagger';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
-import { closeAllPools, setMockMode, isMockMode, preconnectAll, initAllDatabases } from './config/database';
+import { closeAllPools, setMockMode, isMockMode, preconnectAll, initAllDatabases, startRecoveryService, stopRecoveryService } from './config/database';
 import { 
   sqlInjectionDetection, 
   securityHeaders, 
@@ -405,6 +405,9 @@ async function startServer() {
     if (!isMockMode()) {
       await initAllDatabases();
     }
+    
+    // 启动数据库连接恢复服务（每30秒检查一次）
+    startRecoveryService(30000);
   } catch (error: any) {
     console.error('[DB] 预连接或初始化错误详情:', error.message || error);
     console.warn('[DB] 所有数据库连接失败，启用 Mock 模式');
@@ -463,6 +466,9 @@ async function startServer() {
 
   const gracefulShutdown = async (signal: string) => {
     console.log(`[ATCA Server] 收到 ${signal}，开始优雅关闭...`);
+    
+    // 停止数据库连接恢复服务
+    stopRecoveryService();
     
     // 停止保活服务
     stopKeepAliveService();

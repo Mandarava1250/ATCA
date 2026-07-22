@@ -248,12 +248,23 @@ export async function getPool(dbName: string): Promise<sql.ConnectionPool> {
     throw new Error('Mock mode: no database connection');
   }
 
-  if (failedDbs.has(dbName)) {
-    throw new Error(`Database ${dbName} previously failed to connect`);
-  }
-
+  // 如果已有连接池且状态正常，直接返回
   if (pools[dbName] && pools[dbName].connected) {
     return pools[dbName];
+  }
+
+  // 如果连接池存在但已断开，尝试重新连接
+  if (pools[dbName] && !pools[dbName].connected) {
+    console.warn(`[DB] ${dbName} 连接池已断开，尝试重新连接...`);
+    try {
+      await pools[dbName].connect();
+      failedDbs.delete(dbName);
+      console.log(`[DB] ${dbName} 连接池重新连接成功`);
+      return pools[dbName];
+    } catch (err) {
+      console.warn(`[DB] ${dbName} 连接池重新连接失败，将创建新连接池`);
+      pools[dbName] = undefined!;
+    }
   }
 
   const config = dbConfigs[dbName];
@@ -267,6 +278,7 @@ export async function getPool(dbName: string): Promise<sql.ConnectionPool> {
 
   try {
     pools[dbName] = await connectWithRetry(dbName, config);
+    failedDbs.delete(dbName);
     return pools[dbName];
   } catch (err: any) {
     failedDbs.add(dbName);
@@ -322,7 +334,8 @@ export async function query<T = any>(
     dbName: string,
     sqlString: string,
     params?: any,
-    useCache: boolean = true
+    useCache: boolean = true,
+    maxRetries: number = 2
 ): Promise<T[]> {
   const startTime = Date.now();
   
@@ -335,44 +348,63 @@ export async function query<T = any>(
     }
   }
 
-  const pool = await getPool(dbName);
-  const request = pool.request();
+  let lastError: Error | null = null;
 
-  if (params) {
-    for (const [key, value] of Object.entries(params)) {
-      if (value === null || value === undefined) {
-        request.input(key, sql.NVarChar(sql.MAX), null);
-      } else if (typeof value === 'number') {
-        if (isNaN(value) || !isFinite(value)) {
-          request.input(key, sql.NVarChar(sql.MAX), null);
-        } else {
-          request.input(key, sql.Int, value);
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const pool = await getPool(dbName);
+      const request = pool.request();
+
+      if (params) {
+        for (const [key, value] of Object.entries(params)) {
+          if (value === null || value === undefined) {
+            request.input(key, sql.NVarChar(sql.MAX), null);
+          } else if (typeof value === 'number') {
+            if (isNaN(value) || !isFinite(value)) {
+              request.input(key, sql.NVarChar(sql.MAX), null);
+            } else {
+              request.input(key, sql.Int, value);
+            }
+          } else if (typeof value === 'boolean') {
+            request.input(key, sql.Bit, value ? 1 : 0);
+          } else {
+            request.input(key, sql.NVarChar(sql.MAX), value);
+          }
         }
-      } else if (typeof value === 'boolean') {
-        request.input(key, sql.Bit, value ? 1 : 0);
-      } else {
-        request.input(key, sql.NVarChar(sql.MAX), value);
+      }
+
+      const result = await request.query(sqlString);
+      const data = result.recordset as T[];
+      const duration = Date.now() - startTime;
+
+      queryStats.record(dbName, sqlString, params, duration, false, data.length);
+
+      if (useCache && !mockMode) {
+        queryCache.set(dbName, sqlString, params, data);
+      }
+
+      return data;
+    } catch (err: any) {
+      lastError = err;
+      console.warn(`[DB] query ${dbName} 第${attempt}/${maxRetries}次失败: ${err.message}`);
+      
+      // 如果是连接错误，尝试重新获取连接池
+      if (attempt < maxRetries && (err.message?.includes('Connection') || err.message?.includes('connection'))) {
+        console.warn(`[DB] ${dbName} 连接错误，将重新获取连接池...`);
+        pools[dbName] = undefined!;
+        await new Promise(r => setTimeout(r, 500 * attempt));
       }
     }
   }
 
-  const result = await request.query(sqlString);
-  const data = result.recordset as T[];
-  const duration = Date.now() - startTime;
-
-  queryStats.record(dbName, sqlString, params, duration, false, data.length);
-
-  if (useCache && !mockMode) {
-    queryCache.set(dbName, sqlString, params, data);
-  }
-
-  return data;
+  throw lastError || new Error(`查询失败`);
 }
 
 export async function execute(
     dbName: string,
     sqlString: string,
-    params?: Record<string, any>
+    params?: Record<string, any>,
+    maxRetries: number = 2
 ): Promise<sql.IResult<any>> {
   const upperSql = sqlString.toUpperCase();
   const isWriteOperation = upperSql.startsWith('INSERT') || upperSql.startsWith('UPDATE') || upperSql.startsWith('DELETE');
@@ -381,30 +413,48 @@ export async function execute(
     queryCache.clear(dbName);
   }
 
-  const pool = await getPool(dbName);
-  const request = pool.request();
+  let lastError: Error | null = null;
 
-  if (params) {
-    for (const [key, value] of Object.entries(params)) {
-      if (value === null || value === undefined) {
-        request.input(key, sql.NVarChar(sql.MAX), null);
-      } else if (typeof value === 'number') {
-        if (isNaN(value) || !isFinite(value)) {
-          request.input(key, sql.NVarChar(sql.MAX), null);
-        } else {
-          request.input(key, sql.Int, value);
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const pool = await getPool(dbName);
+      const request = pool.request();
+
+      if (params) {
+        for (const [key, value] of Object.entries(params)) {
+          if (value === null || value === undefined) {
+            request.input(key, sql.NVarChar(sql.MAX), null);
+          } else if (typeof value === 'number') {
+            if (isNaN(value) || !isFinite(value)) {
+              request.input(key, sql.NVarChar(sql.MAX), null);
+            } else {
+              request.input(key, sql.Int, value);
+            }
+          } else if (typeof value === 'boolean') {
+            request.input(key, sql.Bit, value ? 1 : 0);
+          } else {
+            request.input(key, sql.NVarChar(sql.MAX), value);
+          }
         }
-      } else if (typeof value === 'boolean') {
-        request.input(key, sql.Bit, value ? 1 : 0);
-      } else {
-        request.input(key, sql.NVarChar(sql.MAX), value);
+      }
+
+      const result = await request.query(sqlString);
+
+      return result;
+    } catch (err: any) {
+      lastError = err;
+      console.warn(`[DB] execute ${dbName} 第${attempt}/${maxRetries}次失败: ${err.message}`);
+      
+      // 如果是连接错误，尝试重新获取连接池
+      if (attempt < maxRetries && (err.message?.includes('Connection') || err.message?.includes('connection'))) {
+        console.warn(`[DB] ${dbName} 连接错误，将重新获取连接池...`);
+        pools[dbName] = undefined!;
+        await new Promise(r => setTimeout(r, 500 * attempt));
       }
     }
   }
 
-  const result = await request.query(sqlString);
-
-  return result;
+  throw lastError || new Error(`执行失败`);
 }
 
 export async function transaction<T>(
@@ -430,6 +480,51 @@ export async function closeAllPools(): Promise<void> {
       await pool.close();
       console.log(`[DB] Closed connection to ${name}`);
     }
+  }
+}
+
+// ============================================
+// 数据库连接恢复机制
+// 定期检查失败的数据库连接，尝试自动恢复
+// ============================================
+
+let recoveryInterval: ReturnType<typeof setInterval> | null = null;
+
+export function startRecoveryService(checkIntervalMs: number = 30000): void {
+  if (recoveryInterval) {
+    clearInterval(recoveryInterval);
+  }
+
+  console.log(`[DB] 启动数据库连接恢复服务，检查间隔: ${checkIntervalMs}ms`);
+
+  recoveryInterval = setInterval(async () => {
+    if (mockMode || failedDbs.size === 0) {
+      return;
+    }
+
+    console.log(`[DB] 检查 ${failedDbs.size} 个失败的数据库连接...`);
+
+    for (const dbName of failedDbs) {
+      try {
+        const config = dbConfigs[dbName];
+        if (!config) continue;
+
+        console.log(`[DB] 尝试恢复 ${dbName} 数据库连接...`);
+        pools[dbName] = await connectWithRetry(dbName, config, 2);
+        failedDbs.delete(dbName);
+        console.log(`[DB] ${dbName} 数据库连接恢复成功！`);
+      } catch (err) {
+        console.warn(`[DB] ${dbName} 数据库连接恢复失败: ${(err as Error).message}`);
+      }
+    }
+  }, checkIntervalMs);
+}
+
+export function stopRecoveryService(): void {
+  if (recoveryInterval) {
+    clearInterval(recoveryInterval);
+    recoveryInterval = null;
+    console.log('[DB] 数据库连接恢复服务已停止');
   }
 }
 
