@@ -391,6 +391,8 @@ describe('Checkin Store', () => {
       const history = JSON.parse(localStorage.getItem('checkin_history') || '[]');
       expect(history).toHaveLength(365);
     });
+  });
+
   describe('multi-device concurrent check-in', () => {
     it('should prevent concurrent check-in requests', async () => {
       vi.useFakeTimers();
