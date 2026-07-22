@@ -160,35 +160,42 @@ const forceRefreshCheckin = ref(false);
 async function loadCheckin(force = false) {
   checkinLoading.value = true;
   const today = new Date().toISOString().split('T')[0];
-  let shouldUpdateFromCache = false;
 
   const saved = localStorage.getItem('atca_checkin');
+  let cachedChecked = false;
+  let cachedStreak = 0;
+  let cachedLastCheckin = '';
+  let isPending = false;
+  let isConfirmed = false;
+
   if (saved) {
     try {
       const cached = JSON.parse(saved);
-      const cachedTodayChecked = cached.todayChecked || cached.lastCheckin === today;
-      const cacheTime = parseInt(localStorage.getItem('atca_checkin_sync_time') || '0');
-      const cacheAge = Date.now() - cacheTime;
-
-      // 如果缓存是乐观更新（pending），立即使用缓存值，同时发起后台刷新
-      if (cached.pending === true) {
-        checkin.value.todayChecked = cachedTodayChecked;
-        checkin.value.streak = cached.streak || 0;
-        checkin.value.lastCheckin = cached.lastCheckin || '';
-        // 不返回，继续执行后台刷新以确认状态
-        logger?.info?.('使用乐观打卡状态，后台刷新确认', { cached });
-      } else if (!force && cacheAge < 5000 && cachedTodayChecked !== undefined) {
-        checkin.value.todayChecked = cachedTodayChecked;
-        checkin.value.streak = cached.streak || 0;
-        checkin.value.lastCheckin = cached.lastCheckin || '';
-        shouldUpdateFromCache = true;
-        logger?.info?.('使用本地缓存的打卡状态', checkin.value);
-      } else if (cachedTodayChecked !== undefined) {
-        checkin.value.todayChecked = cachedTodayChecked;
-        checkin.value.streak = cached.streak || 0;
-        checkin.value.lastCheckin = cached.lastCheckin || '';
-      }
+      cachedChecked = cached.todayChecked || cached.lastCheckin === today;
+      cachedStreak = cached.streak || 0;
+      cachedLastCheckin = cached.lastCheckin || '';
+      isPending = cached.pending === true;
+      isConfirmed = cached.confirmed === true;
     } catch { /* ignore */ }
+  }
+
+  checkin.value.todayChecked = cachedChecked;
+  checkin.value.streak = cachedStreak;
+  checkin.value.lastCheckin = cachedLastCheckin;
+
+  const cacheTime = parseInt(localStorage.getItem('atca_checkin_sync_time') || '0');
+  const cacheAge = Date.now() - cacheTime;
+
+  const useCacheOnly = cachedChecked && !force && !isPending && cacheAge < 30000;
+
+  if (useCacheOnly) {
+    logger?.info?.('使用本地缓存的已打卡状态（30秒内有效）', checkin.value);
+    checkinLoading.value = false;
+    if (countdownTimer && checkin.value.todayChecked) {
+      clearInterval(countdownTimer);
+      countdownTimer = null;
+    }
+    return;
   }
 
   try {
@@ -209,14 +216,30 @@ async function loadCheckin(force = false) {
       backendLastCheckin = statsRes.data.last_checkin_date || '';
     }
 
-    checkin.value.todayChecked = backendChecked;
-    checkin.value.streak = backendStreak;
-    checkin.value.lastCheckin = backendLastCheckin || (backendChecked ? today : '');
+    const localChecked = checkin.value.todayChecked;
+
+    if (localChecked && !backendChecked && !isConfirmed) {
+      logger?.warn?.('状态不一致：本地已打卡但后端未同步，保留本地状态并延迟刷新', {
+        localChecked,
+        backendChecked,
+        isPending,
+        cacheAge,
+      });
+      setTimeout(() => {
+        loadCheckin(true);
+      }, 3000);
+    } else {
+      checkin.value.todayChecked = backendChecked;
+      checkin.value.streak = backendStreak;
+      checkin.value.lastCheckin = backendLastCheckin || (backendChecked ? today : '');
+    }
 
     const newCheckin = {
       todayChecked: checkin.value.todayChecked,
       streak: checkin.value.streak,
       lastCheckin: checkin.value.lastCheckin,
+      pending: false,
+      confirmed: backendChecked,
     };
     localStorage.setItem('atca_checkin', JSON.stringify(newCheckin));
     localStorage.setItem('atca_checkin_sync_time', Date.now().toString());
@@ -380,6 +403,7 @@ onMounted(async () => {
         streak: checkin.value.streak,
         lastCheckin: today,
         pending: false,
+        confirmed: true,
       }));
       localStorage.setItem('atca_checkin_sync_time', Date.now().toString());
       if (countdownTimer) {

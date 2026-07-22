@@ -400,7 +400,8 @@ async function doCheckinAfterSubmit() {
     todayChecked: true,
     streak: localCheckin.streak || 1,
     lastCheckin: today,
-    pending: true, // pending 标志告诉 loadCheckin() 需要后端确认
+    pending: true,
+    confirmed: false,
   };
   localStorage.setItem('atca_checkin', JSON.stringify(optimisticCheckin));
   localStorage.setItem('atca_checkin_sync_time', Date.now().toString());
@@ -421,7 +422,8 @@ async function doCheckinAfterSubmit() {
         streak: res.streak_count || 1,
         lastCheckin: today,
         pointsEarned: res.points_earned || 0,
-        pending: false, // 后端确认完成
+        pending: false,
+        confirmed: true,
       };
       localStorage.setItem('atca_checkin', JSON.stringify(confirmedCheckin));
       localStorage.setItem('atca_checkin_sync_time', Date.now().toString());
@@ -432,11 +434,20 @@ async function doCheckinAfterSubmit() {
         streak: localCheckin.streak || 1,
         lastCheckin: today,
         pending: false,
+        confirmed: true,
       };
       localStorage.setItem('atca_checkin', JSON.stringify(confirmedCheckin));
       logger.info('今日已打卡，无需重复打卡');
     } else {
       logger.error('打卡失败', { error: res.message });
+      const failedCheckin = {
+        todayChecked: false,
+        streak: localCheckin.streak || 0,
+        lastCheckin: localCheckin.lastCheckin || '',
+        pending: false,
+        confirmed: false,
+      };
+      localStorage.setItem('atca_checkin', JSON.stringify(failedCheckin));
     }
   } catch (e: any) {
     logger.error('打卡网络异常，将在下次同步时重试', {
@@ -447,7 +458,6 @@ async function doCheckinAfterSubmit() {
       pendingCheckins.push(today);
       localStorage.setItem('atca_pending_checkins', JSON.stringify(pendingCheckins));
     }
-    // 保留乐观状态（pending: true），后台同步机制会重试
   }
 }
 
