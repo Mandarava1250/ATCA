@@ -625,7 +625,7 @@ async function executeSqlScript(pool: sql.ConnectionPool, scriptPath: string): P
   // 可忽略的错误码（移除 156！）
   // 2714: 对象已存在
   // 1913: 索引已存在
-  // 1750: 无法创建约束或索引
+  // 1750: 无法创建约束或索引下·
   // 208: 对象名不存在（列不存在时）
   // 547: 约束冲突
   // 1505: 唯一索引冲突

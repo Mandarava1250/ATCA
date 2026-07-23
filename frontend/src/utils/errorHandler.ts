@@ -23,29 +23,31 @@ export function getErrorKey(error: any): string {
   // 检查是否有响应
   if (error?.response) {
     const status = error.response.status;
-    if (status && statusToI18nKey[status]) {
-      return statusToI18nKey[status];
-    }
-    
-    // 尝试从响应数据中获取错误消息
-    if (error.response?.data?.error?.message) {
-      // 如果有具体的错误消息，我们直接使用它（假设后端返回多语言）
-      return error.response.data.error.message;
+
+    // 优先使用后端返回的具体错误消息（如有）
+    const backendMessage = error.response?.data?.error?.message;
+    if (backendMessage) {
+      return backendMessage;
     }
     if (error.response?.data?.message) {
       return error.response.data.message;
     }
+
+    // 无后端消息时，使用 i18n 映射
+    if (status && statusToI18nKey[status]) {
+      return statusToI18nKey[status];
+    }
   }
-  
+
   // 检查是否是网络错误
   if (error?.message?.includes('Network Error') || error?.message?.includes('timeout')) {
     return 'errors.network';
   }
-  
+
   if (error?.message?.includes('timeout')) {
     return 'errors.timeout';
   }
-  
+
   // 默认错误
   return 'errors.genericError';
 }

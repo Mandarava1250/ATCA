@@ -38,40 +38,101 @@ apiClient.interceptors.request.use(
 // 防止重复跳转登录页的标志
 let isRedirecting = false;
 
+// Token 刷新互斥锁，防止并发请求各自刷新
+let isRefreshing = false;
+let pendingRequests: Array<{
+  resolve: (value: any) => void;
+  reject: (reason?: any) => void;
+  config: any;
+}> = [];
+
+// 登录/注册/退出/刷新端点不应触发 Token 刷新逻辑
+const AUTH_ENDPOINTS = ['/auth/login', '/auth/register', '/auth/logout', '/auth/refresh'];
+
 // 响应拦截器
 apiClient.interceptors.response.use(
     (response) => response.data,
     async (error) => {
       const originalRequest = error.config;
 
+      // 登录/注册/退出/刷新端点的 401 直接透传，不触发 Token 刷新
+      if (error.response?.status === 401) {
+        const isAuthEndpoint = AUTH_ENDPOINTS.some(endpoint =>
+          originalRequest.url?.includes(endpoint)
+        );
+        if (isAuthEndpoint) {
+          return Promise.reject(error);
+        }
+      }
+
       // Token过期，尝试刷新
       if (error.response?.status === 401 && !originalRequest._retry) {
+        // 如果正在刷新中，排队等待同一个刷新完成
+        if (isRefreshing) {
+          return new Promise((resolve, reject) => {
+            pendingRequests.push({
+              config: originalRequest,
+              resolve: (token: string) => {
+                originalRequest.headers.Authorization = `Bearer ${token}`;
+                resolve(apiClient(originalRequest));
+              },
+              reject,
+            });
+          });
+        }
+
         originalRequest._retry = true;
+        isRefreshing = true;
+
         const refreshToken = localStorage.getItem('atca_refresh_token');
 
-        if (refreshToken) {
-          try {
-            const response = await axios.post(`${API_BASE}/auth/refresh`, { refreshToken });
-            const { accessToken, refreshToken: newRefreshToken } = response.data.data;
-            localStorage.setItem('atca_access_token', accessToken);
-            localStorage.setItem('atca_refresh_token', newRefreshToken);
-            originalRequest.headers.Authorization = `Bearer ${accessToken}`;
-            return apiClient(originalRequest);
-          } catch {
-            // 防止重复调用 logout 和跳转
-            if (!isRedirecting) {
-              isRedirecting = true;
-              const userStore = useUserStore();
-              userStore.logout();
-              // 使用 setTimeout 确保其他 pending 请求有机会完成
-              setTimeout(() => {
-                if (!window.location.href.includes('/login')) {
-                  window.location.href = '/login';
-                }
-                isRedirecting = false;
-              }, 100);
-            }
+        // 没有 refreshToken，说明是过期 Token 且无法刷新，立即登出
+        if (!refreshToken) {
+          isRefreshing = false;
+          const userStore = useUserStore();
+          userStore.logout();
+          if (!isRedirecting && !window.location.href.includes('/login')) {
+            isRedirecting = true;
+            window.location.href = '/login';
+            setTimeout(() => { isRedirecting = false; }, 500);
           }
+          return Promise.reject(error);
+        }
+
+        try {
+          const response = await axios.post(`${API_BASE}/auth/refresh`, { refreshToken });
+          const { accessToken, refreshToken: newRefreshToken } = response.data.data;
+          localStorage.setItem('atca_access_token', accessToken);
+          localStorage.setItem('atca_refresh_token', newRefreshToken);
+
+          // 通知所有排队的请求使用新 Token
+          pendingRequests.forEach(prom => {
+            prom.resolve(accessToken);
+          });
+          pendingRequests = [];
+
+          originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+          return apiClient(originalRequest);
+        } catch {
+          // 刷新失败，通知所有排队的请求失败
+          pendingRequests.forEach(prom => {
+            prom.reject(error);
+          });
+          pendingRequests = [];
+
+          // 防止重复调用 logout 和跳转
+          if (!isRedirecting) {
+            isRedirecting = true;
+            const userStore = useUserStore();
+            userStore.logout();
+            if (!window.location.href.includes('/login')) {
+              window.location.href = '/login';
+            }
+            setTimeout(() => { isRedirecting = false; }, 500);
+          }
+          return Promise.reject(error);
+        } finally {
+          isRefreshing = false;
         }
       }
 

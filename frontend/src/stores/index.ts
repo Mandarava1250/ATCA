@@ -57,9 +57,13 @@ export const useUserStore = defineStore('user', () => {
       const res = await authApi.me();
       if (res.success && res.data) {
         user.value = res.data;
+      } else {
+        throw new Error('获取用户信息失败');
       }
-    } catch {
+    } catch (err) {
       user.value = null;
+      // 重新抛出错误，让 main.ts 的 .catch() 能触发 logout()
+      throw err;
     }
   }
 

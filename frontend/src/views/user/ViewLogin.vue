@@ -90,7 +90,7 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref } from 'vue';
+import { reactive, ref, onMounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { authApi } from '@/services/api';
@@ -104,6 +104,28 @@ const userStore = useUserStore();
 const { t } = useI18n();
 const loading = ref(false);
 const error = ref('');
+
+// 挂载时清除过期 Token，避免干扰登录流程
+onMounted(() => {
+  const accessToken = localStorage.getItem('atca_access_token');
+  if (accessToken) {
+    try {
+      // 简单解码 JWT 检查是否过期（不依赖第三方库）
+      const payload = JSON.parse(atob(accessToken.split('.')[1]));
+      if (payload.exp && payload.exp * 1000 < Date.now()) {
+        // Token 已过期，清除存储
+        localStorage.removeItem('atca_access_token');
+        localStorage.removeItem('atca_refresh_token');
+        localStorage.removeItem('atca_user');
+      }
+    } catch {
+      // Token 格式异常，清除存储
+      localStorage.removeItem('atca_access_token');
+      localStorage.removeItem('atca_refresh_token');
+      localStorage.removeItem('atca_user');
+    }
+  }
+});
 
 const form = reactive({
   username: '',
@@ -140,7 +162,26 @@ const handleLogin = preventDoubleClick(async () => {
     const redirect = (route.query.redirect as string) || '/home';
     router.push(redirect);
   } catch (e: any) {
-    handleError(e, error, t);
+    // 增强错误提示：区分不同 HTTP 状态码
+    if (e?.response) {
+      const status = e.response.status;
+      const backendMsg = e.response?.data?.error?.message;
+      if (backendMsg) {
+        error.value = backendMsg;
+      } else if (status === 401) {
+        error.value = t('errors.unauthorized');
+      } else if (status === 423) {
+        error.value = '账户已被锁定，请稍后重试';
+      } else if (status === 429) {
+        error.value = '请求过于频繁，请稍后重试';
+      } else {
+        handleError(e, error, t);
+      }
+    } else if (e?.message?.includes('Network Error')) {
+      error.value = '网络连接失败，请检查网络';
+    } else {
+      handleError(e, error, t);
+    }
   } finally {
     loading.value = false;
   }

@@ -51,6 +51,13 @@ export async function syncPendingCheckins(): Promise<{ success: boolean; syncedC
           }
         }
       } catch (e: any) {
+        // 401 表示 Token 已过期，用户已登出，停止重试
+        if (e?.response?.status === 401) {
+          // 清除 pending 打卡数据，已无意义
+          localStorage.removeItem('atca_pending_checkins');
+          errors.push({ date, message: `日期 ${date} 同步失败: 登录已过期，请重新登录后重试` });
+          break;
+        }
         // 网络异常，重试
         retryCount++;
         if (retryCount > BACKOFF_CONFIG.maxRetries) {
