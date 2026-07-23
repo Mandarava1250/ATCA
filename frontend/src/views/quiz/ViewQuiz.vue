@@ -250,9 +250,6 @@ onMounted(async () => {
   if (fromQuizPlay === 'true') {
     sessionStorage.removeItem('from_quiz_play');
     logger?.info?.('从答题页面返回，使用Store状态，后台刷新确认');
-    checkinStore.loadCheckin(false);
-  } else {
-    await checkinStore.loadCheckin(false);
   }
 
   await refreshData();

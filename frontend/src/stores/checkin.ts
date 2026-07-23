@@ -42,6 +42,7 @@ export const useCheckinStore = defineStore('checkin', () => {
   const listeners = ref<Set<(state: CheckinState) => void>>(new Set());
   const checkinInProgress = ref(false);  // 并发防护：防止重复打卡请求
   const retryCount = ref(0);             // 重试计数器：用于指数退避
+  const loadingCheckin = ref(false);     // 并发防护：防止 loadCheckin 重复调用
 
   const today = computed(() => new Date().toISOString().split('T')[0]);
 
@@ -112,6 +113,11 @@ export const useCheckinStore = defineStore('checkin', () => {
   }
 
   async function loadCheckin(force = false) {
+    if (loadingCheckin.value) {
+      logger.debug('loadCheckin 已在执行中，跳过重复调用');
+      return;
+    }
+    loadingCheckin.value = true;
     loading.value = true;
     syncError.value = null;
 
@@ -121,6 +127,7 @@ export const useCheckinStore = defineStore('checkin', () => {
     if (!force && todayChecked.value && !pending.value && cacheAge < 30000) {
       logger.info('使用本地缓存的已打卡状态（30秒内有效）');
       loading.value = false;
+      loadingCheckin.value = false;
       return;
     }
 
@@ -143,10 +150,28 @@ export const useCheckinStore = defineStore('checkin', () => {
       }
 
       const localChecked = todayChecked.value;
+      const wsCheckinTime = parseInt(localStorage.getItem('atca_ws_checkin_time') || '0');
 
-      if (localChecked && !backendChecked && !confirmed.value) {
-        logger.warn('状态不一致：本地已打卡但后端未同步，保留本地状态并延迟刷新');
-        scheduleRetry();
+      // 状态冲突处理：当后端返回未打卡，但本地有打卡记录时
+      if (localChecked && !backendChecked) {
+        if (confirmed.value) {
+          // 本地已确认打卡，但后端返回未打卡
+          // 保留本地正确状态，后台重试确认
+          // 多端场景：设备B通过 WebSocket 确认打卡后，不会被后端过期数据覆盖
+          logger.warn('本地已确认打卡但后端返回未打卡，保留本地状态并后台重试');
+          scheduleRetry();
+        } else if (wsCheckinTime > cacheTime) {
+          // WebSocket 同步记录比后端 API 调用更新，信任 WebSocket 数据
+          logger.info('WebSocket 同步记录比后端数据更新，信任本地状态');
+          confirmed.value = true;
+          pending.value = false;
+          scheduleRetry();
+        } else {
+          // 本地乐观更新未确认，保留并重试
+          // 多端场景：设备B未收到 WebSocket 消息，但本地有乐观更新标记
+          logger.warn('状态不一致：本地已打卡但后端未同步，保留本地状态并延迟刷新');
+          scheduleRetry();
+        }
       } else {
         todayChecked.value = backendChecked;
         streak.value = backendStreak;
@@ -167,6 +192,7 @@ export const useCheckinStore = defineStore('checkin', () => {
       logger.warn('打卡状态同步失败，保持当前状态', { error: e.message });
     } finally {
       loading.value = false;
+      loadingCheckin.value = false;
     }
   }
 
@@ -351,6 +377,8 @@ export const useCheckinStore = defineStore('checkin', () => {
       pending.value = false;
       confirmed.value = true;
       syncStatus.value = 'synced';
+      // 记录 WebSocket 同步时间戳，用于 loadCheckin 判断
+      localStorage.setItem('atca_ws_checkin_time', Date.now().toString());
       saveToStorage();
       notifyListeners();
 
@@ -406,6 +434,7 @@ export const useCheckinStore = defineStore('checkin', () => {
     pending,
     confirmed,
     loading,
+    loadingCheckin,
     syncError,
     syncStatus,
     pendingCheckins,

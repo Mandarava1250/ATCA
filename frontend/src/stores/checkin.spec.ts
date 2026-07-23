@@ -179,6 +179,95 @@ describe('Checkin Store', () => {
       expect(store.streak).toBe(5);
       expect(store.syncError).toBe('Network error');
     });
+
+    it('should preserve local confirmed state when backend returns false', async () => {
+      const store = useCheckinStore();
+      store.todayChecked = true;
+      store.confirmed = true;
+      store.streak = 5;
+      localStorage.setItem('atca_checkin_sync_time', '0');
+
+      vi.mocked(activityApi.checkTodayCheckin).mockResolvedValue({
+        success: true,
+        data: { checked_today: false },
+      });
+      vi.mocked(activityApi.getCheckinStats).mockResolvedValue({
+        success: true,
+        data: { total_checkins: 19, max_streak: 4, total_points: 95, last_checkin_date: '2024-01-14', weekly_checkins: 4, monthly_checkins: 14 },
+      });
+
+      vi.useFakeTimers();
+      await store.loadCheckin(true);
+
+      expect(store.todayChecked).toBe(true);
+      expect(store.streak).toBe(5);
+      expect(store.confirmed).toBe(true);
+
+      vi.useRealTimers();
+    });
+
+    it('should skip concurrent loadCheckin calls', async () => {
+      const store = useCheckinStore();
+      store.todayChecked = true;
+      store.confirmed = true;
+      localStorage.setItem('atca_checkin_sync_time', '0');
+
+      // 设置一个慢速 API 响应
+      vi.mocked(activityApi.checkTodayCheckin).mockImplementation(() => {
+        return new Promise(resolve => {
+          setTimeout(() => {
+            resolve({ success: true, data: { checked_today: true } });
+          }, 100);
+        });
+      });
+      vi.mocked(activityApi.getCheckinStats).mockImplementation(() => {
+        return new Promise(resolve => {
+          setTimeout(() => {
+            resolve({ success: true, data: { total_checkins: 20, max_streak: 5, total_points: 100, last_checkin_date: '2024-01-15', weekly_checkins: 5, monthly_checkins: 15 } });
+          }, 100);
+        });
+      });
+
+      vi.useFakeTimers();
+
+      // 同时发起两次 loadCheckin
+      const promise1 = store.loadCheckin(true);
+      const promise2 = store.loadCheckin(true);
+
+      await vi.advanceTimersByTimeAsync(100);
+      await promise1;
+      await promise2;
+
+      // 确认第二次调用没有被执行（只有一次 API 调用）
+      expect(activityApi.checkTodayCheckin).toHaveBeenCalledTimes(1);
+
+      vi.useRealTimers();
+    });
+
+    it('should trust WebSocket timestamp over stale backend data', async () => {
+      const store = useCheckinStore();
+      store.todayChecked = true;
+      store.confirmed = false; // 未确认，但 WS 时间戳比后端 API 时间戳更新
+      localStorage.setItem('atca_checkin_sync_time', '1000'); // 旧的后端同步时间
+      localStorage.setItem('atca_ws_checkin_time', '5000'); // 更新的 WS 时间戳
+
+      vi.mocked(activityApi.checkTodayCheckin).mockResolvedValue({
+        success: true,
+        data: { checked_today: false },
+      });
+      vi.mocked(activityApi.getCheckinStats).mockResolvedValue({
+        success: true,
+        data: { total_checkins: 19, max_streak: 4, total_points: 95, last_checkin_date: '2024-01-14', weekly_checkins: 4, monthly_checkins: 14 },
+      });
+
+      vi.useFakeTimers();
+      await store.loadCheckin(true);
+
+      expect(store.todayChecked).toBe(true);
+      expect(store.confirmed).toBe(true);
+
+      vi.useRealTimers();
+    });
   });
 
   describe('performCheckin', () => {
@@ -293,6 +382,24 @@ describe('Checkin Store', () => {
       expect(store.streak).toBe(10);
       expect(store.lastCheckin).toBe(today);
       expect(store.confirmed).toBe(true);
+    });
+
+    it('should persist WebSocket sync timestamp to localStorage', () => {
+      const store = useCheckinStore();
+      const today = new Date().toISOString().split('T')[0];
+
+      const before = Date.now();
+      store.handleSyncUpdate({
+        payload: {
+          checkin_date: today,
+          streak_count: 5,
+          points_earned: 50,
+        },
+      });
+
+      const wsTime = parseInt(localStorage.getItem('atca_ws_checkin_time') || '0');
+      expect(wsTime).toBeGreaterThanOrEqual(before);
+      expect(wsTime).toBeLessThanOrEqual(Date.now());
     });
 
     it('should ignore sync update for non-today dates', () => {
