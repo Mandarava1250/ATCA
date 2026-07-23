@@ -176,7 +176,7 @@ function pStyle(i: number) {
 function checkStrength() {
   const pwd = form.password;
   let s = 0;
-  if (pwd.length >= 8) s++;
+  if (pwd.length >= 12) s++;
   if (/[A-Z]/.test(pwd) && /[a-z]/.test(pwd)) s++;
   if (/\d/.test(pwd)) s++;
   if (/[^A-Za-z0-9]/.test(pwd)) s++;
@@ -223,7 +223,16 @@ const handleRegister = preventDoubleClick(async () => {
     userStore.setUser(user);
     router.push('/home');
   } catch (e: any) {
-    handleError(e, error, t);
+    // 显示后端返回的具体错误消息
+    const backendMsg = e?.response?.data?.error?.message;
+    if (backendMsg) {
+      error.value = backendMsg;
+    } else if (e?.response?.data?.error?.details) {
+      // 显示验证失败详情（如密码长度不足等）
+      error.value = e.response.data.error.details;
+    } else {
+      handleError(e, error, t);
+    }
   } finally {
     loading.value = false;
   }

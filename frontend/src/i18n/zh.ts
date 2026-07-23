@@ -911,7 +911,7 @@ export default {
     notFound: '请求的资源不存在',
     validation: '输入验证失败',
     usernameTooShort: '用户名至少需要3个字符',
-    passwordTooSimple: '密码太过简单',
+    passwordTooSimple: '密码至少12位，需包含大小写字母、数字和特殊字符',
     invalidEmail: '邮箱格式有问题',
     invalidEmailDomain: '请使用常用邮箱域名（如qq.com、163.com等）',
     registrationFailed: '注册失败',

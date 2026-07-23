@@ -74,7 +74,7 @@ export function validateUsername(username: string): { valid: boolean; errorKey?:
 }
 
 export function validatePassword(password: string): { valid: boolean; errorKey?: string } {
-  if (!password || password.length < 8) {
+  if (!password || password.length < 12) {
     return { valid: false, errorKey: 'errors.passwordTooSimple' };
   }
   if (!/[A-Z]/.test(password) || !/[a-z]/.test(password)) {
@@ -94,42 +94,5 @@ export function validateEmail(email: string): { valid: boolean; errorKey?: strin
   if (!email || !emailRegex.test(email)) {
     return { valid: false, errorKey: 'errors.invalidEmail' };
   }
-  
-  const domain = email.split('@')[1].toLowerCase();
-  const allowedDomains = [
-    'qq.com', 'vip.qq.com', 'foxmail.com',
-    'gmail.com', 'googlemail.com',
-    '163.com', 'vip.163.com', '126.com',
-    '139.com', 'yeah.net',
-    'sina.com', 'sina.cn',
-    'sohu.com', 'sohu.net',
-    'hotmail.com', 'outlook.com', 'live.com', 'msn.com',
-    'yahoo.com', 'yahoo.cn',
-    'aliyun.com', 'alibaba.com',
-    'baidu.com',
-    'jd.com',
-    'meituan.com',
-    'bytedance.com', 'douyin.com', 'tiktok.com',
-    'wechat.com', 'weixin.com',
-    'huawei.com', 'hwccna.net',
-    'microsoft.com',
-    'apple.com',
-    'facebook.com',
-    'twitter.com',
-    'linkedin.com',
-    'github.com',
-  ];
-  
-  const isValidDomain = allowedDomains.some(domainPattern => {
-    if (domainPattern.startsWith('*.')) {
-      return domain.endsWith(domainPattern.substring(2));
-    }
-    return domain === domainPattern || domain.endsWith('.' + domainPattern);
-  });
-  
-  if (!isValidDomain) {
-    return { valid: false, errorKey: 'errors.invalidEmailDomain' };
-  }
-  
   return { valid: true };
 }

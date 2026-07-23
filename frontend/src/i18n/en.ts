@@ -911,7 +911,7 @@ export default {
     notFound: 'The requested resource does not exist',
     validation: 'Input validation failed',
     usernameTooShort: 'Username must be at least 3 characters',
-    passwordTooSimple: 'Password is too simple',
+    passwordTooSimple: 'Password must be at least 12 characters with uppercase, lowercase, digit and special character',
     invalidEmail: 'Email format is invalid',
     invalidEmailDomain: 'Please use a common email domain (e.g., qq.com, 163.com)',
     registrationFailed: 'Registration failed',
